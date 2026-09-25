@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bataille navale — MiniJeux</title>
+  <meta name="description" content="Place ta flotte et coule celle de l'ordinateur. Gagne des pièces d'or à chaque victoire.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚢</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="bataille">
+<main>
+  <div class="titre-page">
+    <h1>🚢 Bataille navale</h1>
+    <span class="doux">Coule les 5 navires ennemis avec le moins de tirs possible. Les navires ne se touchent jamais, même en diagonale.</span>
+  </div>
+
+  <p class="message-bataille" id="message">Place ta flotte sur la grille</p>
+
+  <div class="zone-bataille">
+    <div class="bloc-grille">
+      <h2>⚓ Ta flotte</h2>
+      <div id="grille-joueur"></div>
+      <div class="etat-flottes" id="etat-joueur"></div>
+    </div>
+
+    <div class="bloc-grille" id="bloc-placement">
+      <h2>🛠️ Tes navires</h2>
+      <div class="flotte-liste" id="liste-flotte"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="bouton secondaire petit" id="btn-pivoter">↻ Pivoter (R)</button>
+        <button class="bouton secondaire petit" id="btn-hasard">🎲 Au hasard</button>
+        <button class="bouton secondaire petit" id="btn-effacer">✖ Effacer</button>
+      </div>
+      <button class="bouton" id="btn-lancer" style="width:100%;margin-top:16px" disabled>🔥 Lancer la bataille !</button>
+    </div>
+
+    <div class="bloc-grille cache" id="bloc-ennemi">
+      <h2>🎯 Flotte ennemie</h2>
+      <div id="grille-ennemi"></div>
+      <div class="etat-flottes" id="etat-ennemi"></div>
+    </div>
+  </div>
+</main>
+<script src="/assets/commun.js"></script>
+<script src="/assets/bataille.js"></script>
+</body>
+</html>

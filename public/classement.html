@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classements — MiniJeux</title>
+  <meta name="description" content="Les meilleurs joueurs de chaque jeu, cette semaine et de tous les temps.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="classement">
+<main>
+  <div class="titre-page"><h1>🏆 Classements</h1></div>
+  <div class="panneau">
+    <div class="filtres">
+      <div class="onglets" id="onglets-jeu">
+        <button data-jeu="memory" class="actif">🃏 Memory</button>
+        <button data-jeu="bataille">🚢 Bataille navale</button>
+        <button data-jeu="fortune">🪙 Pièces d'or</button>
+      </div>
+      <div class="onglets" id="onglets-periode">
+        <button data-periode="semaine" class="actif">Cette semaine</button>
+        <button data-periode="tout">Depuis toujours</button>
+      </div>
+    </div>
+    <p class="doux" id="explication"></p>
+    <div id="tableau"></div>
+  </div>
+</main>
+<script src="/assets/commun.js"></script>
+<script>
+  const EXPLICATIONS = {
+    memory: "Meilleur score de chaque joueur. Le score monte quand on trouve les paires vite et en peu d'essais (le mode difficile rapporte plus).",
+    bataille: "Meilleur score de chaque joueur sur une victoire. Moins il faut de tirs pour couler la flotte ennemie, plus le score est haut.",
+    fortune: "Pièces d'or gagnées en jouant, tous jeux confondus (multiplicateurs de la roue compris).",
+  };
+  const etat = { jeu: new URLSearchParams(location.search).get("jeu") || "memory", periode: "semaine" };
+
+  function onglets(id, cle) {
+    document.querySelectorAll(`#${id} button`).forEach((b) => {
+      b.classList.toggle("actif", b.dataset[cle] === etat[cle]);
+      b.onclick = () => { etat[cle] = b.dataset[cle]; onglets(id, cle); charger(); };
+    });
+  }
+
+  async function charger() {
+    document.getElementById("explication").textContent = EXPLICATIONS[etat.jeu];
+    const zone = document.getElementById("tableau");
+    const r = await api(`/api/classement?jeu=${etat.jeu}&periode=${etat.periode}`);
+    if (!r.lignes.length) {
+      zone.innerHTML = `<p class="vide">Personne au classement pour l'instant. À toi de jouer !</p>`;
+      return;
+    }
+    const medailles = ["🥇", "🥈", "🥉"];
+    const rangs = ["or", "argent", "bronze"];
+    const moi = MJ.joueur && MJ.joueur.pseudo;
+    zone.innerHTML = `<table class="tableau">
+      <thead><tr><th>Rang</th><th>Joueur</th><th>Parties</th><th style="text-align:right">${etat.jeu === "fortune" ? "Pièces d'or" : "Meilleur score"}</th></tr></thead>
+      <tbody>${r.lignes.map((l, i) => `
+        <tr class="${rangs[i] || ""} ${l.pseudo === moi ? "moi" : ""}">
+          <td>${medailles[i] || i + 1}</td>
+          <td>${echapper(l.pseudo)}${l.pseudo === moi ? " (toi)" : ""}</td>
+          <td class="doux">${l.parties}</td>
+          <td class="valeur">${l.valeur}${etat.jeu === "fortune" ? ' <i class="piece"></i>' : ""}</td>
+        </tr>`).join("")}</tbody></table>`;
+  }
+
+  onglets("onglets-jeu", "jeu");
+  onglets("onglets-periode", "periode");
+  MJ.surChangement.push(charger);
+</script>
+</body>
+</html>

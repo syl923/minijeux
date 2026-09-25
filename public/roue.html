@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roue de la fortune — MiniJeux</title>
+  <meta name="description" content="Un tour de roue gratuit par jour pour multiplier tes gains de pièces d'or jusqu'à x10.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎡</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="roue">
+<main>
+  <div class="titre-page">
+    <h1>🎡 Roue de la fortune</h1>
+  </div>
+  <div class="zone-roue panneau">
+    <div class="roue-cadre">
+      <div class="fleche"></div>
+      <canvas id="roue" width="880" height="880"></canvas>
+      <div class="moyeu">🪙</div>
+    </div>
+    <div class="roue-infos">
+      <h2>Multiplie tes gains !</h2>
+      <ul>
+        <li><b>1 tour gratuit par jour</b> (remis à zéro à minuit).</li>
+        <li>Le multiplicateur gagné s'applique aux pièces d'or de tes <b id="nb-parties">3</b> prochaines parties, tous jeux confondus.</li>
+        <li>Envie de retenter ta chance ? Un tour supplémentaire coûte <b id="prix">30</b> <i class="piece"></i>.</li>
+        <li>Si tu as déjà un multiplicateur plus fort, il est conservé.</li>
+      </ul>
+      <p id="etat-mult" class="doux"></p>
+      <button class="bouton" id="btn-tourner" style="font-size:20px">🎡 Tourner la roue</button>
+    </div>
+  </div>
+</main>
+<script src="/assets/commun.js"></script>
+<script src="/assets/roue.js"></script>
+</body>
+</html>

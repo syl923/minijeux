@@ -1,0 +1,4 @@
+donnees/
+captures/
+__pycache__/
+*.pyc

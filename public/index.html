@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MiniJeux — petits jeux gratuits et pièces d'or</title>
+  <meta name="description" content="Petits jeux gratuits : memory, bataille navale… Gagne des pièces d'or, tourne la roue et grimpe au classement.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="accueil">
+<main>
+  <section class="banniere">
+    <div>
+      <h1>Joue, gagne des pièces d'or,<br>deviens le roi du classement !</h1>
+      <p>Des petits jeux rapides. Chaque partie rapporte des pièces d'or, et la roue peut multiplier tes gains jusqu'à x10.</p>
+      <a class="bouton" href="/roue.html">🎡 Tourner la roue du jour</a>
+    </div>
+    <div class="deco">🪙🎲<br>🏆</div>
+  </section>
+
+  <h2>Les jeux</h2>
+  <div class="grille-jeux">
+    <a class="carte-jeu" href="/memory.html">
+      <div class="vignette memory">🃏</div>
+      <div class="infos">
+        <h3>Memory</h3>
+        <p>Retrouve toutes les paires le plus vite possible, avec le moins d'essais.</p>
+        <span class="gain">Jusqu'à 30 <i class="piece"></i> par partie</span>
+      </div>
+    </a>
+    <a class="carte-jeu" href="/bataille.html">
+      <div class="vignette bataille">🚢</div>
+      <div class="infos">
+        <h3>Bataille navale</h3>
+        <p>Place ta flotte et coule celle de l'amiral ordinateur avant qu'il ne coule la tienne.</p>
+        <span class="gain">Jusqu'à 30 <i class="piece"></i> par victoire</span>
+      </div>
+    </a>
+    <a class="carte-jeu" href="/roue.html">
+      <div class="vignette roue">🎡</div>
+      <div class="infos">
+        <h3>Roue de la fortune</h3>
+        <p>Un tour gratuit par jour : gagne un multiplicateur pour tes 3 prochaines parties.</p>
+        <span class="gain">Jusqu'à x10</span>
+      </div>
+    </a>
+    <div class="carte-jeu bientot">
+      <div class="vignette bientot">❓</div>
+      <div class="infos">
+        <h3>Bientôt…</h3>
+        <p>D'autres jeux arrivent.</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="section">
+    <h2>🏆 Les plus riches de la semaine</h2>
+    <div class="panneau" id="top-semaine"><p class="vide">Chargement…</p></div>
+  </section>
+</main>
+<script src="/assets/commun.js"></script>
+<script>
+  api("/api/classement?jeu=fortune&periode=semaine").then((r) => {
+    const zone = document.getElementById("top-semaine");
+    if (!r.lignes.length) {
+      zone.innerHTML = `<p class="vide">Personne n'a encore joué cette semaine. La première place est à prendre !</p>`;
+      return;
+    }
+    const medailles = ["🥇", "🥈", "🥉"];
+    zone.innerHTML = `<table class="tableau"><tbody>${r.lignes.slice(0, 5).map((l, i) => `
+      <tr><td>${medailles[i] || i + 1}</td><td>${echapper(l.pseudo)}</td>
+      <td class="valeur">${l.valeur} <i class="piece"></i></td></tr>`).join("")}</tbody></table>
+      <p style="text-align:center;margin:10px 0 0"><a href="/classement.html">Voir tous les classements →</a></p>`;
+  });
+</script>
+</body>
+</html>
