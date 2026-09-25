@@ -6,7 +6,7 @@ Jeux disponibles : **Memory** (facile 16 cartes / difficile 36 cartes) et **Bata
 
 ## Lancer le site en local
 
-Il suffit de Python 3.9 ou plus récent (aucune installation) :
+Il suffit de Python 3.9 ou plus récent, Windows compris (aucune installation) :
 
 ```
 python server.py

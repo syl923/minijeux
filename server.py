@@ -19,17 +19,15 @@ import secrets
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
-from zoneinfo import ZoneInfo
 
 RACINE = os.path.dirname(os.path.abspath(__file__))
 DOSSIER_PUBLIC = os.path.join(RACINE, "public")
 BASE = os.environ.get("MINIJEUX_BASE", os.path.join(RACINE, "donnees", "minijeux.db"))
 PORT = int(os.environ.get("PORT", "8000"))
-PARIS = ZoneInfo("Europe/Paris")
 
 OR_BIENVENUE = 20
 PRIX_TOUR_ROUE = 30
@@ -55,6 +53,24 @@ BATAILLE_TAILLE = 10
 BATAILLE_FLOTTE = [5, 4, 3, 3, 2]
 
 verrou = threading.Lock()
+
+
+def heure_paris():
+    """Heure de Paris. Windows n'a pas toujours la base des fuseaux (module tzdata) :
+    on applique alors directement la règle européenne (heure d'été du dernier dimanche
+    de mars au dernier dimanche d'octobre, à 1 h UTC)."""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Europe/Paris"))
+    except Exception:
+        utc = datetime.now(timezone.utc)
+
+        def dernier_dimanche(mois):
+            fin = datetime(utc.year, mois + 1, 1, 1, tzinfo=timezone.utc) - timedelta(days=1)
+            return fin - timedelta(days=(fin.weekday() + 1) % 7)
+
+        ete = dernier_dimanche(3) <= utc < dernier_dimanche(10)
+        return utc.astimezone(timezone(timedelta(hours=2 if ete else 1)))
 
 
 # --------------------------------------------------------------------------- base
@@ -116,12 +132,12 @@ def maintenant():
 
 def debut_semaine():
     """Lundi 0 h (heure de Paris) de la semaine en cours, en horodatage."""
-    jour = datetime.now(PARIS).replace(hour=0, minute=0, second=0, microsecond=0)
+    jour = heure_paris().replace(hour=0, minute=0, second=0, microsecond=0)
     return (jour - timedelta(days=jour.weekday())).timestamp()
 
 
 def aujourd_hui():
-    return datetime.now(PARIS).strftime("%Y-%m-%d")
+    return heure_paris().strftime("%Y-%m-%d")
 
 
 # --------------------------------------------------------------------------- comptes
@@ -519,6 +535,17 @@ ROUTES_GET = {"/api/classement": classement, "/api/roue": roue_config}
 
 
 class Gestionnaire(SimpleHTTPRequestHandler):
+    # Types fixés ici : sous Windows, Python les lit dans le registre, parfois faux (.js en text/plain).
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".html": "text/html; charset=utf-8",
+        ".js": "text/javascript; charset=utf-8",
+        ".css": "text/css; charset=utf-8",
+        ".json": "application/json",
+        ".svg": "image/svg+xml",
+        ".png": "image/png",
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DOSSIER_PUBLIC, **kwargs)
 
