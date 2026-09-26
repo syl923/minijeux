@@ -370,3 +370,152 @@ try {
   }
 } catch (e) {}
 majPlacement();
+
+// ------------------------------------------------------------ duel en ligne contre un autre joueur
+const DUEL = new URLSearchParams(location.search).get("duel");
+let vueDuel = null, versionDuel = -1, limiteDuel = 0, finMontree = false;
+
+function viderGrille(g) {
+  g.querySelectorAll(".bateau").forEach((b) => b.remove());
+  g.querySelectorAll(".case-mer").forEach((c) => { c.innerHTML = ""; c.classList.remove("visee"); });
+}
+
+function nommerFlotte(liste) { // retrouve le nom de chaque navire d'après sa taille
+  const pris = new Set();
+  return liste.map((b) => { const nom = nomNavire(pris, b.taille); pris.add(nom); return nom; });
+}
+
+async function suivreDuel() {
+  try {
+    const v = await api(`/api/duels/etat?duel=${DUEL}&version=${versionDuel}`);
+    if (!v.inchange) appliquerVueDuel(v);
+  } catch (e) {
+    message.textContent = e.message;
+  }
+}
+
+function appliquerVueDuel(v) {
+  const ancien = vueDuel;
+  vueDuel = v;
+  versionDuel = v.version;
+  limiteDuel = Date.now() + (v.reste || 0) * 1000;
+  document.getElementById("vs-adversaire").textContent = v.adversaire || "…";
+  if (v.statut === "attente") { message.textContent = "En attente d'un adversaire…"; return; }
+
+  if (v.phase === "placement" && !v.flotte_placee) {
+    message.textContent = "Place ta flotte et valide-la avant la fin du temps !";
+    return;
+  }
+  // flotte placée : on passe à l'affichage du combat
+  enJeu = true;
+  document.getElementById("bloc-placement").classList.add("cache");
+  document.getElementById("bloc-ennemi").classList.remove("cache");
+  if (!grilleEnnemi) {
+    grilleEnnemi = creerGrille(document.getElementById("grille-ennemi"), true);
+    grilleEnnemi.addEventListener("click", (e) => {
+      const c = e.target.closest(".case-mer");
+      if (c) tirDuel(Number(c.dataset.x), Number(c.dataset.y));
+    });
+  }
+  viderGrille(grilleJoueur);
+  viderGrille(grilleEnnemi);
+  v.ma_flotte.forEach((b, i) => dessinerBateau(grilleJoueur, b, "", NAVIRES[i] ? NAVIRES[i].type : "torpilleur"));
+  v.tirs_adverses.forEach(([x, y, r]) => marquer(grilleJoueur, x, y, r));
+  v.mes_tirs.forEach(([x, y, r]) => marquer(grilleEnnemi, x, y, r));
+  const nomsAdv = nommerFlotte(v.coules_adverses);
+  v.coules_adverses.forEach((b, i) => dessinerBateau(grilleEnnemi, b, "ennemi coule", typeDeNom(nomsAdv[i])));
+  // navires perdus de mon côté
+  const touches = new Set(v.tirs_adverses.map(([x, y]) => x + "," + y));
+  const nomsMiens = NAVIRES.map((n) => n.nom);
+  coulesJoueur.clear();
+  coulesEnnemi.clear();
+  v.ma_flotte.forEach((b, i) => {
+    if (cases(b).every(([x, y]) => touches.has(x + "," + y))) {
+      coulesJoueur.add(nomsMiens[i]);
+      grilleJoueur.querySelector(`.bateau[data-cle="${b.x},${b.y}"]`)?.classList.add("coule");
+    }
+  });
+  nomsAdv.forEach((n) => coulesEnnemi.add(n));
+  majEtats();
+
+  // sons des nouveaux tirs
+  if (ancien && v.dernier && JSON.stringify(v.dernier) !== JSON.stringify(ancien.dernier)) {
+    const coule = v.coules_adverses.length > (ancien.coules_adverses || []).length || coulesJoueur.size > (ancien.nbCoulesMiens || 0);
+    Sons.jouer(coule ? "kaboom" : v.dernier.resultat === "eau" ? "plouf" : "explosion");
+  }
+  v.nbCoulesMiens = coulesJoueur.size;
+
+  if (v.statut === "termine") return finDuelBataille(v);
+  if (v.phase === "placement") {
+    message.textContent = `Flotte prête ! En attente que ${v.adversaire} place la sienne…`;
+    grilleEnnemi.classList.remove("cible");
+    return;
+  }
+  grilleEnnemi.classList.toggle("cible", v.mon_tour);
+  const d = v.dernier;
+  const avant = d ? `${d.tireur} : ${LETTRES[d.y]}${d.x + 1} ${d.resultat === "eau" ? "dans l'eau 💧" : "touché 🔥"}. ` : "";
+  message.textContent = avant + (v.mon_tour ? "À toi de tirer ! 🎯" : `${v.adversaire} vise…`);
+}
+
+async function tirDuel(x, y) {
+  if (!vueDuel || !vueDuel.mon_tour || tirEnCours || caseDe(grilleEnnemi, x, y).classList.contains("visee")) return;
+  tirEnCours = true;
+  grilleEnnemi.classList.remove("cible");
+  try {
+    appliquerVueDuel(await api("/api/duels/jouer", { duel: DUEL, x, y }));
+  } catch (e) {
+    message.textContent = e.message;
+  }
+  tirEnCours = false;
+}
+
+function finDuelBataille(v) {
+  if (finMontree) return;
+  finMontree = true;
+  grilleEnnemi.classList.remove("cible");
+  if (v.flotte_adverse) {
+    const touchesMiens = new Set(v.mes_tirs.map(([x, y]) => x + "," + y));
+    const noms = nommerFlotte(v.flotte_adverse);
+    v.flotte_adverse.forEach((b, i) => {
+      if (!cases(b).every(([x, y]) => touchesMiens.has(x + "," + y))) dessinerBateau(grilleEnnemi, b, "ennemi fantome", typeDeNom(noms[i]));
+    });
+  }
+  const f = v.fin;
+  const titres = { victoire: "Victoire !", defaite: "Défaite…", nulle: "Duel annulé" };
+  message.textContent = titres[f.resultat];
+  setTimeout(() => afficherResultat({
+    titre: titres[f.resultat],
+    emoji: f.resultat === "victoire" ? "🏆" : f.resultat === "nulle" ? "🤝" : "🌊",
+    victoire: f.resultat === "victoire",
+    lignes: [`Duel contre ${echapper(v.adversaire)} · ${echapper(f.raison || "")}`],
+    fin: f,
+    rejouer: () => (location.href = "/duels.html"),
+  }), 900);
+}
+
+if (DUEL) {
+  document.getElementById("bandeau-duel").classList.remove("cache");
+  document.getElementById("lien-duel").classList.add("cache");
+  const btn = document.getElementById("btn-lancer");
+  btn.innerHTML = "✅ Valider ma flotte";
+  btn.onclick = async () => {
+    try {
+      appliquerVueDuel(await api("/api/duels/jouer", { duel: DUEL, flotte }));
+    } catch (e) {
+      message.textContent = e.message;
+    }
+  };
+  document.getElementById("btn-abandon-duel").onclick = async () => {
+    if (!vueDuel || vueDuel.statut !== "en_cours" || !confirm("Abandonner le duel ? Ton adversaire gagnera la mise.")) return;
+    appliquerVueDuel(await api("/api/duels/abandon", { duel: DUEL }));
+  };
+  MJ.pret.then(() => exigerConnexion(() => { suivreDuel(); setInterval(suivreDuel, 1000); }));
+  setInterval(() => {
+    if (!vueDuel || vueDuel.statut !== "en_cours") return;
+    const reste = Math.max(0, Math.round((limiteDuel - Date.now()) / 1000));
+    const el = document.getElementById("chrono-duel");
+    const aMoi = vueDuel.phase === "placement" ? !vueDuel.flotte_placee : vueDuel.mon_tour;
+    el.textContent = `⏱️ ${Math.floor(reste / 60)}:${String(reste % 60).padStart(2, "0")}`;
+    el.classList.toggle("urgent", aMoi && reste <= 15);
+  }, 250);
+}

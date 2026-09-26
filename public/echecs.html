@@ -12,10 +12,11 @@
 <main>
   <div class="titre-page">
     <h1>♞ Échecs</h1>
-    <span class="doux">Tu as les blancs. Un pion qui atteint le bout de l'échiquier devient une dame.</span>
+    <span class="doux" id="sous-titre">Tu as les blancs. Un pion qui atteint le bout de l'échiquier devient une dame.</span>
   </div>
 
   <section id="ecran-mode">
+    <p style="text-align:center"><a class="bouton secondaire" href="/duels.html">⚔️ Jouer contre un autre joueur en ligne</a></p>
     <div class="choix-mode">
       <button data-niveau="facile"><span class="icone">🐣</span><strong>Facile</strong>L'ordinateur fait des gaffes<br><span class="prix">Partie : 10 <i class="piece"></i></span></button>
       <button data-niveau="normal"><span class="icone">🙂</span><strong>Normal</strong>Il voit 2 coups à l'avance<br><span class="prix">Partie : 10 <i class="piece"></i></span></button>
@@ -24,6 +25,10 @@
   </section>
 
   <section id="ecran-jeu" class="cache">
+    <div class="bandeau-duel cache" id="bandeau-duel">
+      <span>⚔️ Duel en ligne contre</span><span class="vs" id="vs-adversaire">…</span>
+      <span class="doux" id="vs-couleur"></span><span class="chrono-duel" id="chrono-duel"></span>
+    </div>
     <div class="scene">
       <div>
         <div class="prises" id="prises-ia"></div>
@@ -33,7 +38,7 @@
       <div class="panneau-lateral">
         <div class="grand-compteur"><span>Statut</span><b id="statut" style="font-size:20px">À toi !</b></div>
         <div class="grand-compteur"><span>Coups joués</span><b id="nb-coups">0</b></div>
-        <div class="grand-compteur"><span>Niveau</span><b id="niveau" style="font-size:22px"></b></div>
+        <div class="grand-compteur" id="bloc-niveau"><span>Niveau</span><b id="niveau" style="font-size:22px"></b></div>
         <button class="bouton secondaire" id="btn-abandon">🏳️ Abandonner</button>
       </div>
     </div>

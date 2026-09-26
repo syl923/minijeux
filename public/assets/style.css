@@ -853,3 +853,23 @@ main.accueil { background: none; border: 0; box-shadow: none; padding: 0 14px 30
 .jauge-fievre.en-feu b { background: linear-gradient(90deg, #ff2d00, #ffd43b, #ff2d00); background-size: 200% 100%; animation: flamme .4s linear infinite; }
 .jauge-fievre.en-feu span { color: #ffd43b; animation: pulse .4s ease infinite; }
 @keyframes flamme { to { background-position: 200% 0; } }
+
+/* ------------------------------------------------------------ duels */
+.grille-duels { display: grid; grid-template-columns: 1fr 1.3fr 0.9fr; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .grille-duels { grid-template-columns: 1fr; } }
+.choix-duel { display: flex; gap: 10px; }
+.choix-duel button { flex: 1; padding: 14px 8px; border-radius: 16px; border: 3px solid transparent; cursor: pointer; background: #150e36; color: var(--texte); font: bold 15px var(--police); }
+.choix-duel button span { display: block; font-size: 36px; }
+.choix-duel button.actif { border-color: var(--or); background: #2a1d5e; }
+.ligne-duel { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px; border-radius: 12px; background: #150e36; flex-wrap: wrap; }
+.ligne-duel > :last-child { margin-left: auto; }
+.ligne-duel.pour-moi { outline: 2px solid var(--or); animation: pulse 1.5s ease infinite; }
+.jeu-duel { font-weight: bold; color: var(--cyan); }
+.attente { color: var(--texte-doux); font-size: 13px; }
+.attente::after { content: "…"; animation: points 1.2s steps(3) infinite; display: inline-block; width: 1em; overflow: hidden; vertical-align: bottom; }
+.point-vert { width: 10px; height: 10px; border-radius: 50%; background: var(--vert); box-shadow: 0 0 8px var(--vert); }
+.bandeau-duel { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; margin-bottom: 14px; border-radius: 14px; background: #150e36; border: 2px solid var(--or); }
+.bandeau-duel .vs { font: 900 18px var(--police-titre); color: var(--or); }
+.bandeau-duel .chrono-duel { margin-left: auto; font-weight: 900; font-size: 18px; }
+.bandeau-duel .chrono-duel.urgent { color: var(--rouge); animation: pulse .6s ease infinite; }
+@keyframes points { from { width: 0; } to { width: 1em; } }

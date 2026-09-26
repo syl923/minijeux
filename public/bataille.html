@@ -15,7 +15,14 @@
     <span class="doux">Coule les 5 navires ennemis avec le moins de tirs possible. Les navires ne se touchent jamais, même en diagonale.</span>
   </div>
 
+  <div class="bandeau-duel cache" id="bandeau-duel">
+    <span>⚔️ Duel en ligne contre</span><span class="vs" id="vs-adversaire">…</span>
+    <span class="doux">Un tir réussi permet de rejouer</span>
+    <span class="chrono-duel" id="chrono-duel"></span>
+    <button class="bouton secondaire petit" id="btn-abandon-duel">🏳️ Abandonner</button>
+  </div>
   <p class="message-bataille" id="message">Place ta flotte sur la grille</p>
+  <p style="text-align:center;margin-top:-8px" id="lien-duel"><a class="bouton secondaire petit" href="/duels.html">⚔️ Jouer contre un autre joueur en ligne</a></p>
 
   <div class="zone-bataille">
     <div class="bloc-grille">

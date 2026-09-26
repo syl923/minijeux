@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Duels en ligne — MiniJeux</title>
+  <meta name="description" content="Défie d'autres joueurs en ligne aux échecs et à la bataille navale. Le gagnant empoche les pièces d'or.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="duels">
+<main>
+  <div class="titre-page">
+    <h1>⚔️ Duels en ligne</h1>
+    <span class="doux">Affronte de vrais joueurs ! Chacun mise <b>10 <i class="piece"></i></b>, le gagnant repart avec <b>25 <i class="piece"></i></b>. En cas de nulle, chacun récupère sa mise.</span>
+  </div>
+
+  <div class="grille-duels">
+    <section class="panneau">
+      <h2>🎯 Lancer un défi</h2>
+      <div class="choix-duel" id="choix-jeu">
+        <button data-jeu="echecs" class="actif"><span>♞</span>Échecs</button>
+        <button data-jeu="bataille"><span>🚢</span>Bataille navale</button>
+      </div>
+      <label for="adversaire">Adversaire (facultatif)</label>
+      <input type="text" id="adversaire" placeholder="Laisse vide pour un défi ouvert à tous" maxlength="16">
+      <p class="erreur" id="erreur-defi"></p>
+      <button class="bouton" id="btn-defi" style="width:100%">⚔️ Lancer le défi (10 <i class="piece"></i>)</button>
+      <p class="doux" style="font-size:13px;margin-bottom:0">Temps limite : 3 minutes par coup aux échecs, 1 minute par tir à la bataille navale (un tir réussi permet de rejouer). Au-delà, la partie est perdue.</p>
+    </section>
+
+    <section class="panneau">
+      <h2>📜 Défis en attente</h2>
+      <div id="defis"><p class="doux">Chargement…</p></div>
+      <h2 style="margin-top:22px">🎮 Mes duels en cours</h2>
+      <div id="mes-duels"></div>
+    </section>
+
+    <section class="panneau">
+      <h2>🟢 Joueurs en ligne</h2>
+      <div id="en-ligne"></div>
+    </section>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/commun.js"></script>
+<script>
+  const NOMS = { echecs: "♞ Échecs", bataille: "🚢 Bataille navale" };
+  let jeuChoisi = "echecs";
+  let mesDefis = new Set();
+
+  document.querySelectorAll("#choix-jeu button").forEach((b) => (b.onclick = () => {
+    jeuChoisi = b.dataset.jeu;
+    document.querySelectorAll("#choix-jeu button").forEach((x) => x.classList.toggle("actif", x === b));
+  }));
+
+  document.getElementById("btn-defi").onclick = () => exigerConnexion(async () => {
+    const err = document.getElementById("erreur-defi");
+    err.textContent = "";
+    try {
+      const r = await api("/api/duels/creer", { jeu: jeuChoisi, adversaire: document.getElementById("adversaire").value.trim() });
+      majJoueur(r.joueur);
+      Sons.jouer("bonus");
+      document.getElementById("adversaire").value = "";
+      rafraichir();
+    } catch (e) {
+      if (e.statut !== 401 && e.statut !== 402) err.textContent = e.message;
+    }
+  });
+
+  async function accepter(id, jeu) {
+    exigerConnexion(async () => {
+      try {
+        const r = await api("/api/duels/rejoindre", { duel: id });
+        majJoueur(r.joueur);
+        location.href = `/${jeu}.html?duel=${id}`;
+      } catch (e) {
+        if (e.statut !== 401 && e.statut !== 402) alert(e.message);
+        rafraichir();
+      }
+    });
+  }
+
+  async function annuler(id) {
+    const r = await api("/api/duels/annuler", { duel: id });
+    majJoueur(r.joueur);
+    rafraichir();
+  }
+
+  function defier(pseudo) {
+    document.getElementById("adversaire").value = pseudo;
+    document.getElementById("adversaire").focus();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function rafraichir() {
+    const r = await api("/api/duels/salon");
+    // un de mes défis vient d'être accepté ? on file jouer
+    for (const d of r.mes_duels) {
+      if (mesDefis.has(d.id)) {
+        Sons.jouer("extra");
+        location.href = `/${d.jeu}.html?duel=${d.id}`;
+        return;
+      }
+    }
+    mesDefis = new Set(r.defis.filter((d) => d.a_moi).map((d) => d.id));
+    document.getElementById("defis").innerHTML = r.defis.length ? r.defis.map((d) => `
+      <div class="ligne-duel ${d.pour_moi ? "pour-moi" : ""}">
+        <span class="jeu-duel">${NOMS[d.jeu]}</span>
+        <span>${d.a_moi ? `<b>Ton défi</b>${d.invite ? ` pour ${echapper(d.invite)}` : ""} <span class="attente">en attente d'un adversaire</span>`
+          : `<b>${echapper(d.createur)}</b> ${d.pour_moi ? "te défie !" : "cherche un adversaire"}`}</span>
+        ${d.a_moi ? `<button class="bouton secondaire petit" onclick="annuler('${d.id}')">Annuler</button>`
+          : `<button class="bouton vert petit" onclick="accepter('${d.id}', '${d.jeu}')">Accepter</button>`}
+      </div>`).join("") : `<p class="doux">Aucun défi pour l'instant. Lance le tien !</p>`;
+    document.getElementById("mes-duels").innerHTML = r.mes_duels.length ? r.mes_duels.map((d) => `
+      <div class="ligne-duel"><span class="jeu-duel">${NOMS[d.jeu]}</span><span>contre <b>${echapper(d.adversaire)}</b></span>
+        <a class="bouton petit" href="/${d.jeu}.html?duel=${d.id}">Reprendre</a></div>`).join("")
+      : `<p class="doux">Aucun duel en cours.</p>`;
+    document.getElementById("en-ligne").innerHTML = r.en_ligne.length ? r.en_ligne.map((p) => `
+      <div class="ligne-duel"><span class="point-vert"></span><b>${echapper(p)}</b>
+        <button class="bouton secondaire petit" onclick="defier('${echapper(p)}')">Défier</button></div>`).join("")
+      : `<p class="doux">Personne d'autre en ligne pour le moment. Lance un défi ouvert : il attendra un adversaire !</p>`;
+  }
+  rafraichir();
+  setInterval(rafraichir, 3000);
+</script>
+</body>
+</html>

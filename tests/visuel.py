@@ -1,9 +1,10 @@
-"""Test visuel : un robot joue aux 6 jeux dans Chromium, prend des captures d'écran et filme chaque jeu.
+"""Test visuel : un robot joue aux 9 jeux et à un duel en ligne dans Chromium, prend des captures et filme chaque jeu.
 
 Prérequis : pip install playwright, et un serveur lancé sur une base de test :
     MINIJEUX_BASE=/tmp/test.db python server.py
-    MINIJEUX_BASE=/tmp/test.db python tests/visuel.py [dossier_de_sortie]
+    MINIJEUX_BASE=/tmp/test.db python tests/visuel.py [dossier_de_sortie] [jeu ...]
 (la même base permet au robot de créditer des pièces au compte de test).
+Pour les démonstrations, le robot déclenche lui-même certains bonus rares (flipper en feu, multibille).
 """
 
 import os
@@ -54,7 +55,12 @@ def joueurs_fictifs():
         c.appel("/api/snake/fin", {"partie": r["partie"], "entrees": entrees, "ticks": ticks})
         _, r = c.appel("/api/flipper/debut", {})
         sql("UPDATE parties SET debut = debut - 300 WHERE id = ?", r["partie"])
-        c.appel("/api/flipper/fin", {"partie": r["partie"], "score": random.randrange(20000, 90000, 10)})
+        c.appel("/api/flipper/fin", {"partie": r["partie"], "score": random.randrange(80000, 400000, 10)})
+        for jeu, res in (("tetris", {"score": random.randrange(2000, 9000, 10), "lignes": random.randint(10, 30)}),
+                         ("runner", {"score": random.randrange(1500, 4000), "distance": 1200, "pieces": 60})):
+            _, r = c.appel(f"/api/{jeu}/debut", {})
+            sql("UPDATE parties SET debut = debut - 300 WHERE id = ?", r["partie"])
+            c.appel(f"/api/{jeu}/fin", {"partie": r["partie"], **res})
 
 
 # ------------------------------------------------------------ robots dans le navigateur
@@ -181,7 +187,7 @@ def jouer_snake(page):
             page.wait_for_timeout(50)
             capture(page, f"snake-{e['n']}-fruits")
             page.keyboard.press("Space")
-        if e["file"] or e["n"] >= 14:  # après 14 fruits, le robot fonce dans le mur
+        if e["file"] or e["n"] >= 12:  # après 12 fruits, le robot fonce dans le mur
             page.wait_for_timeout(20)
             continue
         corps = [tuple(c) for c in e["c"]]
@@ -189,14 +195,14 @@ def jouer_snake(page):
 
         def sure(d):
             nx, ny = hx + dirs[d][0], hy + dirs[d][1]
-            if not (0 <= nx < 20 and 0 <= ny < 20) or (nx, ny) in corps[:-1]:
+            if not (0 <= nx < 15 and 0 <= ny < 15) or (nx, ny) in corps[:-1]:
                 return False
             vus, pile, bloque = {(nx, ny)}, [(nx, ny)], set(corps[:-1])
             while pile and len(vus) < len(corps) + 5:
                 x, y = pile.pop()
                 for dx, dy in dirs:
                     v = (x + dx, y + dy)
-                    if 0 <= v[0] < 20 and 0 <= v[1] < 20 and v not in bloque and v not in vus:
+                    if 0 <= v[0] < 15 and 0 <= v[1] < 15 and v not in bloque and v not in vus:
                         vus.add(v)
                         pile.append(v)
             return len(vus) >= len(corps) + 5
@@ -287,41 +293,261 @@ def jouer_echecs(page):
     roue_et_resultat(page, "echecs")
 
 
-def jouer_flipper(page, duree_max=60):
+def jouer_flipper(page, duree_max=45):
     page.goto(URL + "/flipper.html")
     page.wait_for_timeout(500)
     capture(page, "flipper-accueil")
     page.click("#btn-jouer", force=True)
-    page.wait_for_function("jeu && jeu.bille")
+    page.wait_for_function("jeu && jeu.billes.length")
     debut = time.time()
     actifs = {"g": 0.0, "d": 0.0}
-    captures = 0
+    captures, declenche = 0, set()
     while True:
-        e = page.evaluate("jeu && ({x: jeu.bille.p[0], y: jeu.bille.p[1], vy: jeu.bille.v[1], lance: jeu.dansCouloir, fini: jeu.fini})")
-        if not e or e["fini"]:
+        e = page.evaluate("({b: jeu.billes.map(b => [b.p[0], b.p[1], b.v[1]]), l: jeu.lanceurOccupe, fini: jeu.fini})")
+        if e["fini"]:
             break
         maintenant = time.time()
-        joue = maintenant - debut < duree_max
-        if e["lance"]:
+        ecoule = maintenant - debut
+        joue = ecoule < duree_max
+        if e["l"]:
             page.keyboard.down("Space")
             page.wait_for_timeout(random.randint(600, 1000))
             page.keyboard.up("Space")
             continue
+        # démonstration : on déclenche la bille en feu puis le multibille
+        if ecoule > 6 and "feu" not in declenche:
+            declenche.add("feu")
+            page.evaluate("jeu.fievre = FIEVRE_MAX - 1")
+        if ecoule > 18 and "multi" not in declenche:
+            declenche.add("multi")
+            page.evaluate("lancerMultibille()")
         for cote, touche in (("g", "ArrowLeft"), ("d", "ArrowRight")):
-            proche = e["y"] > 655 and e["vy"] > -50 and ((cote == "g" and 110 < e["x"] < 222) or (cote == "d" and 222 <= e["x"] < 335))
+            proche = any(y > 655 and vy > -50 and ((cote == "g" and 110 < x < 222) or (cote == "d" and 222 <= x < 335))
+                         for x, y, vy in e["b"])
             if joue and proche and actifs[cote] == 0:
                 page.keyboard.down(touche)
                 actifs[cote] = maintenant
             elif actifs[cote] and maintenant - actifs[cote] > 0.18:
                 page.keyboard.up(touche)
                 actifs[cote] = 0.0
-        if captures < 3 and maintenant - debut > 8 + captures * 14:
+        if captures < 3 and ecoule > 9 + captures * 10:
             captures += 1
             capture(page, f"flipper-jeu-{captures}")
         page.wait_for_timeout(8)
     page.wait_for_timeout(1000)
     capture(page, "flipper-game-over")
     roue_et_resultat(page, "flipper")
+
+
+def jouer_candy(page):
+    page.goto(URL + "/candy.html")
+    page.wait_for_timeout(500)
+    page.click("#btn-jouer", force=True)
+    page.wait_for_timeout(1200)
+    for n in range(20):
+        coup = page.evaluate("""() => {
+          const g = grille, N = 8;
+          let best = null;
+          for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) for (const [dx, dy] of [[1,0],[0,1]]) {
+            if (x + dx >= N || y + dy >= N) continue;
+            if (g[y][x][1] && g[y+dy][x+dx][1]) return [[x,y],[x+dx,y+dy]];
+            const t = g.map(l => l.map(v => v.slice()));
+            const a = t[y][x]; t[y][x] = t[y+dy][x+dx]; t[y+dy][x+dx] = a;
+            let n = 0;
+            for (let j = 0; j < N; j++) for (let i = 0; i < N - 2; i++) if (t[j][i][0] >= 0 && t[j][i][0] === t[j][i+1][0] && t[j][i][0] === t[j][i+2][0]) n++;
+            for (let i = 0; i < N; i++) for (let j = 0; j < N - 2; j++) if (t[j][i][0] >= 0 && t[j][i][0] === t[j+1][i][0] && t[j][i][0] === t[j+2][i][0]) n++;
+            if (n && (!best || n > best[0])) best = [n, [x,y], [x+dx,y+dy]];
+          }
+          return best && [best[1], best[2]]; }""")
+        if not coup:
+            break
+        (ax, ay), (bx, by) = coup
+        page.locator(".case-c").nth(ay * 8 + ax).click()
+        page.locator(".case-c").nth(by * 8 + bx).click()
+        page.wait_for_function("!occupe", timeout=20000)
+        if n in (4, 12):
+            capture(page, f"candy-coup-{n}")
+        if page.locator(".fenetre").count():
+            break
+    roue_et_resultat(page, "candy")
+
+
+def jouer_tetris(page, pieces_max=70):
+    page.goto(URL + "/tetris.html")
+    page.wait_for_timeout(400)
+    page.click("#btn-jouer", force=True)
+    page.wait_for_function("jeu && jeu.piece")
+    n = 0
+    while not page.evaluate("jeu.fini"):
+        if n >= pieces_max:  # assez joué : on lâche les pièces sans les placer jusqu'à la fin
+            page.keyboard.press("Space")
+            page.wait_for_timeout(120)
+            continue
+        coup = page.evaluate("""() => {
+          const p = jeu.piece; let best = null; let m = p.m;
+          for (let r = 0; r < 4; r++) {
+            for (let x = -3; x < 11; x++) {
+              if (collision(m, x, p.y)) continue;
+              let y = p.y; while (!collision(m, x, y + 1)) y++;
+              const g = jeu.grille.map(l => l.slice());
+              m.forEach((l, j) => l.forEach((v, i) => { if (v && y + j >= 0) g[y + j][x + i] = 1; }));
+              let lignes = 0, trous = 0, haut = 0, bosses = 0; const hs = [];
+              for (let j = 0; j < 20; j++) if (g[j].every(Boolean)) lignes++;
+              for (let i = 0; i < 10; i++) { let vu = false, h = 0; for (let j = 0; j < 20; j++) { if (g[j][i]) { if (!vu) h = 20 - j; vu = true; } else if (vu) trous++; } hs.push(h); haut += h; }
+              for (let i = 0; i < 9; i++) bosses += Math.abs(hs[i] - hs[i+1]);
+              const note = lignes * 8 - trous * 7 - haut * 0.5 - bosses * 0.4;
+              if (!best || note > best.note) best = { note, r, x };
+            }
+            m = tourner(m, 1);
+          }
+          return best; }""")
+        if not coup:
+            page.keyboard.press("Space")
+            continue
+        for _ in range(coup["r"]):
+            page.keyboard.press("ArrowUp")
+        dx = coup["x"] - page.evaluate("jeu.piece.x")
+        for _ in range(abs(dx)):
+            page.keyboard.press("ArrowRight" if dx > 0 else "ArrowLeft")
+        page.wait_for_timeout(90)
+        page.keyboard.press("Space")
+        page.wait_for_timeout(110)
+        n += 1
+        if n in (25, 60):
+            capture(page, f"tetris-{n}-pieces")
+    page.wait_for_timeout(600)
+    capture(page, "tetris-game-over")
+    roue_et_resultat(page, "tetris")
+
+
+def jouer_runner(page, duree_max=40):
+    page.goto(URL + "/runner.html")
+    page.wait_for_timeout(500)
+    capture(page, "runner-accueil")
+    page.click("#btn-jouer", force=True)
+    page.wait_for_function("jeu && jeu.compte === 0", timeout=10000)
+    debut, captures = time.time(), 0
+    while True:
+        e = page.evaluate("""() => ({fini: jeu.fini, voie: jeu.voie, y: jeu.y, obs: jeu.objets.filter(o => o.type !== 'piece'
+            && o.type !== 'bonus' && o.z + o.long > -0.5 && o.z < 14).map(o => [o.type, o.voie, o.z, o.long])})""")
+        if e["fini"]:
+            break
+        if time.time() - debut < duree_max:  # ensuite, le robot arrête d'esquiver
+            danger = [o for o in e["obs"] if o[1] == e["voie"]]
+            if danger:
+                typ, v, z, lg = min(danger, key=lambda o: o[2])
+                if typ == "train":
+                    libres = [w for w in range(3) if not any(o[1] == w and o[0] == "train" for o in e["obs"])]
+                    if libres:
+                        cible = min(libres, key=lambda w: abs(w - e["voie"]))
+                        page.keyboard.press("ArrowLeft" if cible < e["voie"] else "ArrowRight")
+                elif typ == "basse" and z < 3.5 and e["y"] < 0.05:
+                    page.keyboard.press("ArrowUp")
+                elif typ == "haute" and z < 3.0:
+                    page.keyboard.press("ArrowDown")
+        if captures < 3 and time.time() - debut > 5 + captures * 9:
+            captures += 1
+            capture(page, f"runner-course-{captures}")
+        page.wait_for_timeout(30)
+    page.wait_for_timeout(400)
+    capture(page, "runner-crash")
+    roue_et_resultat(page, "runner")
+
+
+def jouer_duels(nav, taille, etat_a, etat_b):
+    """Deux navigateurs, deux joueurs : un duel d'échecs (mat du berger) puis un duel de bataille navale."""
+    ctx_a = nav.new_context(viewport=taille, storage_state=etat_a, record_video_dir=str(SORTIE / "videos"), record_video_size=taille)
+    ctx_b = nav.new_context(viewport=taille, storage_state=etat_b)
+    a, b = ctx_a.new_page(), ctx_b.new_page()
+    for p in (a, b):
+        p.on("pageerror", lambda e: print("ERREUR JS :", e, flush=True))
+        p.on("dialog", lambda d: d.accept())
+    b.goto(URL + "/duels.html")   # le rival est dans le salon
+    a.goto(URL + "/duels.html")
+    a.wait_for_timeout(1200)
+    a.click("#choix-jeu button[data-jeu=echecs]")
+    a.click("#btn-defi")
+    b.wait_for_selector(".ligne-duel .bouton.vert", timeout=10000)
+    b.wait_for_timeout(500)
+    capture(b, "duels-salon")
+    b.click(".ligne-duel .bouton.vert")
+    a.wait_for_url("**/echecs.html?duel=*", timeout=15000)
+    b.wait_for_url("**/echecs.html?duel=*", timeout=15000)
+    a.wait_for_function("vueDuel && vueDuel.statut === 'en_cours'")
+    b.wait_for_function("vueDuel && vueDuel.statut === 'en_cours'")
+    blancs, noirs = (a, b) if a.evaluate("vueDuel.couleur") == "blancs" else (b, a)
+    ecran = lambda page, sq: page.locator(".case-e").nth(63 - sq if page.evaluate("retourne") else sq)
+    for joueur, (de, vers) in [(blancs, (52, 36)), (noirs, (12, 28)), (blancs, (61, 34)), (noirs, (1, 18)),
+                               (blancs, (59, 31)), (noirs, (6, 21)), (blancs, (31, 13))]:
+        joueur.wait_for_function("vueDuel && vueDuel.mon_tour", timeout=15000)
+        ecran(joueur, de).click()
+        joueur.wait_for_timeout(300)
+        ecran(joueur, vers).click()
+        joueur.wait_for_timeout(900)
+        if (de, vers) == (6, 21):
+            capture(noirs, "duel-echecs-vu-des-noirs")
+    a.wait_for_selector("#r-rejouer", timeout=15000)
+    b.wait_for_selector("#r-rejouer", timeout=15000)
+    a.wait_for_timeout(2500)
+    capture(blancs, "duel-echecs-victoire")
+    capture(noirs, "duel-echecs-defaite")
+
+    # duel de bataille navale
+    a.goto(URL + "/duels.html")
+    b.goto(URL + "/duels.html")
+    a.wait_for_timeout(800)
+    a.click("#choix-jeu button[data-jeu=bataille]")
+    a.click("#btn-defi")
+    b.wait_for_selector(".ligne-duel .bouton.vert", timeout=10000)
+    b.click(".ligne-duel .bouton.vert")
+    for p in (a, b):
+        p.wait_for_url("**/bataille.html?duel=*", timeout=15000)
+        p.wait_for_function("vueDuel && vueDuel.statut === 'en_cours'")
+        p.click("#btn-hasard")
+        p.wait_for_timeout(300)
+        p.click("#btn-lancer")
+    for p in (a, b):
+        p.wait_for_function("vueDuel && vueDuel.phase === 'tir'", timeout=15000)
+    def viser(v):
+        """Chasse : autour des touches non coulées, sinon en damier (jamais à côté d'un navire coulé)."""
+        tires = {(t[0], t[1]) for t in v["mes_tirs"]}
+        coulees = {(bt["x"] + (0 if bt["vertical"] else k), bt["y"] + (k if bt["vertical"] else 0))
+                   for bt in v["coules_adverses"] for k in range(bt["taille"])}
+        interdites = {(x + dx, y + dy) for x, y in coulees for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+        touches = [(t[0], t[1]) for t in v["mes_tirs"] if t[2] == "touche" and (t[0], t[1]) not in coulees]
+        cand = [(x + dx, y + dy) for x, y in touches for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        if len(touches) >= 2:
+            if len({t[1] for t in touches}) == 1:
+                cand = [c for c in cand if c[1] == touches[0][1]]
+            else:
+                cand = [c for c in cand if c[0] == touches[0][0]]
+        ok = lambda c: 0 <= c[0] < 10 and 0 <= c[1] < 10 and c not in tires and c not in interdites
+        cand = [c for c in cand if ok(c)]
+        if not cand:
+            libres = [(x, y) for y in range(10) for x in range(10) if ok((x, y))]
+            cand = [c for c in libres if (c[0] + c[1]) % 2 == 0] or libres
+        return random.choice(cand)
+
+    n = 0
+    while not a.evaluate("vueDuel.statut === 'termine'") and n < 250:
+        joueur = a if a.evaluate("vueDuel.mon_tour") else b if b.evaluate("vueDuel.mon_tour") else None
+        if joueur is None:
+            a.wait_for_timeout(200)
+            continue
+        x, y = viser(joueur.evaluate("vueDuel"))
+        joueur.locator("#grille-ennemi .case-mer").nth(y * 10 + x).click()
+        joueur.wait_for_timeout(150)
+        n += 1
+        if n == 40:
+            capture(a, "duel-bataille-en-cours")
+    a.wait_for_selector("#r-rejouer", timeout=15000)
+    a.wait_for_timeout(2500)
+    capture(a, "duel-bataille-fin")
+    video = a.video
+    ctx_a.close()
+    ctx_b.close()
+    video.save_as(str(SORTIE / "videos" / "duels.webm"))
+    video.delete()
 
 
 def main():
@@ -343,14 +569,26 @@ def main():
         page.fill("#f-mdp", "motdepasse")
         page.click("#f-valider")
         page.wait_for_selector("#bourse")
-        sql("UPDATE joueurs SET pieces = 200 WHERE pseudo = 'Sylvain'")
+        sql("UPDATE joueurs SET pieces = 400 WHERE pseudo = 'Sylvain'")
         etat = ctx.storage_state()
+        ctx.close()
+        ctx = nav.new_context(viewport=taille)  # un deuxième joueur pour les duels
+        page = ctx.new_page()
+        page.goto(URL)
+        page.click("#btn-connexion")
+        page.fill("#f-pseudo", "Rival")
+        page.fill("#f-mdp", "motdepasse")
+        page.click("#f-valider")
+        page.wait_for_selector("#bourse")
+        sql("UPDATE joueurs SET pieces = 400 WHERE pseudo = 'Rival'")
+        etat_rival = ctx.storage_state()
         ctx.close()
 
         # un contexte (et donc une vidéo) par jeu
         seuls = sys.argv[2:]  # on peut ne lancer que certains jeux
-        for nom, robot in [("memory", jouer_memory), ("bataille", jouer_bataille), ("snake", jouer_snake),
-                           ("demineur", jouer_demineur), ("echecs", jouer_echecs), ("flipper", jouer_flipper)]:
+        for nom, robot in [("runner", jouer_runner), ("candy", jouer_candy), ("tetris", jouer_tetris), ("flipper", jouer_flipper),
+                           ("memory", jouer_memory), ("bataille", jouer_bataille), ("snake", jouer_snake),
+                           ("demineur", jouer_demineur), ("echecs", jouer_echecs)]:
             if seuls and nom not in seuls:
                 continue
             ctx = nav.new_context(viewport=taille, storage_state=etat, record_video_dir=str(SORTIE / "videos"),
@@ -367,8 +605,20 @@ def main():
             video.save_as(str(SORTIE / "videos" / f"{nom}.webm"))
             video.delete()
 
+        if not seuls or "duels" in seuls:
+            try:
+                jouer_duels(nav, taille, etat, etat_rival)
+            except Exception as e:
+                print("ÉCHEC du robot duels :", e, flush=True)
+
         ctx = nav.new_context(viewport=taille, storage_state=etat)
         page = ctx.new_page()
+        page.goto(URL)
+        page.wait_for_timeout(900)
+        capture(page, "accueil-connecte")
+        page.hover(".menu-jeux")
+        page.wait_for_timeout(300)
+        capture(page, "menu-des-jeux")
         page.goto(URL + "/classement.html?jeu=flipper")
         page.wait_for_timeout(700)
         capture(page, "classement-flipper")
@@ -383,7 +633,7 @@ def main():
         mobile = nav.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True,
                                  has_touch=True, storage_state=etat)
         m = mobile.new_page()
-        for nom in ["", "demineur.html", "flipper.html", "echecs.html"]:
+        for nom in ["", "runner.html", "candy.html", "tetris.html", "flipper.html"]:
             m.goto(URL + "/" + nom)
             m.wait_for_timeout(700)
             capture(m, "mobile-" + (nom.replace(".html", "") or "accueil"))
