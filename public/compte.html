@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mon compte — Moka Arcade</title>
+  <meta name="description" content="Gère ton compte Moka Arcade : mot de passe, données, suppression.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐵</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="compte">
+<main>
+  <div class="titre-page"><h1>👤 Mon compte</h1></div>
+  <div class="page-texte" id="pas-connecte"><p>Connecte-toi pour gérer ton compte.</p><button class="bouton" onclick="ouvrirConnexion()">Me connecter</button></div>
+  <div class="grille-duels cache" id="espace-compte">
+    <section class="panneau">
+      <h2>📋 Mes informations</h2>
+      <div id="infos-compte"></div>
+      <p><button class="bouton secondaire" id="btn-export">⬇️ Télécharger mes données</button></p>
+      <p class="doux" style="font-size:13px">Un fichier contenant toutes tes données : compte, parties et scores.</p>
+    </section>
+    <section class="panneau">
+      <h2>🔑 Changer de mot de passe</h2>
+      <form id="form-mdp">
+        <label for="ancien">Mot de passe actuel</label><input type="password" id="ancien" autocomplete="current-password" required>
+        <label for="nouveau">Nouveau mot de passe</label><input type="password" id="nouveau" autocomplete="new-password" minlength="6" required>
+        <p class="erreur" id="erreur-mdp"></p>
+        <button class="bouton">Changer</button>
+      </form>
+    </section>
+    <section class="panneau zone-danger">
+      <h2>🗑️ Supprimer mon compte</h2>
+      <p>Ton compte, tes pièces, tes parties et tes scores seront <b>définitivement</b> effacés. Tes duels en cours seront perdus.</p>
+      <form id="form-supprimer">
+        <label for="mdp-suppr">Confirme avec ton mot de passe</label><input type="password" id="mdp-suppr" autocomplete="current-password" required>
+        <p class="erreur" id="erreur-suppr"></p>
+        <button class="bouton rouge">Supprimer définitivement</button>
+      </form>
+    </section>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/icones.js"></script>
+<script src="/assets/commun.js"></script>
+<script>
+  MJ.surChangement.push(async (j) => {
+    document.getElementById("pas-connecte").classList.toggle("cache", !!j);
+    document.getElementById("espace-compte").classList.toggle("cache", !j);
+    if (!j) return;
+    const d = await api("/api/compte/donnees");
+    const date = (t) => t ? new Date(t * 1000).toLocaleDateString("fr-FR") : "—";
+    document.getElementById("infos-compte").innerHTML = `
+      <p>Pseudo : <b>${echapper(d.compte.pseudo)}</b></p>
+      <p>Inscrit le : <b>${date(d.compte.inscrit_le)}</b></p>
+      <p>Pièces d'or : <b>${d.compte.pieces}</b> (gagnées au total : ${d.compte.pieces_gagnees})</p>
+      <p>Parties jouées : <b>${d.parties.length}</b></p>`;
+  });
+  document.getElementById("btn-export").onclick = async () => {
+    const d = await api("/api/compte/donnees");
+    const lien = document.createElement("a");
+    lien.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: "application/json" }));
+    lien.download = `moka-arcade-${d.compte.pseudo}.json`;
+    lien.click();
+  };
+  document.getElementById("form-mdp").onsubmit = async (e) => {
+    e.preventDefault();
+    const err = document.getElementById("erreur-mdp");
+    try {
+      await api("/api/compte/mot_de_passe", { ancien: document.getElementById("ancien").value, nouveau: document.getElementById("nouveau").value });
+      err.style.color = "var(--vert)"; err.textContent = "Mot de passe changé !";
+      e.target.reset();
+    } catch (x) { err.style.color = ""; err.textContent = x.message; }
+  };
+  document.getElementById("form-supprimer").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!confirm("Supprimer définitivement ton compte ? Cette action est irréversible.")) return;
+    try {
+      await api("/api/compte/supprimer", { mot_de_passe: document.getElementById("mdp-suppr").value });
+      alert("Ton compte a été supprimé. À bientôt peut-être !");
+      location.href = "/";
+    } catch (x) { document.getElementById("erreur-suppr").textContent = x.message; }
+  };
+</script>
+</body></html>

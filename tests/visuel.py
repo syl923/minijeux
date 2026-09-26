@@ -1,7 +1,7 @@
-"""Test visuel : un robot joue aux 9 jeux et à un duel en ligne dans Chromium, prend des captures et filme chaque jeu.
+"""Test visuel : un robot joue aux 11 jeux et à un duel en ligne dans Chromium, prend des captures et filme chaque jeu.
 
 Prérequis : pip install playwright, et un serveur lancé sur une base de test :
-    MINIJEUX_BASE=/tmp/test.db python server.py
+    MINIJEUX_SANS_LIMITE=1 MINIJEUX_BASE=/tmp/test.db python server.py
     MINIJEUX_BASE=/tmp/test.db python tests/visuel.py [dossier_de_sortie] [jeu ...]
 (la même base permet au robot de créditer des pièces au compte de test).
 Pour les démonstrations, le robot déclenche lui-même certains bonus rares (flipper en feu, multibille).
@@ -432,6 +432,8 @@ def jouer_runner(page, duree_max=40):
             && o.type !== 'bonus' && o.z + o.long > -0.5 && o.z < 14).map(o => [o.type, o.voie, o.z, o.long])})""")
         if e["fini"]:
             break
+        rampes = {o[1] for o in e["obs"] if o[0] == "rampe"}  # une rampe devant : on monte sur le toit du train
+        e["obs"] = [o for o in e["obs"] if o[0] != "rampe" and not (o[0] == "train" and (o[1] in rampes or e["y"] > 2))]
         if time.time() - debut < duree_max:  # ensuite, le robot arrête d'esquiver
             danger = [o for o in e["obs"] if o[1] == e["voie"]]
             if danger:
@@ -452,6 +454,53 @@ def jouer_runner(page, duree_max=40):
     page.wait_for_timeout(400)
     capture(page, "runner-crash")
     roue_et_resultat(page, "runner")
+
+
+def jouer_jet(page, duree_max=40):
+    page.goto(URL + "/jet.html")
+    page.wait_for_timeout(600)
+    capture(page, "jet-accueil")
+    page.click("#btn-jouer", force=True)
+    page.wait_for_function("jeu && jeu.sim")
+    page.keyboard.press("Space")
+    debut, captures = time.time(), 0
+    while not page.evaluate("jeu.fini"):
+        joue = time.time() - debut < duree_max  # ensuite le robot lâche tout et Moka tombe
+        e = page.evaluate("""(() => { const s = jeu.sim; const b = s.bambous.find(b => b.x + 84 > s.dist + 123) || s.bambous[0];
+            return {y: s.y, vy: s.vy, c: (b.haut + b.bas) / 2 + 12}; })()""")
+        if joue and e["y"] > e["c"] and e["vy"] > -1:
+            page.keyboard.press("Space")
+        if captures < 2 and time.time() - debut > 7 + captures * 12:
+            captures += 1
+            capture(page, f"jet-vol-{captures}")
+        page.wait_for_timeout(16)
+    page.wait_for_timeout(500)
+    capture(page, "jet-crash")
+    roue_et_resultat(page, "jet")
+
+
+def jouer_pingouin(page, duree_max=45):
+    page.goto(URL + "/pingouin.html")
+    page.wait_for_timeout(600)
+    capture(page, "pingouin-accueil")
+    page.click("#btn-jouer", force=True)
+    page.wait_for_function("jeu && jeu.collines")
+    debut, captures, appui = time.time(), 0, False
+    while not page.evaluate("jeu.fini"):
+        e = page.evaluate("({p: pente(jeu.x), sol: jeu.auSol, vy: jeu.vy})")
+        joue = time.time() - debut < duree_max  # ensuite le robot ne plonge plus : la tempête le rattrape
+        veut = joue and ((e["p"] < -0.05) if e["sol"] else (e["vy"] < 0))
+        if veut != appui:
+            (page.keyboard.down if veut else page.keyboard.up)("Space")
+            appui = veut
+        if captures < 3 and time.time() - debut > 6 + captures * 11:
+            captures += 1
+            capture(page, f"pingouin-glisse-{captures}")
+        page.wait_for_timeout(20)
+    page.keyboard.up("Space")
+    page.wait_for_timeout(900)
+    capture(page, "pingouin-tempete")
+    roue_et_resultat(page, "pingouin")
 
 
 def jouer_duels(nav, taille, etat_a, etat_b):
@@ -586,7 +635,7 @@ def main():
 
         # un contexte (et donc une vidéo) par jeu
         seuls = sys.argv[2:]  # on peut ne lancer que certains jeux
-        for nom, robot in [("runner", jouer_runner), ("candy", jouer_candy), ("tetris", jouer_tetris), ("flipper", jouer_flipper),
+        for nom, robot in [("jet", jouer_jet), ("pingouin", jouer_pingouin), ("runner", jouer_runner), ("candy", jouer_candy), ("tetris", jouer_tetris), ("flipper", jouer_flipper),
                            ("memory", jouer_memory), ("bataille", jouer_bataille), ("snake", jouer_snake),
                            ("demineur", jouer_demineur), ("echecs", jouer_echecs)]:
             if seuls and nom not in seuls:
@@ -628,12 +677,16 @@ def main():
         page.goto(URL + "/roue.html")
         page.wait_for_timeout(700)
         capture(page, "page-roue")
+        for nom in ("compte", "mentions-legales", "confidentialite"):
+            page.goto(URL + f"/{nom}.html")
+            page.wait_for_timeout(700)
+            capture(page, f"page-{nom}")
         ctx.close()
 
         mobile = nav.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True,
                                  has_touch=True, storage_state=etat)
         m = mobile.new_page()
-        for nom in ["", "runner.html", "candy.html", "tetris.html", "flipper.html"]:
+        for nom in ["", "jet.html", "pingouin.html", "runner.html", "candy.html"]:
             m.goto(URL + "/" + nom)
             m.wait_for_timeout(700)
             capture(m, "mobile-" + (nom.replace(".html", "") or "accueil"))

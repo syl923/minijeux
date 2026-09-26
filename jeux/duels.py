@@ -40,7 +40,7 @@ db.executescript(
 
 def pseudo(jid):
     j = lire_joueur(jid) if jid else None
-    return j["pseudo"] if j else None
+    return j["pseudo"] if j else ("Joueur supprimé" if jid else None)
 
 
 def lire_duel(did):

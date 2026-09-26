@@ -9,26 +9,46 @@ celle de chaque jeu dans jeux/<jeu>.py.
 
 import json
 import os
+import time
 from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import compte
 import noyau
 from noyau import DUREE_SESSION, ErreurApi, creer_session, db, joueur_de_session, joueur_public, lire_joueur
 from jeux import bataille, candy, demineur, duels, echecs, flipper, jet, memory, pingouin, runner, snake, tetris
 
 DOSSIER_PUBLIC = os.path.join(noyau.RACINE, "public")
 PORT = int(os.environ.get("PORT", "8000"))
+HOTE = os.environ.get("HOST", "0.0.0.0")               # certains hébergeurs imposent "::"
+HTTPS = os.environ.get("MINIJEUX_HTTPS") == "1"         # en ligne derrière HTTPS : cookie « Secure »
+DERRIERE_PROXY = os.environ.get("MINIJEUX_PROXY") == "1"  # l'hébergeur transmet l'IP réelle dans X-Forwarded-For
+
+# Limite anti-force-brute : nombre d'essais par adresse IP sur une fenêtre de temps.
+LIMITES = {"/api/connexion": (10, 600), "/api/inscription": (5, 3600)}
+if os.environ.get("MINIJEUX_SANS_LIMITE") == "1":  # tests en local uniquement
+    LIMITES = {chemin: (10**6, 1) for chemin in LIMITES}
+essais = {}
+
+
+def trop_d_essais(ip, chemin):
+    maxi, fenetre = LIMITES[chemin]
+    maintenant = time.time()
+    liste = [t for t in essais.get((ip, chemin), []) if t > maintenant - fenetre]
+    liste.append(maintenant)
+    essais[(ip, chemin)] = liste
+    return len(liste) > maxi
 
 ROUTES_POST = {
     "/api/roue/tourner": noyau.roue_tourner,
     "/api/secours": noyau.secours,
 }
-for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin):
+for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin, compte):
     ROUTES_POST.update(jeu.ROUTES)
 ROUTES_GET = {"/api/classement": noyau.classement, "/api/roue": noyau.roue_config, "/api/mes_records": noyau.mes_records,
               "/api/activite": noyau.activite,
-              **duels.ROUTES_GET}
+              **duels.ROUTES_GET, **compte.ROUTES_GET}
 
 verrou = noyau.verrou
 
@@ -54,9 +74,18 @@ class Gestionnaire(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        if HTTPS:
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
         if self.path.startswith("/api/"):
             self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    def ip(self):
+        if DERRIERE_PROXY and self.headers.get("X-Forwarded-For"):
+            return self.headers["X-Forwarded-For"].split(",")[0].strip()
+        return self.client_address[0]
 
     def jeton(self):
         c = cookies.SimpleCookie(self.headers.get("Cookie", ""))
@@ -69,7 +98,8 @@ class Gestionnaire(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(brut)))
         if cookie is not None:
             age = DUREE_SESSION if cookie else 0
-            self.send_header("Set-Cookie", f"session={cookie}; Path=/; HttpOnly; SameSite=Lax; Max-Age={age}")
+            securise = "; Secure" if HTTPS else ""
+            self.send_header("Set-Cookie", f"session={cookie}; Path=/; HttpOnly; SameSite=Lax; Max-Age={age}{securise}")
         self.end_headers()
         self.wfile.write(brut)
 
@@ -101,6 +131,8 @@ class Gestionnaire(SimpleHTTPRequestHandler):
             try:
                 with db:
                     if url.path in ("/api/inscription", "/api/connexion"):
+                        if trop_d_essais(self.ip(), url.path):
+                            raise ErreurApi("Trop d'essais depuis cette connexion : réessaie dans quelques minutes.", 429)
                         jid = (noyau.inscription if url.path == "/api/inscription" else noyau.connexion)(donnees)
                         jeton = creer_session(jid)
                         return self.repondre(200, {"joueur": joueur_public(lire_joueur(jid))}, cookie=jeton)
@@ -121,8 +153,17 @@ class Gestionnaire(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    serveur = ThreadingHTTPServer(("0.0.0.0", PORT), Gestionnaire)
-    print(f"MiniJeux en ligne sur http://localhost:{PORT}  (Ctrl+C pour arrêter)")
+    if ":" in HOTE:  # adresse IPv6 (ex. "::"), repli en IPv4 si la machine ne la gère pas
+        import socket
+        ThreadingHTTPServer.address_family = socket.AF_INET6
+        try:
+            serveur = ThreadingHTTPServer((HOTE, PORT), Gestionnaire)
+        except OSError:
+            ThreadingHTTPServer.address_family = socket.AF_INET
+            serveur = ThreadingHTTPServer(("0.0.0.0", PORT), Gestionnaire)
+    else:
+        serveur = ThreadingHTTPServer((HOTE, PORT), Gestionnaire)
+    print(f"Moka Arcade en ligne sur http://localhost:{PORT}  (Ctrl+C pour arrêter)")
     try:
         serveur.serve_forever()
     except KeyboardInterrupt:

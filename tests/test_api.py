@@ -14,10 +14,11 @@ os.environ["MINIJEUX_BASE"] = os.path.join(tempfile.mkdtemp(), "test.db")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import server  # noqa: E402
 import noyau  # noqa: E402
-from jeux import bataille, echecs, snake  # noqa: E402
+from jeux import bataille, echecs, jet, snake  # noqa: E402
 import robots  # noqa: E402
 from robots import bot_snake, jouer_memory  # noqa: E402
 
+server.LIMITES.update({"/api/connexion": (10**6, 1), "/api/inscription": (10**6, 1)})  # pas de limite pour les tests
 httpd = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Gestionnaire)
 threading.Thread(target=httpd.serve_forever, daemon=True).start()
 robots.URL = f"http://127.0.0.1:{httpd.server_port}"
@@ -342,6 +343,89 @@ class TestApi(unittest.TestCase):
         duree["memory"] = t.time() - debut
         fil.join()
         self.assertLess(duree["memory"], 0.5)
+
+    # ------------------------------------------------------------ compte (RGPD) et sécurité
+    def test_compte_donnees_mot_de_passe_suppression(self):
+        c, _ = nouveau_joueur("Partant")
+        jouer_memory(c)
+        code, d = c.appel("/api/compte/donnees")
+        self.assertEqual((code, d["compte"]["pseudo"]), (200, "Partant"))
+        self.assertEqual(len(d["parties"]), 1)
+        self.assertNotIn("hash", json.dumps(d))
+        self.assertEqual(c.appel("/api/compte/mot_de_passe", {"ancien": "faux", "nouveau": "nouveau123"})[0], 400)
+        self.assertEqual(c.appel("/api/compte/mot_de_passe", {"ancien": "secret123", "nouveau": "nouveau123"})[0], 200)
+        self.assertEqual(Client().appel("/api/connexion", {"pseudo": "Partant", "mot_de_passe": "nouveau123"})[0], 200)
+        self.assertEqual(c.appel("/api/compte/supprimer", {"mot_de_passe": "secret123"})[0], 400)
+        self.assertEqual(c.appel("/api/compte/supprimer", {"mot_de_passe": "nouveau123"})[0], 200)
+        self.assertEqual(Client().appel("/api/connexion", {"pseudo": "Partant", "mot_de_passe": "nouveau123"})[0], 400)
+        self.assertIsNone(c.appel("/api/moi")[1]["joueur"])
+        _, lig = Client().appel("/api/classement?jeu=memory&periode=tout")
+        self.assertNotIn("Partant", [l["pseudo"] for l in lig["lignes"]])
+
+    def test_suppression_pendant_un_duel(self):
+        ca, cb, did = self.duel("echecs", "Fuyard", "Patient")
+        self.assertEqual(ca.appel("/api/compte/supprimer", {"mot_de_passe": "secret123"})[0], 200)
+        vb = cb.appel(f"/api/duels/etat?duel={did}")[1]
+        self.assertEqual((vb["statut"], vb["fin"]["resultat"]), ("termine", "victoire"))
+        self.assertEqual(vb["adversaire"], "Joueur supprimé")
+
+    def test_limite_anti_force_brute(self):
+        ancien = dict(server.LIMITES)
+        server.LIMITES["/api/connexion"] = (3, 600)
+        server.essais.clear()
+        try:
+            codes = [Client().appel("/api/connexion", {"pseudo": "personne", "mot_de_passe": "x"})[0] for _ in range(5)]
+        finally:
+            server.LIMITES.update(ancien)
+            server.essais.clear()
+        self.assertEqual(codes, [400, 400, 400, 429, 429])
+
+    def test_activite(self):
+        code, a = Client().appel("/api/activite")
+        self.assertEqual(code, 200)
+        self.assertIn("recents", a)
+
+    # ------------------------------------------------------------ Moka Jet et Pingu Glisse
+    def test_jet_rejoue(self):
+        c, _ = nouveau_joueur("Pilote")
+        _, r = c.appel("/api/jet/debut", {})
+        # robot : on appuie dès que Moka passe sous le milieu du prochain passage
+        from jeux.snake import mulberry32
+        alea = mulberry32(r["graine"])
+        bambous = [jet.nouveau_bambou(alea, 620.0, 0)]
+        y, vy, dist, points, appuis, t = 360.0, 0.0, 0.0, 0, [], 0
+        while t < 3000:
+            px = dist + jet.X_JOUEUR
+            b = next((b for b in bambous if b["x"] + jet.LARGEUR_BAMBOU > px - jet.RAYON), bambous[-1])
+            appui = y > (b["haut"] + b["bas"]) / 2 + 12 and vy > -1
+            if appui:
+                appuis.append(t)
+            pts, _, mort = jet.simuler(r["graine"], appuis, t + 1)
+            if mort:
+                break
+            # on avance d'un pas avec la même simulation (état reconstruit)
+            vy = (jet.POUSSEE if appui else vy) + jet.GRAVITE
+            vy = min(vy, jet.CHUTE_MAX)
+            y += vy
+            dist += jet.vitesse(pts)
+            while bambous[-1]["x"] < dist + 900:
+                bambous.append(jet.nouveau_bambou(alea, bambous[-1]["x"] + jet.ECART_BAMBOUS, pts))
+            t += 1
+        with noyau.db:
+            noyau.db.execute("UPDATE parties SET debut = debut - 600 WHERE id = ?", (r["partie"],))
+        self.assertEqual(c.appel("/api/jet/fin", {"partie": r["partie"], "appuis": appuis, "ticks": t})[0], 400)  # pas mort à ce pas-là
+        code, f = c.appel("/api/jet/fin", {"partie": r["partie"], "appuis": appuis, "ticks": t + 1})
+        self.assertEqual(code, 200, f)
+        self.assertEqual(f["fin"]["score"], f["fin"]["bambous"] * 10 + f["fin"]["bananes"] * 5)
+
+    def test_pingouin_plausible(self):
+        c, _ = nouveau_joueur("Pingu")
+        _, r = c.appel("/api/pingouin/debut", {})
+        self.assertEqual(c.appel("/api/pingouin/fin", {"partie": r["partie"], "metres": 5000, "poissons": 0, "parfaits": 0})[0], 400)
+        with noyau.db:
+            noyau.db.execute("UPDATE parties SET debut = debut - 100 WHERE id = ?", (r["partie"],))
+        code, f = c.appel("/api/pingouin/fin", {"partie": r["partie"], "metres": 4000, "poissons": 12, "parfaits": 20})
+        self.assertEqual((code, f["fin"]["score"]), (200, 4000 + 12 * 25 + 20 * 10))
 
 
 if __name__ == "__main__":

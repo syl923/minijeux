@@ -1,12 +1,15 @@
-# MiniJeux
+# Moka Arcade
 
 Salle de petits jeux gratuits dans le navigateur, façon sites flash des années 2000, avec Moka le singe comme mascotte.
+Mise en ligne : voir **[DEPLOIEMENT.md](DEPLOIEMENT.md)** (hébergeur, nom de domaine, mentions légales, sauvegardes).
 On joue avec un pseudo, chaque partie coûte 10 **pièces d'or** et en rapporte selon le résultat, une **roue de la fortune**
 multiplie les gains une fois par jour, chaque jeu a son **classement**, et on peut **défier d'autres joueurs en ligne**.
 
 | Jeu | Décor | Principe |
 |---|---|---|
-| 🛹 Rail Rush | ville au crépuscule | course sans fin en perspective : trains, barrières, pièces, bonus (aimant, jetpack, x2, super-baskets) |
+| 🚀 Moka Jet | jungle | Moka et son jetpack entre les bambous ; partie rejouée par le serveur (anti-triche) |
+| 🐧 Pingu Glisse | banquise | glisser sur des collines enneigées, plonger, s'envoler, fuir la tempête |
+| 🛹 Rail Rush | ville (jour → nuit) | course sans fin en perspective : trains, rampes et toits, barrières, pièces, bonus (aimant, jetpack, x2, super-baskets) |
 | 🍬 Bonbons Folies | bonbons | alignements de 3+, bonbons rayés, emballés, arc-en-ciel, combos ; 20 coups |
 | 🧱 Blocomania | arcade | blocs qui tombent, réserve, fantôme, niveaux |
 | 🎸 Flipper Néon | futuriste | bumpers, bille en feu, multibille, jackpots, trou mystère, tir d'adresse, musique rock |
@@ -35,7 +38,7 @@ Pour essayer les duels seul : ouvrir un deuxième navigateur (ou une fenêtre de
 ```
 python -m unittest discover tests      # API : comptes, économie, tous les jeux, duels, roue, classements
 pip install playwright                 # une fois, pour le test visuel
-MINIJEUX_BASE=/tmp/test.db python server.py
+MINIJEUX_SANS_LIMITE=1 MINIJEUX_BASE=/tmp/test.db python server.py
 MINIJEUX_BASE=/tmp/test.db python tests/visuel.py captures [jeu ...]   # un robot joue à tout : captures + vidéos
 ```
 
@@ -59,5 +62,10 @@ serveur plus costaud (plusieurs processus, base PostgreSQL) : le code est organi
 ## Anti-triche
 
 - Memory, Démineur, Bonbons Folies, Bataille navale, Échecs, duels : tout se joue sur le serveur, la page ne fait qu'afficher.
-- Snake : la page envoie ses changements de direction, le serveur rejoue la partie et vérifie la durée.
-- Flipper, Blocomania, Rail Rush (temps réel) : le serveur vérifie que le score est possible pour la durée réellement jouée.
+- Snake et Moka Jet : la page envoie ses commandes, le serveur rejoue la partie à l'identique et vérifie la durée.
+- Flipper, Blocomania, Rail Rush, Pingu Glisse (temps réel) : le serveur vérifie que le score est possible pour la durée réellement jouée.
+
+## Données personnelles
+
+Pages `mentions-legales.html`, `confidentialite.html`, `cgu.html` (à compléter avant la mise en ligne : voir DEPLOIEMENT.md).
+Chaque joueur peut télécharger ses données et supprimer son compte depuis `compte.html` (module `compte.py`).

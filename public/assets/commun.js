@@ -141,7 +141,7 @@ function afficherCompte() {
   zone.innerHTML = `
     ${j.secours ? `<button class="bouton petit" id="btn-secours" title="Tu n'as plus de quoi jouer : 20 pièces offertes une fois par jour">🆘 +20 pièces</button>` : ""}
     <span class="bourse" id="bourse" title="Pièces d'or"><i class="piece"></i><span id="nb-pieces">${j.pieces}</span></span>
-    <span class="pseudo">${echapper(j.pseudo)}</span>
+    <a class="pseudo" href="/compte.html" title="Mon compte">${echapper(j.pseudo)}</a>
     <button class="bouton secondaire petit" id="btn-deco" title="Se déconnecter">⏻</button>`;
   zone.querySelector("#btn-deco").onclick = async () => {
     await api("/api/deconnexion", {});
