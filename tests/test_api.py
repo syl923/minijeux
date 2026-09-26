@@ -195,7 +195,7 @@ class TestApi(unittest.TestCase):
         with noyau.db:
             noyau.db.execute("UPDATE parties SET debut = debut - 120 WHERE id = ?", (r["partie"],))
         code, f = c.appel("/api/flipper/fin", {"partie": r["partie"], "score": 50000})
-        self.assertEqual((code, f["fin"]["pieces"]), (200, 10))
+        self.assertEqual((code, f["fin"]["pieces"]), (200, 7))
 
     def test_roue(self):
         c, _ = nouveau_joueur("Chanceux")

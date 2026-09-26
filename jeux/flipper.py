@@ -4,9 +4,9 @@ Il vérifie au moins que le score est plausible pour la durée réellement joué
 
 from noyau import ErreurApi, lire_partie, maintenant, nouvelle_partie, terminer_partie
 
-POINTS_MAX_PAR_SECONDE = 5000   # largement au-dessus d'un très bon joueur
-SCORE_MAX = 5_000_000
-POINTS_PAR_PIECE = 5000
+POINTS_MAX_PAR_SECONDE = 20000  # bonus, feu et multibille compris : largement au-dessus d'un très bon joueur
+SCORE_MAX = 20_000_000
+POINTS_PAR_PIECE = 25000
 PIECES_MAX = 40
 
 
@@ -23,7 +23,7 @@ def fin(joueur, donnees):
     duree = maintenant() - partie["debut"]
     if not 0 <= score <= SCORE_MAX or score > duree * POINTS_MAX_PAR_SECONDE:
         raise ErreurApi("Score invalide.")
-    resultat = terminer_partie(joueur, partie, score, min(PIECES_MAX, score // POINTS_PAR_PIECE))
+    resultat = terminer_partie(joueur, partie, score, min(PIECES_MAX, 5 + score // POINTS_PAR_PIECE))
     return {"fin": resultat}
 
 

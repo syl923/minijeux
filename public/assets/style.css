@@ -846,3 +846,10 @@ main.accueil { background: none; border: 0; box-shadow: none; padding: 0 14px 30
 .icone-bonus { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 50%; font: 900 20px var(--police); color: #fff; border: 3px solid #fff; box-shadow: 0 0 12px rgba(255,255,255,.4); }
 .icone-bonus.aimant { background: #e03131; } .icone-bonus.jetpack { background: #1c7ed6; }
 .icone-bonus.double { background: #f08c00; } .icone-bonus.baskets { background: #2f9e44; }
+
+.jauge-fievre { flex: 1; max-width: 140px; }
+.jauge-fievre i { display: block; height: 14px; margin-top: 8px; border: 2px solid #ff8c1a; border-radius: 4px; overflow: hidden; }
+.jauge-fievre b { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, #ff8c1a 0 6px, #ffd43b 6px 8px); transition: width .2s; }
+.jauge-fievre.en-feu b { background: linear-gradient(90deg, #ff2d00, #ffd43b, #ff2d00); background-size: 200% 100%; animation: flamme .4s linear infinite; }
+.jauge-fievre.en-feu span { color: #ffd43b; animation: pulse .4s ease infinite; }
+@keyframes flamme { to { background-position: 200% 0; } }

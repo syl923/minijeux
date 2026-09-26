@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Flipper — MiniJeux</title>
-  <meta name="description" content="Un flipper néon avec bumpers, cibles, multiplicateur et musique rétro. Gagne des pièces d'or.">
+  <title>Flipper Néon — MiniJeux</title>
+  <meta name="description" content="Un flipper néon rock'n'roll : bille en feu, multibille, jackpots et trou mystère. Gagne des pièces d'or.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪩</text></svg>">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -16,11 +16,12 @@
         <div><span>SCORE</span><b id="score">0</b></div>
         <div><span>BILLES</span><b id="billes">3</b></div>
         <div><span>MULTI</span><b id="multi">x1</b></div>
+        <div class="jauge-fievre"><span>FIÈVRE 🔥</span><i><b id="fievre"></b></i></div>
       </div>
       <canvas id="flipper"></canvas>
       <div class="surcouche" id="surcouche">
-        <h2>🪩 Flipper Néon</h2>
-        <p class="doux">3 billes. Allume les 3 couloirs du haut pour augmenter le multiplicateur,<br>fais tomber les 3 cibles pour le jackpot !</p>
+        <h2>🎸 Flipper Néon</h2>
+        <p class="doux">3 billes, du rock et des bonus partout :<br>mets la bille en feu, déclenche le multibille, vise le trou mystère !</p>
         <button class="bouton gros-bouton" id="btn-jouer">▶ Jouer (10 <i class="piece"></i>)</button>
       </div>
       <div class="commandes-tactiles">
@@ -37,14 +38,17 @@
         <kbd>Espace</kbd> (maintenir puis lâcher) : lanceur<br>
         Sur téléphone : touche la moitié gauche ou droite du jeu.
       </p>
-      <h2 style="margin:10px 0 0">Points</h2>
+      <h2 style="margin:10px 0 0">Bonus</h2>
       <p class="touches">
-        Bumper : 100 · Slingshot : 30<br>
-        Couloir du haut : 250 (les 3 = multiplicateur +1)<br>
-        Cible tombante : 500 (les 3 = jackpot 5 000)<br>
-        Étoiles du couloir droit : 750 (les 2 = 3 000)<br>
-        Tous les points sont multipliés (jusqu'à x5).<br>
-        1 pièce d'or tous les 5 000 points (40 max).
+        🔥 <b>Bille en feu</b> : 14 coups de bumper et tous les points sont doublés pendant 15 s<br>
+        🎯 <b>Jackpot</b> : fais tomber les 3 cibles de gauche (5 000)<br>
+        ⚡ <b>Multibille</b> : 2 jackpots = 3 billes en même temps !<br>
+        ➕ <b>Extra ball</b> : 3 jackpots = une bille de plus (une fois par partie)<br>
+        ❓ <b>Trou mystère</b> : une surprise à chaque fois<br>
+        💫 <b>Tir d'adresse</b> : au lancer, vise le couloir du haut qui clignote en bleu (+5 000)<br>
+        ✖ <b>Multiplicateur</b> : allume les 3 couloirs du haut (jusqu'à x5)<br>
+        🔗 <b>Combos</b> : enchaîne 8 coups sans pause<br>
+        5 pièces d'or + 1 tous les 25 000 points (40 max).
       </p>
     </div>
   </div>
