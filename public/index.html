@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MiniJeux — petits jeux gratuits et pièces d'or</title>
-  <meta name="description" content="Petits jeux gratuits : Rail Rush, Bonbons Folies, Blocomania, flipper, snake, memory, démineur, échecs et bataille navale en ligne. Gagne des pièces d'or et grimpe au classement.">
+  <title>Moka Arcade — petits jeux gratuits, pièces d'or et duels en ligne</title>
+  <meta name="description" content="Moka Arcade : 11 petits jeux gratuits (Rail Rush, Moka Jet, Pingu Glisse, Bonbons Folies, flipper, snake, échecs et bataille navale en ligne…). Gagne des pièces d'or et grimpe au classement.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐵</text></svg>">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -14,47 +14,89 @@
     <div id="mascotte-banniere"></div>
     <div>
       <span class="bulle" id="bulle">Salut, moi c'est Moka ! Prêt à jouer ?</span>
-      <h1 class="titre-flash">Joue, gagne des pièces d'or<br>et deviens le roi du classement !</h1>
-      <p>Une partie coûte 10 pièces, une bonne partie en rapporte bien plus. Et chaque jour, la roue de la fortune peut multiplier tes gains jusqu'à x10 !</p>
+      <h1 class="titre-flash">Joue, gagne des pièces d'or<br>et deviens le roi de l'arcade !</h1>
+      <p>11 jeux gratuits, des classements chaque semaine, des duels en ligne… et chaque jour, la roue de la fortune peut multiplier tes gains jusqu'à x10 !</p>
       <a class="bouton" href="#salle">🎮 Choisir un jeu</a>
       <a class="bouton secondaire" href="/duels.html">⚔️ Défier un joueur</a>
     </div>
+    <a class="jeu-du-jour" id="jeu-du-jour" href="#"></a>
   </section>
 
-  <div class="defilant-infos"><span id="infos">Bienvenue sur MiniJeux ! ★ Nouveaux jeux : Rail Rush, Bonbons Folies et Blocomania ★ Défie tes amis aux échecs et à la bataille navale en ligne ★</span></div>
+  <div class="defilant-infos"><span id="infos">Bienvenue sur Moka Arcade !</span></div>
 
-  <div class="accueil-grille">
+  <div class="accueil-grille trois">
     <aside class="colonne">
       <div class="boite carte-compte">
         <h2 class="boite-titre bleu">Mon compte</h2>
         <div class="boite-corps" id="mon-compte"></div>
       </div>
       <div class="boite">
+        <h2 class="boite-titre violet">💡 L'astuce de Moka</h2>
+        <div class="boite-corps astuce"><p id="astuce"></p><button class="bouton secondaire petit" id="autre-astuce">Une autre !</button></div>
+      </div>
+      <div class="boite">
+        <h2 class="boite-titre vert">📊 Aujourd'hui</h2>
+        <div class="boite-corps" id="stats"><p class="doux">Chargement…</p></div>
+      </div>
+    </aside>
+
+    <section class="boite" id="salle">
+      <h2 class="boite-titre orange">🎮 La salle de jeux</h2>
+      <div class="boite-corps">
+        <div class="categories" id="categories"></div>
+        <div class="grille-jeux" id="grille-jeux"></div>
+      </div>
+    </section>
+
+    <aside class="colonne">
+      <div class="boite">
         <h2 class="boite-titre">🏆 Top de la semaine</h2>
         <div class="boite-corps"><ol class="top-mini" id="top-semaine"><li>Chargement…</li></ol>
           <p style="margin:10px 0 0;text-align:center"><a href="/classement.html">Tous les classements →</a></p></div>
+      </div>
+      <div class="boite">
+        <h2 class="boite-titre bleu">✨ Derniers exploits</h2>
+        <div class="boite-corps"><ul class="exploits" id="exploits"><li class="doux">Chargement…</li></ul></div>
       </div>
       <div class="boite">
         <h2 class="boite-titre violet">⚔️ Duels en ligne</h2>
         <div class="boite-corps" id="duels-ouverts"><p class="doux" style="margin:0">Échecs et bataille navale contre de vrais joueurs.</p></div>
       </div>
     </aside>
-
-    <section class="boite" id="salle">
-      <h2 class="boite-titre vert">🎮 La salle de jeux</h2>
-      <div class="boite-corps">
-        <div class="categories" id="categories"></div>
-        <div class="grille-jeux" id="grille-jeux"></div>
-      </div>
-    </section>
   </div>
 </main>
 <script src="/assets/sons.js"></script>
+<script src="/assets/icones.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
   document.getElementById("mascotte-banniere").innerHTML = MASCOTTE;
+  const NOMS = Object.fromEntries(JEUX.map((j) => [j.id, j.nom]));
   let categorie = "tous";
   let records = {};
+
+  // jeu du jour : change chaque jour, le même pour tout le monde
+  const jour = Math.floor(Date.now() / 86400000);
+  const duJour = JEUX[jour % JEUX.length];
+  const carte = document.getElementById("jeu-du-jour");
+  carte.href = `/${duJour.id}.html`;
+  carte.innerHTML = `<span class="etiquette">⭐ Jeu du jour ⭐</span>${iconeJeu(duJour.id, "icone-du-jour")}<b>${duJour.nom}</b><span class="bouton petit">▶ Jouer</span>`;
+
+  const ASTUCES = [
+    "La roue de la fortune se lance à la fin de ta première partie gagnée de la journée : garde ta meilleure partie pour elle !",
+    "À Pingu Glisse, relâche le bouton en haut des bosses et plonge dans les descentes : les glissades parfaites donnent un gros coup de vitesse.",
+    "À Rail Rush, les rampes jaunes permettent de courir sur le toit des trains… et il y a souvent des pièces là-haut !",
+    "Au flipper, 14 coups de bumper mettent la bille en feu : tous les points sont doublés pendant 15 secondes.",
+    "À Bonbons Folies, échange deux bonbons spéciaux entre eux pour un super combo.",
+    "Au Memory, chaque paire trouvée ajoute 5 secondes au chrono : enchaîne vite !",
+    "À la bataille navale, les navires ne se touchent jamais : inutile de tirer autour d'un navire coulé.",
+    "Plus de pièces ? Le bouton 🆘 t'en offre 20 une fois par jour.",
+    "Aux échecs, un mat rapide contre l'ordinateur difficile rapporte jusqu'à 65 pièces.",
+    "À Moka Jet, de petites tapes régulières valent mieux qu'une grosse poussée.",
+  ];
+  let numeroAstuce = jour % ASTUCES.length;
+  const montrerAstuce = () => (document.getElementById("astuce").textContent = ASTUCES[numeroAstuce % ASTUCES.length]);
+  document.getElementById("autre-astuce").onclick = () => { numeroAstuce++; montrerAstuce(); Sons.jouer("pop"); };
+  montrerAstuce();
 
   function afficherJeux() {
     document.getElementById("categories").innerHTML = Object.entries(CATEGORIES).map(([id, nom]) =>
@@ -63,12 +105,11 @@
     document.getElementById("grille-jeux").innerHTML = JEUX.filter((j) => categorie === "tous" || j.cat === categorie).map((j) => `
       <a class="carte-jeu" href="/${j.id}.html">
         ${j.badge ? `<span class="ruban ${j.badge.split(" ")[0]}">${j.badge}</span>` : ""}
-        <div class="vignette ${j.id}">${j.emoji}</div>
+        <div class="vignette ${j.id}">${iconeJeu(j.id)}<span class="survol-jouer">▶ JOUER</span></div>
         <div class="infos">
           <h3>${j.nom}</h3>
           <p>${j.desc}</p>
           ${records[j.id] ? `<span class="record-perso">🏅 Ton record : ${records[j.id].score}</span>` : ""}
-          <span class="bouton petit jouer">▶ Jouer</span>
         </div>
       </a>`).join("");
   }
@@ -88,25 +129,37 @@
       <p style="margin:4px 0 10px;font:900 18px var(--police)">${echapper(j.pseudo)}</p>
       <div class="stat-ligne"><span>Pièces d'or</span><b>${j.pieces} <i class="piece"></i></b></div>
       <div class="stat-ligne"><span>Parties jouées</span><b>${parties}</b></div>
-      <div class="stat-ligne"><span>Roue du jour</span><b>${j.tour_gratuit ? "✨ disponible" : "✔ utilisée"}</b></div>`;
+      <div class="stat-ligne"><span>Roue du jour</span><b>${j.tour_gratuit ? "✨ disponible" : "✔ utilisée"}</b></div>
+      <p style="margin:10px 0 0"><a href="/compte.html">Gérer mon compte</a></p>`;
     document.getElementById("bulle").textContent = j.tour_gratuit
       ? `Salut ${j.pseudo} ! Ta roue du jour t'attend à la fin de ta première partie gagnée !`
       : `Re-salut ${j.pseudo} ! On se refait une partie ?`;
     afficherJeux();
   });
 
+  const medailles = ["🥇", "🥈", "🥉"];
   api("/api/classement?jeu=fortune&periode=semaine").then((r) => {
-    const medailles = ["🥇", "🥈", "🥉"];
     document.getElementById("top-semaine").innerHTML = r.lignes.length
       ? r.lignes.slice(0, 5).map((l, i) => `<li>${medailles[i] || i + 1 + "."} ${echapper(l.pseudo)}<b>${l.valeur} <i class="piece"></i></b></li>`).join("")
       : "<li>Personne n'a encore joué cette semaine !</li>";
-    if (r.lignes.length) {
-      document.getElementById("infos").textContent += ` Le plus riche de la semaine : ${r.lignes[0].pseudo} avec ${r.lignes[0].valeur} pièces ! ★`;
-    }
+  });
+  api("/api/activite").then((a) => {
+    document.getElementById("stats").innerHTML = `
+      <div class="stat-ligne"><span>👥 Joueurs inscrits</span><b>${a.joueurs}</b></div>
+      <div class="stat-ligne"><span>🎮 Parties du jour</span><b>${a.parties_jour}</b></div>
+      <div class="stat-ligne"><span>🪙 Pièces gagnées</span><b>${a.pieces_jour}</b></div>`;
+    document.getElementById("exploits").innerHTML = a.recents.length ? a.recents.map((r) => `
+      <li>${iconeJeu(r.jeu, "icone-mini")}<span><b>${echapper(r.pseudo)}</b> · ${NOMS[r.jeu] || r.jeu}<br><small>${r.score} points · +${r.pieces} <i class="piece"></i></small></span></li>`).join("")
+      : `<li class="doux">Aucun exploit pour l'instant : sois le premier !</li>`;
+    const infos = [`Bienvenue sur Moka Arcade ! ★ Jeu du jour : ${duJour.nom} ★ ${a.parties_jour} parties jouées aujourd'hui`];
+    a.recents.slice(0, 4).forEach((r) => infos.push(`${r.pseudo} vient de faire ${r.score} points à ${NOMS[r.jeu] || r.jeu}`));
+    infos.push("Nouveaux jeux : Moka Jet et Pingu Glisse !");
+    document.getElementById("infos").textContent = infos.join("  ★  ");
   });
   api("/api/duels/salon").then((r) => {
     const n = r.defis.length;
-    document.getElementById("duels-ouverts").innerHTML = `<p style="margin:0 0 10px">${n ? `<b>${n}</b> défi${n > 1 ? "s" : ""} en attente d'un adversaire !` : "Aucun défi en attente : lance le tien !"}</p>
+    document.getElementById("duels-ouverts").innerHTML = `<p style="margin:0 0 10px">${n ? `<b>${n}</b> défi${n > 1 ? "s" : ""} en attente d'un adversaire !` : "Aucun défi en attente : lance le tien !"}
+      ${r.en_ligne.length ? `<br><span class="doux">🟢 ${r.en_ligne.length} joueur(s) en ligne</span>` : ""}</p>
       <a class="bouton secondaire petit" href="/duels.html">Aller au salon</a>`;
   }).catch(() => {});
 </script>

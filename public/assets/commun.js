@@ -90,7 +90,7 @@ function construireEntete() {
   entete.className = "entete";
   entete.innerHTML = `
     <div class="entete-haut">
-      <a class="logo" href="/" title="Accueil">${MASCOTTE}<span class="logo-texte">Mini<b>Jeux</b></span></a>
+      <a class="logo" href="/" title="Accueil">${MASCOTTE}<span class="logo-texte">Moka <b>Arcade</b></span></a>
       <span class="slogan">Les petits jeux qui rapportent gros !</span>
       <div class="compte">
         <button class="bouton-son" id="btn-son" title="Couper / remettre le son"></button>
@@ -101,7 +101,7 @@ function construireEntete() {
       ${lien("/", "accueil", "🏠 Accueil")}
       <span class="menu-jeux ${jeu ? "actif" : ""}">
         <button class="onglet-nav" type="button">🎮 Les jeux ▾</button>
-        <span class="deroulant">${JEUX.map((j) => `<a href="/${j.id}.html" class="${page === j.id ? "actif" : ""}"><i>${j.emoji}</i>${j.nom}${j.badge ? `<em>${j.badge}</em>` : ""}</a>`).join("")}</span>
+        <span class="deroulant">${JEUX.map((j) => `<a href="/${j.id}.html" class="${page === j.id ? "actif" : ""}">${iconeJeu(j.id, "icone-menu")}${j.nom}${j.badge ? `<em class="${j.badge.split(" ")[0]}">${j.badge}</em>` : ""}</a>`).join("")}</span>
       </span>
       ${lien("/duels.html", "duels", "⚔️ Duels en ligne")}
       ${lien("/roue.html", "roue", "🎡 Roue")}
@@ -118,8 +118,14 @@ function construireEntete() {
 
   const pied = document.createElement("footer");
   pied.className = "pied";
-  pied.innerHTML = `<b>MiniJeux</b> — jeux gratuits, sans publicité · Les pièces d'or n'ont aucune valeur monétaire<br>
-    ${JEUX.map((j) => `<a href="/${j.id}.html">${j.nom}</a>`).join(" · ")}`;
+  pied.innerHTML = `<div class="pied-mascotte">${MASCOTTE}</div>
+    <b>Moka Arcade</b> — petits jeux gratuits, sans publicité · Les pièces d'or sont virtuelles et n'ont aucune valeur monétaire<br>
+    ${JEUX.map((j) => `<a href="/${j.id}.html">${j.nom}</a>`).join(" · ")}<br>
+    <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité et cookies</a> ·
+    <a href="/cgu.html">Règles du site</a> · <a href="/compte.html">Mon compte</a>`;
+  // icône du jeu dans le titre de la page (à la place de l'émoji)
+  const h1 = document.querySelector(".titre-page h1");
+  if (jeu && h1) h1.innerHTML = iconeJeu(jeu.id, "icone-titre") + h1.textContent.replace(/^\S+\s/, "");
   document.body.append(pied);
 }
 

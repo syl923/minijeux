@@ -322,6 +322,20 @@ function dessiner(dt = 0) {
   g.addColorStop(1, "#05020f");
   ctx.fillStyle = g;
   ctx.fillRect(-10, -20, toile.width + 20, toile.height + 40);
+  // fond animé : aurore néon et étoiles qui défilent lentement
+  const tf = performance.now() / 1000;
+  for (let b = 0; b < 3; b++) {
+    ctx.strokeStyle = ["rgba(168, 85, 247, .16)", "rgba(34, 211, 238, .12)", "rgba(34, 197, 94, .1)"][b];
+    ctx.lineWidth = 40 - b * 10;
+    ctx.beginPath();
+    for (let x = -10; x <= toile.width + 10; x += 15) ctx.lineTo(x, 140 + b * 90 + Math.sin(x / 50 + tf * .7 + b * 2) * 30);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 45; i++) {
+    const sx = (i * 67) % toile.width, sy = ((i * 131) + tf * (8 + i % 3 * 6)) % toile.height;
+    ctx.fillStyle = `rgba(255,255,255,${.25 + .35 * Math.abs(Math.sin(tf * 2 + i))})`;
+    ctx.fillRect(sx, sy, i % 4 ? 1.5 : 2.5, i % 4 ? 1.5 : 2.5);
+  }
   ctx.strokeStyle = "rgba(120, 100, 255, .12)";
   ctx.lineWidth = 1;
   for (let x = 1; x < L; x++) { ctx.beginPath(); ctx.moveTo(x * T, 0); ctx.lineTo(x * T, toile.height); ctx.stroke(); }
@@ -401,4 +415,4 @@ function dessiner(dt = 0) {
   }
 }
 
-dessiner();
+(function attente() { if (!jeu) { dessiner(); requestAnimationFrame(attente); } })();

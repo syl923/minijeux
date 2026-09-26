@@ -355,3 +355,21 @@ def mes_records(joueur, requete):
         (joueur["id"],),
     ).fetchall()
     return {"records": {l["jeu"]: {"score": l["s"], "parties": l["n"]} for l in lignes}}
+
+
+def activite(joueur, requete):
+    """Vie du site pour l'accueil : derniers exploits et chiffres du jour."""
+    minuit = heure_paris().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    recents = db.execute(
+        """SELECT j.pseudo, p.jeu, p.score, p.pieces FROM parties p JOIN joueurs j ON j.id = p.joueur_id
+           WHERE p.statut = 'terminee' AND p.score > 0 AND p.jeu NOT LIKE 'duel_%' ORDER BY p.fin DESC LIMIT 8"""
+    ).fetchall()
+    jour = db.execute(
+        "SELECT COUNT(*) AS n, COALESCE(SUM(pieces), 0) AS p FROM parties WHERE statut = 'terminee' AND fin >= ?", (minuit,)
+    ).fetchone()
+    return {
+        "recents": [dict(r) for r in recents],
+        "joueurs": db.execute("SELECT COUNT(*) FROM joueurs").fetchone()[0],
+        "parties_jour": jour["n"],
+        "pieces_jour": jour["p"],
+    }
