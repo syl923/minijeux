@@ -12,7 +12,9 @@ import random
 import re
 import secrets
 import sqlite3
+import threading
 import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
 RACINE = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,22 @@ ROUE = [
     {"mult": 5, "poids": 7},
     {"mult": 10, "poids": 3},
 ]
+
+
+# Un seul verrou protège la base : chaque requête est courte (quelques millisecondes).
+# Les calculs longs (réflexion de l'ordinateur aux échecs) se font hors verrou, voir sans_verrou().
+verrou = threading.Lock()
+
+
+@contextmanager
+def sans_verrou():
+    """Libère la base le temps d'un calcul long, pour ne pas faire attendre les autres joueurs."""
+    db.commit()
+    verrou.release()
+    try:
+        yield
+    finally:
+        verrou.acquire()
 
 
 class ErreurApi(Exception):

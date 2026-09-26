@@ -1,4 +1,4 @@
-"""Memory contre la montre : 20 secondes au départ, +5 secondes par paire trouvée.
+"""Memory contre la montre : 20 s au départ (30 s en difficile), +5 secondes par paire trouvée.
 
 Le serveur connaît l'ordre des cartes et tient le chrono : la page ne découvre une carte
 qu'en la retournant, et une carte retournée après la fin du temps ne compte pas.
@@ -10,13 +10,13 @@ from noyau import ErreurApi, lire_partie, maintenant, nouvelle_partie, sauver_et
 
 MODES = {"facile": 8, "difficile": 18}
 NB_SYMBOLES = 24      # doit correspondre au nombre d'images dans memory.js
-TEMPS_DEPART = 20
+TEMPS_DEPART = {"facile": 20, "difficile": 30}
 BONUS_PAIRE = 5
 TOLERANCE = 1.0       # latence réseau acceptée, en secondes
 
 
 def temps_restant(partie, etat):
-    limite = partie["debut"] + TEMPS_DEPART + BONUS_PAIRE * (len(etat["trouvees"]) // 2)
+    limite = partie["debut"] + TEMPS_DEPART[partie["mode"]] + BONUS_PAIRE * (len(etat["trouvees"]) // 2)
     return limite - maintenant()
 
 
@@ -35,7 +35,7 @@ def debut(joueur, donnees):
     random.shuffle(cartes)
     etat = {"cartes": cartes, "trouvees": [], "attente": None, "coups": 0}
     pid = nouvelle_partie(joueur, "memory", mode, etat)
-    return {"partie": pid, "nb_cartes": len(cartes), "temps": TEMPS_DEPART, "bonus": BONUS_PAIRE}
+    return {"partie": pid, "nb_cartes": len(cartes), "temps": TEMPS_DEPART[mode], "bonus": BONUS_PAIRE}
 
 
 def retourner(joueur, donnees):

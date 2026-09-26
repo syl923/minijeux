@@ -28,7 +28,7 @@ class Client:
 def bot_snake(graine):
     """Joue au snake en allant vers les fruits, puis fonce dans un mur. Renvoie (entrées, ticks)."""
     alea = snake.mulberry32(graine)
-    corps = [(10, 10), (9, 10), (8, 10)]
+    corps = list(snake.DEPART)
     direction, fruit = 1, snake.placer_fruit(alea, corps)
     entrees, fruits, tick = [], 0, 0
     while fruits < 8:
@@ -40,7 +40,7 @@ def bot_snake(graine):
             if d == (direction + 2) % 4:
                 continue
             nx, ny = hx + snake.DIRECTIONS[d][0], hy + snake.DIRECTIONS[d][1]
-            if 0 <= nx < 20 and 0 <= ny < 20 and (nx, ny) not in corps[:-1]:
+            if 0 <= nx < snake.TAILLE and 0 <= ny < snake.TAILLE and (nx, ny) not in corps[:-1]:
                 break
         if d != direction:
             entrees.append([tick, d])
@@ -57,7 +57,7 @@ def bot_snake(graine):
         dx, dy = snake.DIRECTIONS[direction]
         tete = (corps[0][0] + dx, corps[0][1] + dy)
         tick += 1
-        if not (0 <= tete[0] < 20 and 0 <= tete[1] < 20) or tete in corps[:-1]:
+        if not (0 <= tete[0] < snake.TAILLE and 0 <= tete[1] < snake.TAILLE) or tete in corps[:-1]:
             return entrees, tick
         corps = [tete] + (corps if tete == fruit else corps[:-1])
         if tete == fruit:

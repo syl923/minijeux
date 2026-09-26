@@ -7,7 +7,7 @@ Majuscules = blancs (le joueur), minuscules = noirs (l'ordinateur), "." = vide.
 
 import random
 
-from noyau import ErreurApi, lire_partie, nouvelle_partie, sauver_etat, terminer_partie
+from noyau import ErreurApi, lire_partie, nouvelle_partie, sans_verrou, sauver_etat, terminer_partie
 
 DEPART = "rnbqkbnrpppppppp" + "." * 32 + "PPPPPPPPRNBQKBNR"
 NIVEAUX = {"facile": 1, "normal": 2, "difficile": 3}
@@ -337,6 +337,8 @@ def coup(joueur, donnees):
         c = (int(donnees.get("de")), int(donnees.get("vers")))
     except (TypeError, ValueError):
         raise ErreurApi("Coup invalide.")
+    if etat.get("reflexion"):
+        raise ErreurApi("L'ordinateur réfléchit encore.")
     if e["t"] != "w" or c not in coups_legaux(e):
         raise ErreurApi("Coup illégal.")
 
@@ -352,7 +354,13 @@ def coup(joueur, donnees):
     if issue is None and etat["demi_coups"] >= MAX_DEMI_COUPS:
         issue = ("nulle", "Partie trop longue")
     if issue is None:
-        c_ia = choisir_coup(e, partie["mode"])
+        # L'ordinateur réfléchit sans bloquer le serveur ; la partie est marquée pour refuser tout autre coup.
+        etat["e"], etat["reflexion"] = e, True
+        sauver_etat(partie["id"], etat)
+        with sans_verrou():
+            c_ia = choisir_coup(e, partie["mode"])
+        etat["reflexion"] = False
+        partie, _ = lire_partie(joueur, partie["id"], "echecs")  # abandonnée entre-temps ? lève une erreur
         e = avancer(e, c_ia)
         reponse["ia"] = list(c_ia)
         issue = fin_de_partie(e, etat["positions"])
@@ -372,6 +380,8 @@ def coup(joueur, donnees):
 
 def abandon(joueur, donnees):
     partie, etat = lire_partie(joueur, donnees.get("partie"), "echecs")
+    if etat.get("reflexion"):
+        raise ErreurApi("Attends que l'ordinateur ait joué.")
     return {"fin": terminer(joueur, partie, etat, "defaite", "Abandon")}
 
 

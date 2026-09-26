@@ -1,7 +1,7 @@
 // Snake : la page enregistre les changements de direction, le serveur rejoue la partie pour la valider.
 // Le placement des fruits et la vitesse doivent rester identiques à jeux/snake.py.
 
-const TAILLE = 20;
+const TAILLE = 15;
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // haut, droite, bas, gauche
 const toile = document.getElementById("toile");
 const ctx = toile.getContext("2d");
@@ -38,7 +38,7 @@ async function lancer() {
   }
   majJoueur(r.joueur);
   const alea = mulberry32(r.graine);
-  const corps = [[10, 10], [9, 10], [8, 10]];
+  const corps = [[7, 7], [6, 7], [5, 7]];
   jeu = {
     partie: r.partie, alea, corps, avant: corps.map((c) => c.slice()),
     dir: 1, file: [], entrees: [], tick: 0, fruits: 0, score: 0,
@@ -163,6 +163,52 @@ async function mourir() {
 }
 
 // ------------------------------------------------------------ dessin
+// Décor de prairie dessiné une fois pour toutes : herbe en damier, touffes, fleurs et cailloux.
+const decor = document.createElement("canvas");
+decor.width = toile.width;
+decor.height = toile.height;
+(() => {
+  const d = decor.getContext("2d");
+  const alea = mulberry32(2027);
+  for (let y = 0; y < TAILLE; y++)
+    for (let x = 0; x < TAILLE; x++) {
+      d.fillStyle = (x + y) % 2 ? "#7cc653" : "#86d05c";
+      d.fillRect(x * C, y * C, C, C);
+    }
+  for (let i = 0; i < 260; i++) { // brins d'herbe
+    const x = alea() * decor.width, y = alea() * decor.height;
+    d.strokeStyle = alea() < .5 ? "#5fa83a" : "#9bdc70";
+    d.lineWidth = 2;
+    d.beginPath();
+    d.moveTo(x, y);
+    d.quadraticCurveTo(x + 2, y - 5, x + (alea() - .5) * 6, y - 9);
+    d.stroke();
+  }
+  const couleurs = ["#ffffff", "#ffe066", "#ff8fab", "#b197fc"];
+  for (let i = 0; i < 26; i++) { // petites fleurs
+    const x = alea() * decor.width, y = alea() * decor.height, c = couleurs[Math.floor(alea() * 4)];
+    for (let p = 0; p < 5; p++) {
+      const a = p * Math.PI * 2 / 5;
+      d.fillStyle = c;
+      d.beginPath(); d.arc(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 3, 0, Math.PI * 2); d.fill();
+    }
+    d.fillStyle = "#f59f00";
+    d.beginPath(); d.arc(x, y, 2.5, 0, Math.PI * 2); d.fill();
+  }
+  for (let i = 0; i < 10; i++) { // cailloux
+    const x = alea() * decor.width, y = alea() * decor.height;
+    d.fillStyle = "#adb5bd";
+    d.beginPath(); d.ellipse(x, y, 7, 5, alea(), 0, Math.PI * 2); d.fill();
+    d.fillStyle = "rgba(255,255,255,.5)";
+    d.beginPath(); d.ellipse(x - 2, y - 2, 3, 2, 0, 0, Math.PI * 2); d.fill();
+  }
+  // ombre douce sur les bords
+  const g = d.createRadialGradient(decor.width / 2, decor.height / 2, decor.width * .35, decor.width / 2, decor.height / 2, decor.width * .75);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(20,60,10,.35)");
+  d.fillStyle = g;
+  d.fillRect(0, 0, decor.width, decor.height);
+})();
 function exploser([x, y], couleur, n) {
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * 4;
@@ -177,12 +223,7 @@ function dessiner(alpha) {
     jeu.secousse *= .85;
     if (jeu.secousse < .5) jeu.secousse = 0;
   }
-  // fond en damier sombre
-  for (let y = 0; y < TAILLE; y++)
-    for (let x = 0; x < TAILLE; x++) {
-      ctx.fillStyle = (x + y) % 2 ? "#15223a" : "#1a2a46";
-      ctx.fillRect(x * C, y * C, C, C);
-    }
+  ctx.drawImage(decor, 0, 0);
   if (!jeu) return ctx.restore();
 
   // fruit
@@ -219,24 +260,44 @@ function dessiner(alpha) {
   });
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.shadowColor = "#5be37d";
-  ctx.shadowBlur = 16;
+  // ombre portée sur l'herbe
+  ctx.strokeStyle = "rgba(20, 50, 10, .35)";
+  ctx.lineWidth = C * .7;
+  ctx.beginPath();
+  pos.forEach(([x, y], i) => (i ? ctx.lineTo(x + 4, y + 6) : ctx.moveTo(x + 4, y + 6)));
+  ctx.stroke();
   for (let i = n - 1; i > 0; i--) {
     const k = i / n;
-    ctx.strokeStyle = `hsl(${140 - k * 60}, 80%, ${55 - k * 15}%)`;
-    ctx.lineWidth = C * (.78 - k * .25);
+    ctx.strokeStyle = `hsl(${42 - k * 18}, 95%, ${58 - k * 12}%)`;
+    ctx.lineWidth = C * (.8 - k * .25);
     ctx.beginPath();
     ctx.moveTo(pos[i][0], pos[i][1]);
     ctx.lineTo(pos[i - 1][0], pos[i - 1][1]);
     ctx.stroke();
+    if (i % 2 === 0) { // taches du python
+      ctx.fillStyle = "rgba(110, 50, 10, .55)";
+      ctx.beginPath();
+      ctx.arc(pos[i][0], pos[i][1], C * (.2 - k * .06), 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
-  ctx.shadowBlur = 0;
   // tête et yeux
   const [hx, hy] = pos[0];
   const [dx, dy] = DIRS[jeu.dir];
-  ctx.fillStyle = "#7dff9e";
+  if (!jeu.fini && Math.sin(t * 9) > .3) { // langue qui sort
+    ctx.strokeStyle = "#e0314f";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(hx + dx * C * .4, hy + dy * C * .4);
+    ctx.lineTo(hx + dx * C * .75, hy + dy * C * .75);
+    ctx.stroke();
+  }
+  const gt = ctx.createRadialGradient(hx - 4, hy - 4, 2, hx, hy, C * .5);
+  gt.addColorStop(0, "#ffd66b");
+  gt.addColorStop(1, "#f08c00");
+  ctx.fillStyle = gt;
   ctx.beginPath();
-  ctx.arc(hx, hy, C * .45, 0, Math.PI * 2);
+  ctx.arc(hx, hy, C * .47, 0, Math.PI * 2);
   ctx.fill();
   for (const s of [-1, 1]) {
     const ex = hx + dx * C * .15 + dy * s * C * .2, ey = hy + dy * C * .15 - dx * s * C * .2;

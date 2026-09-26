@@ -9,7 +9,8 @@ import secrets
 
 from noyau import ErreurApi, lire_partie, maintenant, nouvelle_partie, terminer_partie
 
-TAILLE = 20
+TAILLE = 15
+DEPART = [(7, 7), (6, 7), (5, 7)]
 DIRECTIONS = [(0, -1), (1, 0), (0, 1), (-1, 0)]  # haut, droite, bas, gauche
 MAX_TICKS = 50_000
 POINTS_FRUIT = 10
@@ -47,7 +48,7 @@ def placer_fruit(alea, corps):
 def rejouer(graine, entrees, ticks):
     """Rejoue la partie. Renvoie (score, fruits, durée minimale en ms) ou lève ErreurApi."""
     alea = mulberry32(graine)
-    corps = [(10, 10), (9, 10), (8, 10)]
+    corps = list(DEPART)
     direction = 1
     fruit = placer_fruit(alea, corps)
     fruits = score = duree = 0

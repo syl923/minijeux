@@ -9,7 +9,6 @@ celle de chaque jeu dans jeux/<jeu>.py.
 
 import json
 import os
-import threading
 from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -29,7 +28,7 @@ for jeu in (memory, bataille, snake, demineur, echecs, flipper):
     ROUTES_POST.update(jeu.ROUTES)
 ROUTES_GET = {"/api/classement": noyau.classement, "/api/roue": noyau.roue_config}
 
-verrou = threading.Lock()
+verrou = noyau.verrou
 
 
 class Gestionnaire(SimpleHTTPRequestHandler):
