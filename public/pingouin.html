@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pingu Glisse — Moka Arcade</title>
+  <meta name="description" content="Fais glisser le pingouin sur les collines enneigées, plonge dans les descentes, envole-toi et fuis la tempête !">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="pingouin">
+<main>
+  <div class="titre-page">
+    <h1>🐧 Pingu Glisse</h1>
+    <span class="doux">Glisse le plus loin possible avant que la tempête ne te rattrape !</span>
+  </div>
+  <div class="scene">
+    <div class="toile-cadre">
+      <canvas id="pingouin"></canvas>
+      <div class="surcouche" id="surcouche">
+        <h2>Pingu Glisse</h2>
+        <p class="doux">Maintiens <b>Espace</b> (ou le doigt / la souris) pour plonger dans les descentes,<br>relâche en montée pour t'envoler. Atterris bien dans la pente : glissade parfaite !</p>
+        <button class="bouton gros-bouton" id="btn-jouer">▶ Glisser (10 <i class="piece"></i>)</button>
+      </div>
+    </div>
+    <div class="panneau-lateral">
+      <div class="grand-compteur"><span>Distance</span><b id="metres">0 m</b></div>
+      <div class="grand-compteur"><span>Poissons</span><b id="poissons">0</b></div>
+      <div class="grand-compteur"><span>Glissades parfaites</span><b id="parfaits">0</b></div>
+      <p class="touches">Score = mètres + 25 par poisson + 10 par glissade parfaite.<br>La tempête accélère petit à petit : garde ta vitesse !</p>
+    </div>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/commun.js"></script>
+<script src="/assets/pingouin.js"></script>
+</body>
+</html>

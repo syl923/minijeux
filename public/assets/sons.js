@@ -248,6 +248,37 @@ const Sons = (() => {
         note(midi(acc[(mesure + temps) % 3] + 12), t + beat / 4, beat / 5, { type: "square", volume: 0.03, filtre: 3000, dest: bus });
       },
     },
+    // Moka Jet : marimba et bongos de la jungle
+    jungle: {
+      tempo: 116,
+      accords: [[60, 64, 67, 72], [57, 60, 64, 69], [62, 65, 69, 74], [55, 59, 62, 67]],
+      jouerTemps(t, temps, mesure, bus) {
+        const acc = this.accords[mesure % 4], beat = 60 / this.tempo;
+        [0, 1].forEach((k) => {
+          const n = acc[(temps * 2 + k + mesure) % 4];
+          note(midi(n + 12), t + k * beat / 2, beat * .35, { type: "sine", volume: 0.07, dest: bus });
+          note(midi(n + 24), t + k * beat / 2, beat * .15, { type: "sine", volume: 0.02, dest: bus });
+        });
+        note(midi(acc[0] - 12), t, beat * .6, { type: "triangle", volume: 0.12, dest: bus });
+        note(temps % 2 ? 220 : 160, t, 0.12, { type: "sine", volume: 0.18, glisse: temps % 2 ? 140 : 100, dest: bus }); // bongos
+        note(260, t + beat * .75, 0.08, { type: "sine", volume: 0.1, glisse: 180, dest: bus });
+        bruitPlanifie(t + beat / 2, 0.04, 0.05, 8000, 5000, bus, "highpass"); // maracas
+      },
+    },
+    // Pingu Glisse : valse de clochettes sur la banquise
+    banquise: {
+      tempo: 132,
+      accords: [[64, 67, 71, 76], [60, 64, 67, 72], [62, 66, 69, 74], [59, 62, 66, 71]],
+      jouerTemps(t, temps, mesure, bus) {
+        const acc = this.accords[Math.floor(mesure / 1) % 4], beat = 60 / this.tempo;
+        if (temps % 3 === 0) note(midi(acc[0] - 24), t, beat * 1.2, { type: "triangle", volume: 0.13, dest: bus });
+        else note(midi(acc[(temps % 3)] - 12), t, beat * .5, { type: "triangle", volume: 0.06, dest: bus });
+        const n = acc[(temps + mesure * 2) % 4] + 12;
+        note(midi(n), t, beat * 1.5, { type: "sine", volume: 0.06, dest: bus });
+        note(midi(n + 12), t, beat * .4, { type: "sine", volume: 0.025, dest: bus });
+        if (temps === 3) bruitPlanifie(t, 0.3, 0.05, 12000, 8000, bus, "highpass");
+      },
+    },
     // Flipper : rock ! guitares saturées en croches, batterie qui cogne
     rock: {
       tempo: 152,

@@ -311,7 +311,7 @@ def roue_config(joueur, requete):
 
 # --------------------------------------------------------------------------- classements
 
-JEUX_CLASSES = ("memory", "bataille", "snake", "demineur", "echecs", "flipper", "candy", "tetris", "runner")
+JEUX_CLASSES = ("memory", "bataille", "snake", "demineur", "echecs", "flipper", "candy", "tetris", "runner", "jet", "pingouin")
 
 
 def classement(joueur, requete):

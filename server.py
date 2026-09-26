@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlparse
 
 import noyau
 from noyau import DUREE_SESSION, ErreurApi, creer_session, db, joueur_de_session, joueur_public, lire_joueur
-from jeux import bataille, candy, demineur, duels, echecs, flipper, memory, runner, snake, tetris
+from jeux import bataille, candy, demineur, duels, echecs, flipper, jet, memory, pingouin, runner, snake, tetris
 
 DOSSIER_PUBLIC = os.path.join(noyau.RACINE, "public")
 PORT = int(os.environ.get("PORT", "8000"))
@@ -24,7 +24,7 @@ ROUTES_POST = {
     "/api/roue/tourner": noyau.roue_tourner,
     "/api/secours": noyau.secours,
 }
-for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels):
+for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin):
     ROUTES_POST.update(jeu.ROUTES)
 ROUTES_GET = {"/api/classement": noyau.classement, "/api/roue": noyau.roue_config, "/api/mes_records": noyau.mes_records,
               **duels.ROUTES_GET}

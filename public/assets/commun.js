@@ -2,7 +2,9 @@
 
 // Catalogue des jeux : catégorie pour le menu, thème graphique de la page, badge éventuel.
 const JEUX = [
-  { id: "runner", nom: "Rail Rush", emoji: "🛹", cat: "action", theme: "ville", badge: "NOUVEAU", desc: "Cours sur les rails, saute par-dessus les trains et ramasse les pièces et les bonus !" },
+  { id: "jet", nom: "Moka Jet", emoji: "🚀", cat: "arcade", theme: "jungle", badge: "NOUVEAU", desc: "Pilote Moka et son jetpack entre les bambous et attrape les bananes !" },
+  { id: "pingouin", nom: "Pingu Glisse", emoji: "🐧", cat: "action", theme: "banquise", badge: "NOUVEAU", desc: "Plonge dans les descentes, envole-toi sur les bosses et fuis la tempête de neige !" },
+  { id: "runner", nom: "Rail Rush", emoji: "🛹", cat: "action", theme: "ville", badge: "HOT", desc: "Cours sur les rails, saute par-dessus les trains et ramasse les pièces et les bonus !" },
   { id: "candy", nom: "Bonbons Folies", emoji: "🍬", cat: "reflexion", theme: "bonbons", badge: "NOUVEAU", desc: "Aligne 3 bonbons ou plus. Rayés, emballés, arc-en-ciel : déclenche des combos sucrés !" },
   { id: "tetris", nom: "Blocomania", emoji: "🧱", cat: "arcade", theme: "arcade", badge: "NOUVEAU", desc: "Empile les blocs qui tombent et complète des lignes. Ça accélère !" },
   { id: "flipper", nom: "Flipper Néon", emoji: "🪩", cat: "arcade", theme: "futur", badge: "HOT", desc: "Bumpers, flammes, multibille et jackpot sur fond de rock !" },
