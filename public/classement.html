@@ -27,6 +27,7 @@
 <script src="/assets/commun.js"></script>
 <script>
   document.getElementById("onglets-jeu").innerHTML = JEUX.map((j) => `<button data-jeu="${j.id}">${j.emoji} ${j.nom}</button>`).join("")
+    + `<button data-jeu="duel_echecs">⚔️ Duels d'échecs</button><button data-jeu="duel_bataille">⚔️ Duels navals</button>`
     + `<button data-jeu="fortune">🪙 Pièces d'or</button>`;
   const EXPLICATIONS = {
     memory: "Meilleur score de chaque joueur. Le score monte avec le temps restant au chrono et baisse avec les erreurs (le mode difficile rapporte plus).",
@@ -35,6 +36,11 @@
     demineur: "Meilleur score sur une victoire : plus le terrain est grand et plus on est rapide, plus le score est haut.",
     echecs: "Meilleur score sur une victoire (ou une nulle) : dépend du niveau de l'ordinateur et de la rapidité du mat.",
     flipper: "Meilleur score de chaque joueur au flipper.",
+    runner: "Meilleur score à Rail Rush : distance parcourue + 10 points par pièce ramassée (x2 avec le bonus).",
+    candy: "Meilleur score à Bonbons Folies en 20 coups.",
+    tetris: "Meilleur score à Blocomania : les lignes rapportent plus à chaque niveau.",
+    duel_echecs: "Nombre de duels d'échecs gagnés contre d'autres joueurs.",
+    duel_bataille: "Nombre de duels de bataille navale gagnés contre d'autres joueurs.",
     fortune: "Pièces d'or gagnées en jouant, tous jeux confondus (multiplicateurs de la roue compris).",
   };
   const etat = { jeu: new URLSearchParams(location.search).get("jeu") || "memory", periode: "semaine" };
@@ -58,7 +64,7 @@
     const rangs = ["or", "argent", "bronze"];
     const moi = MJ.joueur && MJ.joueur.pseudo;
     zone.innerHTML = `<table class="tableau">
-      <thead><tr><th>Rang</th><th>Joueur</th><th>Parties</th><th style="text-align:right">${etat.jeu === "fortune" ? "Pièces d'or" : "Meilleur score"}</th></tr></thead>
+      <thead><tr><th>Rang</th><th>Joueur</th><th>Parties</th><th style="text-align:right">${etat.jeu === "fortune" ? "Pièces d'or" : etat.jeu.startsWith("duel_") ? "Victoires" : "Meilleur score"}</th></tr></thead>
       <tbody>${r.lignes.map((l, i) => `
         <tr class="${rangs[i] || ""} ${l.pseudo === moi ? "moi" : ""}">
           <td>${medailles[i] || i + 1}</td>

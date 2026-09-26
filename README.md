@@ -1,9 +1,23 @@
 # MiniJeux
 
-Petits jeux gratuits dans le navigateur, façon « salle de jeux » : on joue avec un pseudo, chaque partie coûte 10 **pièces d'or** et en rapporte selon le résultat, une **roue de la fortune** multiplie les gains une fois par jour, et chaque jeu a son **classement**.
+Salle de petits jeux gratuits dans le navigateur, façon sites flash des années 2000, avec Moka le singe comme mascotte.
+On joue avec un pseudo, chaque partie coûte 10 **pièces d'or** et en rapporte selon le résultat, une **roue de la fortune**
+multiplie les gains une fois par jour, chaque jeu a son **classement**, et on peut **défier d'autres joueurs en ligne**.
 
-Jeux : **Memory** (contre la montre), **Bataille navale**, **Snake**, **Démineur**, **Échecs** (3 niveaux) et **Flipper**.
+| Jeu | Décor | Principe |
+|---|---|---|
+| 🛹 Rail Rush | ville au crépuscule | course sans fin en perspective : trains, barrières, pièces, bonus (aimant, jetpack, x2, super-baskets) |
+| 🍬 Bonbons Folies | bonbons | alignements de 3+, bonbons rayés, emballés, arc-en-ciel, combos ; 20 coups |
+| 🧱 Blocomania | arcade | blocs qui tombent, réserve, fantôme, niveaux |
+| 🎸 Flipper Néon | futuriste | bumpers, bille en feu, multibille, jackpots, trou mystère, tir d'adresse, musique rock |
+| 🐍 Snake | savane | serpent python dans une prairie 15 × 15 |
+| 🃏 Memory | magie | contre la montre : 20 s (30 s en difficile), +5 s par paire |
+| 💣 Démineur | chantier | bombes farceuses dessinées à la main, sons cartoon |
+| ♞ Échecs | bois | contre l'ordinateur (3 niveaux) ou **en ligne** contre un joueur |
+| 🚢 Bataille navale | océan | contre l'ordinateur ou **en ligne** contre un joueur |
+
 Sons et musiques sont synthétisés dans le navigateur (aucun fichier audio). Bouton 🔊 en haut pour couper le son.
+Les noms des jeux sont volontairement originaux (les noms Tetris, Candy Crush, Subway Surfers sont des marques déposées).
 
 ## Lancer le site en local
 
@@ -13,35 +27,37 @@ Il suffit de Python 3.9 ou plus récent, Windows compris (aucune installation) :
 python server.py
 ```
 
-Puis ouvrir http://localhost:8000. Comptes et scores : `donnees/minijeux.db` (SQLite, créé automatiquement, jamais envoyé sur GitHub).
+Puis ouvrir http://localhost:8000. Comptes et scores : `donnees/minijeux.db` (SQLite, créé et mis à jour automatiquement).
+Pour essayer les duels seul : ouvrir un deuxième navigateur (ou une fenêtre de navigation privée) avec un autre pseudo.
 
 ## Tests
 
 ```
-python -m unittest discover tests      # API : comptes, économie, les 6 jeux, roue, classements
+python -m unittest discover tests      # API : comptes, économie, tous les jeux, duels, roue, classements
 pip install playwright                 # une fois, pour le test visuel
 MINIJEUX_BASE=/tmp/test.db python server.py
-MINIJEUX_BASE=/tmp/test.db python tests/visuel.py captures   # un robot joue aux 6 jeux : captures + vidéos
+MINIJEUX_BASE=/tmp/test.db python tests/visuel.py captures [jeu ...]   # un robot joue à tout : captures + vidéos
 ```
 
-## Économie (réglable dans `noyau.py` et `jeux/*.py`)
+## Économie (réglable dans `noyau.py`, `jeux/*.py`)
 
 | | |
 |---|---|
 | Inscription | 20 pièces offertes |
-| Partie | 10 pièces, tous jeux confondus |
+| Partie solo | 10 pièces |
 | Secours | 20 pièces une fois par jour si on n'a plus de quoi jouer |
-| Roue | se lance à la fin de la 1re partie qui rapporte des pièces de la journée ; multiplie les gains de cette partie (x1 à x10) |
-| Memory | 20 s au départ, +5 s par paire ; gains selon le temps restant et les erreurs |
-| Bataille navale | victoire : 14 à 37 pièces selon le nombre de tirs ; défaite : 2 pièces par navire coulé |
-| Snake | 1 pièce par 10 points |
-| Démineur | victoire : selon la taille et la vitesse |
-| Échecs | victoire : de 15 (facile) à 65 (difficile) pièces ; nulle : un quart |
-| Flipper | 1 pièce par 5 000 points (40 max) |
+| Roue | à la fin de la 1re partie gagnante du jour : multiplie les gains de cette partie (x1 à x10) |
+| Duel en ligne | chacun mise 10, le gagnant reçoit 25 ; nulle = mises rendues ; temps limite par coup |
+
+## Plusieurs joueurs en même temps
+
+Chaque joueur a ses propres parties : personne ne se gêne. Le serveur traite les requêtes une par une (elles durent
+quelques millisecondes) ; le seul calcul long, la réflexion de l'ordinateur aux échecs, se fait sans bloquer les autres.
+Cela suffit largement pour quelques dizaines de joueurs simultanés. Pour des centaines, il faudrait passer à un
+serveur plus costaud (plusieurs processus, base PostgreSQL) : le code est organisé pour que ce soit faisable.
 
 ## Anti-triche
 
-Le navigateur n'envoie jamais un score qu'on croirait sur parole :
-- Memory, Démineur, Bataille navale, Échecs : tout le jeu se déroule sur le serveur (cartes, bombes, flotte et coups de l'ordinateur), la page ne fait qu'afficher.
-- Snake : la page envoie ses changements de direction, le serveur rejoue la partie (même générateur aléatoire des deux côtés) et vérifie la durée.
-- Flipper : la physique tourne dans la page, le serveur ne peut que vérifier que le score est plausible pour la durée jouée. C'est le seul jeu où un tricheur déterminé pourrait gonfler son score.
+- Memory, Démineur, Bonbons Folies, Bataille navale, Échecs, duels : tout se joue sur le serveur, la page ne fait qu'afficher.
+- Snake : la page envoie ses changements de direction, le serveur rejoue la partie et vérifie la durée.
+- Flipper, Blocomania, Rail Rush (temps réel) : le serveur vérifie que le score est possible pour la durée réellement jouée.

@@ -1,6 +1,8 @@
 # MiniJeux — contexte pour Claude
 
-Site de petits jeux façon Prizee : pseudo + mot de passe, pièces d'or, roue multiplicatrice, classements par jeu.
+Site de petits jeux façon salle de jeux flash des années 2000 : pseudo + mot de passe, pièces d'or, roue multiplicatrice,
+classements par jeu, duels en ligne (échecs, bataille navale). Mascotte : Moka, singe original (ne pas reprendre la
+mascotte ni la marque de Prizee ; noms de jeux originaux, pas de marques déposées).
 Le propriétaire parle français : réponds en français, simplement.
 
 ## Architecture
@@ -12,6 +14,9 @@ Le propriétaire parle français : réponds en français, simplement.
 - `public/assets/commun.js` : en-tête, compte, bourse, fenêtres (connexion, résultat), fonction `api()`. Chaque page a `<body data-page="...">`.
 - Un jeu = `public/<jeu>.html` (+ `sons.js` et `commun.js`) + `public/assets/<jeu>.js` + `jeux/<jeu>.py`. Le `debut` appelle `nouvelle_partie()` (encaisse la mise), la fin appelle `terminer_partie()` (crédite les pièces, alimente le classement, propose la roue). Côté page, `afficherResultat()` gère la roue et l'animation des pièces. Déclarer le jeu dans `server.py`, `JEUX_CLASSES` (noyau.py) et `JEUX` (commun.js).
 - `public/assets/sons.js` : effets sonores et musiques synthétisés (Web Audio), aucun fichier audio.
+- Thème graphique : chaque jeu déclare un `theme` dans `JEUX` (commun.js) ; le décor correspondant est `.theme-xxx` dans style.css.
+- `jeux/duels.py` : duels en ligne (table `duels`), les pages interrogent `/api/duels/etat` toutes les secondes.
+- Concurrence : un verrou global (`noyau.verrou`) ; un calcul long se fait dans `with sans_verrou():`.
 - HTML/CSS/JS sans framework ni build.
 
 ## Vérifications avant de pousser
