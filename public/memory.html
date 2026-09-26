@@ -12,26 +12,30 @@
 <main>
   <div class="titre-page">
     <h1>🃏 Memory</h1>
-    <span class="doux">Retrouve les paires : moins d'essais et moins de temps = plus de points.</span>
+    <span class="doux">20 secondes au départ, +5 secondes par paire trouvée. Trouve tout avant la fin du chrono !</span>
   </div>
 
   <section id="ecran-mode">
     <div class="choix-mode">
-      <button data-mode="facile"><span class="icone">🐣</span><strong>Facile</strong>16 cartes · jusqu'à 13 <i class="piece"></i></button>
-      <button data-mode="difficile"><span class="icone">🔥</span><strong>Difficile</strong>36 cartes · jusqu'à 30 <i class="piece"></i></button>
+      <button data-mode="facile"><span class="icone">🐣</span><strong>Facile</strong>16 cartes<br><span class="prix">Partie : 10 <i class="piece"></i></span></button>
+      <button data-mode="difficile"><span class="icone">🔥</span><strong>Difficile</strong>36 cartes · gains plus gros<br><span class="prix">Partie : 10 <i class="piece"></i></span></button>
     </div>
   </section>
 
   <section id="ecran-jeu" class="cache">
     <div class="barre-jeu">
-      <span class="compteur">⏱️ <b id="temps">0:00</b></span>
       <span class="compteur">🎯 Essais : <b id="coups">0</b></span>
       <span class="compteur">✨ Paires : <b id="paires">0</b></span>
       <button class="bouton secondaire petit" id="btn-abandon" style="margin-left:auto">↺ Changer de mode</button>
     </div>
+    <div class="chrono" id="chrono">
+      <div class="chrono-barre"><div id="chrono-rempli"></div></div>
+      <span class="chrono-texte">⏱️ <b id="temps">20,0</b> s</span>
+    </div>
     <div class="plateau-memory" id="plateau"></div>
   </section>
 </main>
+<script src="/assets/sons.js"></script>
 <script src="/assets/commun.js"></script>
 <script src="/assets/memory.js"></script>
 </body>

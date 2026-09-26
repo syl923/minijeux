@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flipper — MiniJeux</title>
+  <meta name="description" content="Un flipper néon avec bumpers, cibles, multiplicateur et musique rétro. Gagne des pièces d'or.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪩</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="flipper">
+<main>
+  <div class="scene">
+    <div class="toile-cadre cadre-flipper">
+      <div class="afficheur" id="afficheur">
+        <div><span>SCORE</span><b id="score">0</b></div>
+        <div><span>BILLES</span><b id="billes">3</b></div>
+        <div><span>MULTI</span><b id="multi">x1</b></div>
+      </div>
+      <canvas id="flipper"></canvas>
+      <div class="surcouche" id="surcouche">
+        <h2>🪩 Flipper Néon</h2>
+        <p class="doux">3 billes. Allume les 3 couloirs du haut pour augmenter le multiplicateur,<br>fais tomber les 3 cibles pour le jackpot !</p>
+        <button class="bouton gros-bouton" id="btn-jouer">▶ Jouer (10 <i class="piece"></i>)</button>
+      </div>
+      <div class="commandes-tactiles">
+        <button id="t-gauche">◀ Flip</button>
+        <button id="t-lancer">⏫ Lancer</button>
+        <button id="t-droite">Flip ▶</button>
+      </div>
+    </div>
+    <div class="panneau-lateral">
+      <h2 style="margin:0">Commandes</h2>
+      <p class="touches">
+        <kbd>←</kbd> ou <kbd>Q</kbd> : flipper gauche<br>
+        <kbd>→</kbd> ou <kbd>D</kbd> : flipper droit<br>
+        <kbd>Espace</kbd> (maintenir puis lâcher) : lanceur<br>
+        Sur téléphone : touche la moitié gauche ou droite du jeu.
+      </p>
+      <h2 style="margin:10px 0 0">Points</h2>
+      <p class="touches">
+        Bumper : 100 · Slingshot : 30<br>
+        Couloir du haut : 250 (les 3 = multiplicateur +1)<br>
+        Cible tombante : 500 (les 3 = jackpot 5 000)<br>
+        Étoiles du couloir droit : 750 (les 2 = 3 000)<br>
+        Tous les points sont multipliés (jusqu'à x5).<br>
+        1 pièce d'or tous les 5 000 points (40 max).
+      </p>
+    </div>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/commun.js"></script>
+<script src="/assets/flipper.js"></script>
+</body>
+</html>

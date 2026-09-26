@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snake — MiniJeux</title>
+  <meta name="description" content="Le serpent classique : mange les fruits, grandis et gagne des pièces d'or.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="snake">
+<main>
+  <div class="titre-page">
+    <h1>🐍 Snake</h1>
+    <span class="doux">Chaque fruit rapporte 10 points, le fruit doré (1 sur 5) en rapporte 50. Le serpent accélère !</span>
+  </div>
+  <div class="scene">
+    <div class="toile-cadre">
+      <canvas id="toile" width="600" height="600"></canvas>
+      <div class="surcouche" id="surcouche">
+        <h2>Prêt ?</h2>
+        <p class="doux">Flèches du clavier ou glisser le doigt sur le jeu.</p>
+        <button class="bouton gros-bouton" id="btn-jouer">▶ Jouer (10 <i class="piece"></i>)</button>
+      </div>
+    </div>
+    <div class="panneau-lateral">
+      <div class="grand-compteur"><span>Score</span><b id="score">0</b></div>
+      <div class="grand-compteur"><span>Fruits</span><b id="fruits">0</b></div>
+      <div class="grand-compteur"><span>Vitesse</span><b id="vitesse">1</b></div>
+      <p class="touches"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> ou <kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> pour diriger<br><kbd>Espace</kbd> pause</p>
+    </div>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/commun.js"></script>
+<script src="/assets/snake.js"></script>
+</body>
+</html>

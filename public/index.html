@@ -13,54 +13,28 @@
   <section class="banniere">
     <div>
       <h1>Joue, gagne des pièces d'or,<br>deviens le roi du classement !</h1>
-      <p>Des petits jeux rapides. Chaque partie rapporte des pièces d'or, et la roue peut multiplier tes gains jusqu'à x10.</p>
-      <a class="bouton" href="/roue.html">🎡 Tourner la roue du jour</a>
+      <p>Une partie coûte 10 pièces, une bonne partie en rapporte bien plus. Et une fois par jour, la roue de la fortune multiplie tes gains jusqu'à x10 !</p>
+      <a class="bouton" href="#grille-jeux">🎮 Choisir un jeu</a>
     </div>
     <div class="deco">🪙🎲<br>🏆</div>
   </section>
 
-  <h2>Les jeux</h2>
-  <div class="grille-jeux">
-    <a class="carte-jeu" href="/memory.html">
-      <div class="vignette memory">🃏</div>
-      <div class="infos">
-        <h3>Memory</h3>
-        <p>Retrouve toutes les paires le plus vite possible, avec le moins d'essais.</p>
-        <span class="gain">Jusqu'à 30 <i class="piece"></i> par partie</span>
-      </div>
-    </a>
-    <a class="carte-jeu" href="/bataille.html">
-      <div class="vignette bataille">🚢</div>
-      <div class="infos">
-        <h3>Bataille navale</h3>
-        <p>Place ta flotte et coule celle de l'amiral ordinateur avant qu'il ne coule la tienne.</p>
-        <span class="gain">Jusqu'à 30 <i class="piece"></i> par victoire</span>
-      </div>
-    </a>
-    <a class="carte-jeu" href="/roue.html">
-      <div class="vignette roue">🎡</div>
-      <div class="infos">
-        <h3>Roue de la fortune</h3>
-        <p>Un tour gratuit par jour : gagne un multiplicateur pour tes 3 prochaines parties.</p>
-        <span class="gain">Jusqu'à x10</span>
-      </div>
-    </a>
-    <div class="carte-jeu bientot">
-      <div class="vignette bientot">❓</div>
-      <div class="infos">
-        <h3>Bientôt…</h3>
-        <p>D'autres jeux arrivent.</p>
-      </div>
-    </div>
-  </div>
+  <h2>Les jeux <span class="doux" style="font-size:16px;font-weight:normal">· une partie = 10 <i class="piece"></i></span></h2>
+  <div class="grille-jeux" id="grille-jeux"></div>
 
   <section class="section">
     <h2>🏆 Les plus riches de la semaine</h2>
     <div class="panneau" id="top-semaine"><p class="vide">Chargement…</p></div>
   </section>
 </main>
+<script src="/assets/sons.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
+  document.getElementById("grille-jeux").innerHTML = JEUX.map((j) => `
+    <a class="carte-jeu" href="/${j.id}.html">
+      <div class="vignette ${j.classe}">${j.emoji}</div>
+      <div class="infos"><h3>${j.nom}</h3><p>${j.desc}</p></div>
+    </a>`).join("");
   api("/api/classement?jeu=fortune&periode=semaine").then((r) => {
     const zone = document.getElementById("top-semaine");
     if (!r.lignes.length) {

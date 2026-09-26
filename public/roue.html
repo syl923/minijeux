@@ -22,17 +22,32 @@
     <div class="roue-infos">
       <h2>Multiplie tes gains !</h2>
       <ul>
-        <li><b>1 tour gratuit par jour</b> (remis à zéro à minuit).</li>
-        <li>Le multiplicateur gagné s'applique aux pièces d'or de tes <b id="nb-parties">3</b> prochaines parties, tous jeux confondus.</li>
-        <li>Envie de retenter ta chance ? Un tour supplémentaire coûte <b id="prix">30</b> <i class="piece"></i>.</li>
-        <li>Si tu as déjà un multiplicateur plus fort, il est conservé.</li>
+        <li>La roue se lance <b>toute seule à la fin de ta première partie gagnante de la journée</b>.</li>
+        <li>Elle multiplie les pièces d'or de cette partie : jusqu'à <b>x10</b> !</li>
+        <li>Un tour par jour, remis à zéro à minuit.</li>
       </ul>
-      <p id="etat-mult" class="doux"></p>
-      <button class="bouton" id="btn-tourner" style="font-size:20px">🎡 Tourner la roue</button>
+      <table class="tableau" id="chances"></table>
+      <p id="etat-roue" class="record"></p>
+      <a class="bouton" href="/">🎮 Jouer</a>
     </div>
   </div>
 </main>
+<script src="/assets/sons.js"></script>
 <script src="/assets/commun.js"></script>
-<script src="/assets/roue.js"></script>
+<script>
+  chargerRoue().then((c) => {
+    dessinerRoue(document.getElementById("roue"), c.secteurs);
+    const total = c.probas.reduce((a, b) => a + b, 0);
+    const parMult = {};
+    c.secteurs.forEach((m, i) => (parMult[m] = (parMult[m] || 0) + c.probas[i]));
+    document.getElementById("chances").innerHTML = "<tbody>" + Object.keys(parMult).sort((a, b) => a - b).map((m) =>
+      `<tr><td>${formatMult(Number(m))}</td><td class="valeur">${Math.round(100 * parMult[m] / total)} %</td></tr>`).join("") + "</tbody>";
+  });
+  MJ.surChangement.push((j) => {
+    document.getElementById("etat-roue").textContent = !j ? "" : j.tour_gratuit
+      ? "✨ Ton tour du jour est disponible : gagne une partie pour lancer la roue !"
+      : "✔ Tu as déjà tourné la roue aujourd'hui. Reviens demain !";
+  });
+</script>
 </body>
 </html>

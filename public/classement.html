@@ -13,11 +13,7 @@
   <div class="titre-page"><h1>🏆 Classements</h1></div>
   <div class="panneau">
     <div class="filtres">
-      <div class="onglets" id="onglets-jeu">
-        <button data-jeu="memory" class="actif">🃏 Memory</button>
-        <button data-jeu="bataille">🚢 Bataille navale</button>
-        <button data-jeu="fortune">🪙 Pièces d'or</button>
-      </div>
+      <div class="onglets defilant" id="onglets-jeu"></div>
       <div class="onglets" id="onglets-periode">
         <button data-periode="semaine" class="actif">Cette semaine</button>
         <button data-periode="tout">Depuis toujours</button>
@@ -27,11 +23,18 @@
     <div id="tableau"></div>
   </div>
 </main>
+<script src="/assets/sons.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
+  document.getElementById("onglets-jeu").innerHTML = JEUX.map((j) => `<button data-jeu="${j.id}">${j.emoji} ${j.nom}</button>`).join("")
+    + `<button data-jeu="fortune">🪙 Pièces d'or</button>`;
   const EXPLICATIONS = {
-    memory: "Meilleur score de chaque joueur. Le score monte quand on trouve les paires vite et en peu d'essais (le mode difficile rapporte plus).",
+    memory: "Meilleur score de chaque joueur. Le score monte avec le temps restant au chrono et baisse avec les erreurs (le mode difficile rapporte plus).",
     bataille: "Meilleur score de chaque joueur sur une victoire. Moins il faut de tirs pour couler la flotte ennemie, plus le score est haut.",
+    snake: "Meilleur score de chaque joueur : 10 points par fruit, 50 pour un fruit doré.",
+    demineur: "Meilleur score sur une victoire : plus le terrain est grand et plus on est rapide, plus le score est haut.",
+    echecs: "Meilleur score sur une victoire (ou une nulle) : dépend du niveau de l'ordinateur et de la rapidité du mat.",
+    flipper: "Meilleur score de chaque joueur au flipper.",
     fortune: "Pièces d'or gagnées en jouant, tous jeux confondus (multiplicateurs de la roue compris).",
   };
   const etat = { jeu: new URLSearchParams(location.search).get("jeu") || "memory", periode: "semaine" };
