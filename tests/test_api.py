@@ -216,6 +216,133 @@ class TestApi(unittest.TestCase):
             self.assertEqual(Client().appel(f"/api/classement?jeu={jeu}&periode=tout")[0], 200)
         self.assertEqual(Client().appel("/api/classement?jeu=inconnu")[0], 400)
 
+    # ------------------------------------------------------------ duels en ligne
+    def duel(self, jeu, a="Alpha", b="Beta"):
+        ca, _ = nouveau_joueur(a + jeu, pieces=100)
+        cb, _ = nouveau_joueur(b + jeu, pieces=100)
+        code, r = ca.appel("/api/duels/creer", {"jeu": jeu})
+        self.assertEqual(code, 200, r)
+        _, salon = cb.appel("/api/duels/salon")
+        self.assertIn(r["duel"], [d["id"] for d in salon["defis"]])
+        code, r2 = cb.appel("/api/duels/rejoindre", {"duel": r["duel"]})
+        self.assertEqual(code, 200, r2)
+        return ca, cb, r["duel"]
+
+    def test_duel_echecs_mat(self):
+        ca, cb, did = self.duel("echecs")
+        va = ca.appel(f"/api/duels/etat?duel={did}")[1]
+        blancs, noirs = (ca, cb) if va["couleur"] == "blancs" else (cb, ca)
+        self.assertEqual(noirs.appel("/api/duels/jouer", {"duel": did, "de": 12, "vers": 28})[0], 400)  # pas son tour
+        for joueur, (de, vers) in [(blancs, (52, 36)), (noirs, (12, 28)), (blancs, (61, 34)), (noirs, (1, 18)),
+                                   (blancs, (59, 31)), (noirs, (6, 21)), (blancs, (31, 13))]:
+            code, v = joueur.appel("/api/duels/jouer", {"duel": did, "de": de, "vers": vers})
+            self.assertEqual(code, 200, v)
+        self.assertEqual(v["statut"], "termine")
+        self.assertEqual(v["fin"]["resultat"], "victoire")
+        vn = noirs.appel(f"/api/duels/etat?duel={did}")[1]
+        self.assertEqual(vn["fin"]["resultat"], "defaite")
+        self.assertEqual(v["fin"]["joueur"]["pieces"], 100 - 10 + 25)
+        self.assertEqual(vn["fin"]["joueur"]["pieces"], 100 - 10)
+        _, cl = Client().appel("/api/classement?jeu=duel_echecs&periode=tout")
+        self.assertEqual(cl["lignes"][0]["valeur"], 1)
+
+    def test_duel_bataille(self):
+        ca, cb, did = self.duel("bataille")
+        flottes = {}
+        for c in (ca, cb):
+            f = bataille.flotte_aleatoire()
+            flottes[id(c)] = f
+            code, v = c.appel("/api/duels/jouer", {"duel": did, "flotte": f})
+            self.assertEqual(code, 200, v)
+        self.assertEqual(v["phase"], "tir")
+        self.assertNotIn("flotte_adverse", v)  # la flotte adverse reste secrète
+        # chacun tire case par case quand c'est son tour
+        cases = {id(ca): [(x, y) for y in range(10) for x in range(10)], id(cb): [(x, y) for y in range(10) for x in range(10)]}
+        for _ in range(400):
+            va = ca.appel(f"/api/duels/etat?duel={did}")[1]
+            if va["statut"] == "termine":
+                break
+            c = ca if va["mon_tour"] else cb
+            x, y = cases[id(c)].pop(0)
+            code, v = c.appel("/api/duels/jouer", {"duel": did, "x": x, "y": y})
+            self.assertEqual(code, 200, v)
+        va = ca.appel(f"/api/duels/etat?duel={did}")[1]
+        vb = cb.appel(f"/api/duels/etat?duel={did}")[1]
+        self.assertEqual(va["statut"], "termine")
+        self.assertEqual({va["fin"]["resultat"], vb["fin"]["resultat"]}, {"victoire", "defaite"})
+        self.assertIn("flotte_adverse", va)
+
+    def test_duel_temps_ecoule(self):
+        ca, cb, did = self.duel("echecs", "Lent", "Rapide")
+        with noyau.db:
+            etat = json.loads(noyau.db.execute("SELECT etat FROM duels WHERE id = ?", (did,)).fetchone()[0])
+            etat["limite"] = 0
+            noyau.db.execute("UPDATE duels SET etat = ? WHERE id = ?", (json.dumps(etat), did))
+        va = ca.appel(f"/api/duels/etat?duel={did}")[1]
+        self.assertEqual(va["statut"], "termine")
+        self.assertEqual(va["fin"]["raison"], "Temps écoulé")
+
+    def test_duel_annuler_et_prive(self):
+        ca, _ = nouveau_joueur("Createur", pieces=50)
+        cb, _ = nouveau_joueur("Intrus", pieces=50)
+        nouveau_joueur("Invite", pieces=50)
+        _, r = ca.appel("/api/duels/creer", {"jeu": "echecs", "adversaire": "invite"})
+        self.assertEqual(cb.appel("/api/duels/rejoindre", {"duel": r["duel"]})[0], 400)
+        self.assertEqual(ca.appel("/api/duels/rejoindre", {"duel": r["duel"]})[0], 400)
+        code, a = ca.appel("/api/duels/annuler", {"duel": r["duel"]})
+        self.assertEqual((code, a["joueur"]["pieces"]), (200, 50))
+        self.assertEqual(ca.appel(f"/api/duels/etat?duel={r['duel']}")[1]["statut"], "annule")
+        self.assertEqual(cb.appel(f"/api/duels/etat?duel={r['duel']}")[0], 403)
+
+    def test_candy(self):
+        c, _ = nouveau_joueur("Gourmand")
+        code, r = c.appel("/api/candy/debut", {})
+        self.assertEqual(code, 200)
+        self.assertEqual(c.appel("/api/candy/echanger", {"partie": r["partie"], "a": [0, 0], "b": [2, 0]})[0], 400)
+        from jeux import candy
+        for _ in range(candy.COUPS):
+            g = etat_partie(r["partie"])["g"]
+            a, b = next(((x, y), (x + dx, y + dy)) for y in range(8) for x in range(8) for dx, dy in ((1, 0), (0, 1))
+                        if candy.dans(x + dx, y + dy) and candy.echange_utile(g, (x, y), (x + dx, y + dy)))
+            code, t = c.appel("/api/candy/echanger", {"partie": r["partie"], "a": list(a), "b": list(b)})
+            self.assertEqual(code, 200, t)
+            self.assertTrue(t["valide"])
+        self.assertIn("fin", t)
+        self.assertGreater(t["fin"]["score"], 0)
+
+    def test_tetris_et_runner_plausibles(self):
+        c, _ = nouveau_joueur("Arcade")
+        for jeu, bon, mauvais in (("tetris", {"score": 3000, "lignes": 12}, {"score": 900000, "lignes": 12}),
+                                  ("runner", {"score": 2500, "distance": 1500, "pieces": 50}, {"score": 99999, "distance": 99999, "pieces": 50})):
+            _, r = c.appel(f"/api/{jeu}/debut", {})
+            self.assertEqual(c.appel(f"/api/{jeu}/fin", {"partie": r["partie"], **mauvais})[0], 400)
+            with noyau.db:
+                noyau.db.execute("UPDATE parties SET debut = debut - 120 WHERE id = ?", (r["partie"],))
+            code, f = c.appel(f"/api/{jeu}/fin", {"partie": r["partie"], **bon})
+            self.assertEqual(code, 200, f)
+
+    def test_echecs_ne_bloque_pas_les_autres(self):
+        """Pendant que l'ordinateur réfléchit (difficile), un autre joueur est servi sans attendre."""
+        import time as t
+        c1, _ = nouveau_joueur("Penseur")
+        c2, _ = nouveau_joueur("Presse")
+        _, r = c1.appel("/api/echecs/debut", {"niveau": "difficile"})
+        _, m = c2.appel("/api/memory/debut", {"mode": "facile"})
+        duree = {}
+
+        def coup_long():
+            debut = t.time()
+            c1.appel("/api/echecs/coup", {"partie": r["partie"], "de": 52, "vers": 36})
+            duree["echecs"] = t.time() - debut
+        fil = threading.Thread(target=coup_long)
+        fil.start()
+        t.sleep(0.05)
+        debut = t.time()
+        c2.appel("/api/memory/retourner", {"partie": m["partie"], "index": 0})
+        duree["memory"] = t.time() - debut
+        fil.join()
+        self.assertLess(duree["memory"], 0.5)
+
 
 if __name__ == "__main__":
     unittest.main()

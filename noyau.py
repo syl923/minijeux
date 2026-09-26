@@ -133,7 +133,8 @@ def connexion_base():
         """
     )
     # Colonnes ajoutées après la première version : on complète les bases existantes.
-    for table, colonne in (("joueurs", "dernier_secours TEXT"), ("parties", "mult REAL"), ("parties", "pieces_base INTEGER")):
+    for table, colonne in (("joueurs", "dernier_secours TEXT"), ("joueurs", "vu_le REAL"), ("parties", "mult REAL"),
+                           ("parties", "pieces_base INTEGER")):
         try:
             base.execute(f"ALTER TABLE {table} ADD COLUMN {colonne}")
         except sqlite3.OperationalError:
@@ -199,10 +200,13 @@ def connexion(donnees):
 def joueur_de_session(jeton):
     if not jeton:
         return None
-    return db.execute(
+    j = db.execute(
         "SELECT j.* FROM sessions s JOIN joueurs j ON j.id = s.joueur_id WHERE s.jeton = ? AND s.cree_le > ?",
         (jeton, maintenant() - DUREE_SESSION),
     ).fetchone()
+    if j and (j["vu_le"] or 0) < maintenant() - 20:  # présence « en ligne » pour le salon des duels
+        db.execute("UPDATE joueurs SET vu_le = ? WHERE id = ?", (maintenant(), j["id"]))
+    return j
 
 
 def secours(joueur, donnees):
@@ -321,6 +325,14 @@ def classement(joueur, requete):
                WHERE p.statut = 'terminee' AND p.fin >= ?
                GROUP BY p.joueur_id HAVING valeur > 0 ORDER BY valeur DESC, MIN(p.fin) LIMIT 50""",
             (depuis,),
+        ).fetchall()
+    elif jeu in ("duel_echecs", "duel_bataille"):  # duels en ligne : nombre de victoires
+        lignes = db.execute(
+            """SELECT j.pseudo, SUM(p.score) AS valeur, COUNT(*) AS parties
+               FROM parties p JOIN joueurs j ON j.id = p.joueur_id
+               WHERE p.statut = 'terminee' AND p.jeu = ? AND p.fin >= ?
+               GROUP BY p.joueur_id HAVING valeur > 0 ORDER BY valeur DESC, parties LIMIT 50""",
+            (jeu, depuis),
         ).fetchall()
     elif jeu in JEUX_CLASSES:
         lignes = db.execute(
