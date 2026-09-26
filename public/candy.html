@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bonbons Folies — MiniJeux</title>
+  <meta name="description" content="Aligne les bonbons, crée des bonbons rayés, emballés et arc-en-ciel, et gagne des pièces d'or.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍬</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="candy">
+<main>
+  <div class="titre-page">
+    <h1>🍬 Bonbons Folies</h1>
+    <span class="doux">Échange deux bonbons voisins pour en aligner 3 ou plus. Tu as 20 coups pour faire le meilleur score !</span>
+  </div>
+  <div class="scene">
+    <div class="toile-cadre">
+      <div class="plateau-candy" id="plateau"></div>
+      <div class="surcouche" id="surcouche">
+        <h2>Bonbons Folies</h2>
+        <p class="doux">4 alignés = bonbon rayé · en L ou en T = bonbon emballé<br>5 alignés = bombe arc-en-ciel !</p>
+        <button class="bouton gros-bouton" id="btn-jouer">▶ Jouer (10 <i class="piece"></i>)</button>
+      </div>
+      <div class="annonce-candy" id="annonce"></div>
+    </div>
+    <div class="panneau-lateral">
+      <div class="grand-compteur"><span>Score</span><b id="score">0</b></div>
+      <div class="grand-compteur"><span>Coups restants</span><b id="coups">20</b></div>
+      <div class="legende-candy">
+        <p><span class="bonbon c0 sH"></span> Rayé : vide une ligne</p>
+        <p><span class="bonbon c4 sV"></span> Rayé : vide une colonne</p>
+        <p><span class="bonbon c3 sE"></span> Emballé : explose autour</p>
+        <p><span class="bonbon cB sB"></span> Arc-en-ciel : vide une couleur</p>
+        <p class="doux">Échange deux spéciaux entre eux pour un super combo !</p>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/commun.js"></script>
+<script src="/assets/candy.js"></script>
+</body>
+</html>
