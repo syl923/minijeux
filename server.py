@@ -14,6 +14,7 @@ from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import avatars
 import compte
 import noyau
 from noyau import DUREE_SESSION, ErreurApi, creer_session, db, joueur_de_session, joueur_public, lire_joueur
@@ -44,11 +45,11 @@ ROUTES_POST = {
     "/api/roue/tourner": noyau.roue_tourner,
     "/api/secours": noyau.secours,
 }
-for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin, compte):
+for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin, compte, avatars):
     ROUTES_POST.update(jeu.ROUTES)
 ROUTES_GET = {"/api/classement": noyau.classement, "/api/roue": noyau.roue_config, "/api/mes_records": noyau.mes_records,
               "/api/activite": noyau.activite,
-              **duels.ROUTES_GET, **compte.ROUTES_GET}
+              **duels.ROUTES_GET, **compte.ROUTES_GET, **avatars.ROUTES_GET}
 
 verrou = noyau.verrou
 
@@ -153,6 +154,9 @@ class Gestionnaire(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    if not HTTPS and os.environ.get("MINIJEUX_COMPTE_TEST", "1") == "1":
+        noyau.compte_de_test()  # toto / toto avec 1000 bananes, pour tester en local
+        print("Compte de test : pseudo toto, mot de passe toto (1000 bananes)")
     if ":" in HOTE:  # adresse IPv6 (ex. "::"), repli en IPv4 si la machine ne la gère pas
         import socket
         ThreadingHTTPServer.address_family = socket.AF_INET6

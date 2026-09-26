@@ -283,6 +283,20 @@ async function lancer() {
 
 const attendre = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
+// Les répliques du capitaine Moka
+const REPLIQUES = {
+  touche: [["Touché ! Feu à volonté, moussaillon !", "content"], ["Dans le mille ! Vise juste à côté maintenant.", "malin"], ["Bien visé, mille bananes !", "content"]],
+  coule: [["COULÉ ! À l'abordage !", "etoiles"], ["Un de moins ! Hissez les voiles !", "rire"], ["Par ma barbe de banane, il a sombré !", "etoiles"]],
+  eau: [["Plouf… Rien que des poissons.", "malin"], ["À l'eau, matelot ! On retente.", "malin"]],
+  subi: [["Aïe, notre coque ! Réplique vite !", "choc"], ["Ils nous ont touchés ! Aux canons !", "colere"]],
+  perdu: [["Nooon, notre navire coule !", "triste"], ["Un bateau perdu… on se venge !", "colere"]],
+};
+function capitaine(cle, proba = 1) {
+  if (Math.random() > proba) return;
+  const [texte, humeur] = REPLIQUES[cle][Math.floor(Math.random() * REPLIQUES[cle].length)];
+  mokaDit(texte, humeur, 2200);
+}
+
 async function tirer(x, y) {
   if (tirEnCours || !enJeu || caseDe(grilleEnnemi, x, y).classList.contains("visee")) return;
   tirEnCours = true;
@@ -305,7 +319,9 @@ async function tirer(x, y) {
     dessinerBateau(grilleEnnemi, j.coule, "ennemi coule", typeDeNom(nom));
     Sons.jouer("kaboom");
     message.textContent = `💥 Tu as coulé le ${nom} ennemi !`;
+    capitaine("coule");
   } else {
+    capitaine(j.resultat === "touche" ? "touche" : "eau", j.resultat === "touche" ? .6 : .25);
     message.textContent = j.resultat === "touche" ? `🔥 Touché en ${LETTRES[y]}${x + 1} !` : `💧 Plouf… ${LETTRES[y]}${x + 1} dans l'eau.`;
     Sons.jouer(j.resultat === "touche" ? "explosion" : "plouf");
   }
@@ -323,7 +339,9 @@ async function tirer(x, y) {
       coulesJoueur.add(nom);
       grilleJoueur.querySelector(`.bateau[data-cle="${ia.coule.x},${ia.coule.y}"]`)?.classList.add("coule");
       message.textContent = `😱 L'ennemi a coulé ton ${nom} !`;
+      capitaine("perdu");
     } else {
+      if (ia.resultat === "touche") capitaine("subi", .5);
       message.textContent = ia.resultat === "touche"
         ? `🔥 L'ennemi t'a touché en ${LETTRES[ia.y]}${ia.x + 1} ! À toi.`
         : `💧 L'ennemi rate en ${LETTRES[ia.y]}${ia.x + 1}. À toi !`;
@@ -351,7 +369,7 @@ async function tirer(x, y) {
       emoji: f.victoire ? "🏆" : "🌊",
       lignes: f.victoire
         ? [`Flotte ennemie coulée en ${f.tirs} tirs`]
-        : [`${coulesEnnemi.size} navire(s) ennemi(s) coulé(s) : 2 pièces par navire`],
+        : [`${coulesEnnemi.size} navire(s) ennemi(s) coulé(s) : 2 bananes par navire`],
       fin: f,
       rejouer: () => location.reload(),
     });
@@ -399,7 +417,7 @@ function appliquerVueDuel(v) {
   vueDuel = v;
   versionDuel = v.version;
   limiteDuel = Date.now() + (v.reste || 0) * 1000;
-  document.getElementById("vs-adversaire").textContent = v.adversaire || "…";
+  document.getElementById("vs-adversaire").innerHTML = v.adversaire ? pseudoAvecAvatar(v.adversaire, v.avatar_adversaire) : "…";
   if (v.statut === "attente") { message.textContent = "En attente d'un adversaire…"; return; }
 
   if (v.phase === "placement" && !v.flotte_placee) {
@@ -442,6 +460,9 @@ function appliquerVueDuel(v) {
   if (ancien && v.dernier && JSON.stringify(v.dernier) !== JSON.stringify(ancien.dernier)) {
     const coule = v.coules_adverses.length > (ancien.coules_adverses || []).length || coulesJoueur.size > (ancien.nbCoulesMiens || 0);
     Sons.jouer(coule ? "kaboom" : v.dernier.resultat === "eau" ? "plouf" : "explosion");
+    const parMoi = v.dernier.tireur === v.moi;
+    if (coule) capitaine(parMoi ? "coule" : "perdu");
+    else if (v.dernier.resultat !== "eau") capitaine(parMoi ? "touche" : "subi", .5);
   }
   v.nbCoulesMiens = coulesJoueur.size;
 

@@ -124,6 +124,8 @@ function avancer() {
     const dore = jeu.fruits % 5 === 0;
     jeu.score += dore ? 50 : 10;
     Sons.jouer(dore ? "manger_or" : "mange");
+    if (dore) mokaDit(["Un fruit doré ! Quelle trouvaille !", "De l'or dans la savane !"][Math.floor(Math.random() * 2)], "etoiles", 1600);
+    else if (jeu.fruits % 12 === 0) mokaDit(`${jeu.fruits} fruits ! Ce serpent devient géant…`, "choc", 1800);
     exploser(jeu.fruit, dore ? "#ffd84d" : "#ff5b7a", dore ? 30 : 16);
     jeu.fruit = placerFruit(jeu.alea, jeu.corps);
     majCompteurs();
@@ -140,6 +142,7 @@ async function mourir() {
   jeu.fini = true;
   jeu.secousse = 14;
   Sons.jouer("crash");
+  mokaDit("Ouille ! Le serpent s'est cogné…", "ko", 2200);
   exploser(jeu.corps[0], "#5be37d", 40);
   const animer = () => { dessiner(1); if (jeu.secousse > 0 || jeu.particules.length) requestAnimationFrame(animer); };
   animer();

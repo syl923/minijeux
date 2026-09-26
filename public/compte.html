@@ -30,7 +30,7 @@
     </section>
     <section class="panneau zone-danger">
       <h2>🗑️ Supprimer mon compte</h2>
-      <p>Ton compte, tes pièces, tes parties et tes scores seront <b>définitivement</b> effacés. Tes duels en cours seront perdus.</p>
+      <p>Ton compte, tes bananes, tes parties et tes scores seront <b>définitivement</b> effacés. Tes duels en cours seront perdus.</p>
       <form id="form-supprimer">
         <label for="mdp-suppr">Confirme avec ton mot de passe</label><input type="password" id="mdp-suppr" autocomplete="current-password" required>
         <p class="erreur" id="erreur-suppr"></p>
@@ -41,6 +41,7 @@
 </main>
 <script src="/assets/sons.js"></script>
 <script src="/assets/icones.js"></script>
+<script src="/assets/singes.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
   MJ.surChangement.push(async (j) => {
@@ -50,9 +51,10 @@
     const d = await api("/api/compte/donnees");
     const date = (t) => t ? new Date(t * 1000).toLocaleDateString("fr-FR") : "—";
     document.getElementById("infos-compte").innerHTML = `
+      <a href="/avatars.html" class="grand-avatar" style="display:block;width:110px;height:110px;margin:0 0 10px" title="Changer d'avatar">${avatarSVG(j.avatar)}</a>
       <p>Pseudo : <b>${echapper(d.compte.pseudo)}</b></p>
       <p>Inscrit le : <b>${date(d.compte.inscrit_le)}</b></p>
-      <p>Pièces d'or : <b>${d.compte.pieces}</b> (gagnées au total : ${d.compte.pieces_gagnees})</p>
+      <p>Bananes : <b>${d.compte.pieces}</b> (gagnées au total : ${d.compte.pieces_gagnees})</p>
       <p>Parties jouées : <b>${d.parties.length}</b></p>`;
   });
   document.getElementById("btn-export").onclick = async () => {

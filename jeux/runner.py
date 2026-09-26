@@ -1,7 +1,7 @@
-"""Rail Rush (course sur les rails) : la partie tourne dans la page, en temps réel.
+"""Safari Rush (Moka s'échappe du zoo) : la partie tourne dans la page, en temps réel.
 
 Le serveur vérifie la vraisemblance du résultat avec la durée qu'il a mesurée lui-même :
-distance possible à la vitesse maximale, nombre de pièces ramassables, score cohérent.
+distance possible à la vitesse maximale, nombre de bananes ramassables, score cohérent.
 """
 
 from noyau import ErreurApi, lire_partie, maintenant, nouvelle_partie, terminer_partie

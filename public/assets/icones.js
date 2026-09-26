@@ -2,14 +2,17 @@
 
 const ICONES_JEUX = {
   runner: `
-    <path d="M38 30 L10 100 H90 L62 30Z" fill="#8a7866"/>
-    <path d="M44 30 L30 100 M56 30 L70 100" stroke="#e9ecef" stroke-width="4"/>
-    <path d="M40 44h20M36 58h28M31 74h38M25 92h50" stroke="#5c3d26" stroke-width="5"/>
-    <rect x="30" y="12" width="40" height="36" rx="7" fill="#f76707" stroke="#1b1340" stroke-width="3"/>
-    <rect x="35" y="17" width="13" height="12" rx="3" fill="#1b1340"/><rect x="52" y="17" width="13" height="12" rx="3" fill="#1b1340"/>
-    <rect x="33" y="34" width="34" height="4" fill="#fff"/>
-    <circle cx="39" cy="42" r="3.5" fill="#ffe066"/><circle cx="61" cy="42" r="3.5" fill="#ffe066"/>
-    <circle cx="80" cy="30" r="11" fill="#ffd43b" stroke="#e8a200" stroke-width="3"/><text x="80" y="35" text-anchor="middle" font-size="13" font-weight="900" fill="#c98a00">★</text>`,
+    <rect width="100" height="62" fill="#ffd8a8"/><circle cx="72" cy="30" r="16" fill="#ffa94d"/>
+    <path d="M0 62 q25 -10 50 -2 t50 -4 V100 H0z" fill="#d9a441"/>
+    <path d="M40 60 L18 100 H82 L60 60Z" fill="#b8804a"/><path d="M47 60 L40 100 M53 60 L60 100" stroke="#9a6536" stroke-width="3"/>
+    <rect x="11" y="30" width="3" height="28" fill="#5c3d22"/><ellipse cx="12" cy="30" rx="12" ry="4" fill="#5c7a29"/>
+    <path d="M58 70 q12 4 10 -10 q-2 -6 -6 -3" stroke="#7a4a1f" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="50" cy="72" rx="12" ry="14" fill="#9c6433"/><rect x="41" y="62" width="18" height="16" rx="5" fill="#2f9e44"/>
+    <path d="M40 66 l-10 -10 M60 66 l10 -12" stroke="#9c6433" stroke-width="6" stroke-linecap="round"/>
+    <path d="M45 84 l-4 10 M55 84 l5 10" stroke="#9c6433" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="39" cy="50" r="5" fill="#9c6433"/><circle cx="61" cy="50" r="5" fill="#9c6433"/>
+    <circle cx="50" cy="50" r="11" fill="#9c6433"/><path d="M39 47 q11 -14 22 0z" fill="#e03131"/>
+    <path d="M78 64 c-3 10 2 18 12 18 c-7 -3 -10 -9 -8 -18z" fill="#ffd43b" stroke="#8a6400" stroke-width="2"/>`,
   candy: `
     <g transform="rotate(-20 50 50)">
       <path d="M18 50 L6 40 L8 60Z M82 50 L94 40 L92 60Z" fill="#ff8787" stroke="#c92a2a" stroke-width="2"/>
@@ -74,15 +77,18 @@ const ICONES_JEUX = {
     <path d="M34 24 q22 -24 46 0z" fill="#e03131"/><rect x="58" y="20" width="26" height="6" rx="3" fill="#c92a2a"/>
     <path d="M52 54 q7 7 14 0" stroke="#6b3d17" stroke-width="3" fill="none" stroke-linecap="round"/>`,
   pingouin: `
-    <path d="M0 78 q30 -30 60 -10 t40 -6 V100 H0z" fill="#e7f5ff"/><path d="M0 78 q30 -30 60 -10 t40 -6" stroke="#fff" stroke-width="5" fill="none"/>
-    <path d="M6 90 l30 -22 M30 96 l30 -22" stroke="#a5d8ff" stroke-width="6" opacity=".6"/>
-    <g transform="rotate(-18 50 50)">
-      <ellipse cx="46" cy="52" rx="28" ry="15" fill="#1b1b2f"/><ellipse cx="48" cy="46" rx="22" ry="7" fill="#f8f9fa"/>
-      <circle cx="72" cy="56" r="11" fill="#1b1b2f"/><circle cx="76" cy="59" r="4" fill="#fff"/><circle cx="77" cy="59" r="2" fill="#111"/>
-      <path d="M82 55 l11 -2 -11 -3z" fill="#ff922b"/><ellipse cx="18" cy="50" rx="6" ry="3" fill="#ff922b"/>
-      <path d="M62 60 q-16 12 -34 8" stroke="#e03131" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <rect width="100" height="100" fill="#d0ebff"/>
+    <path d="M0 74 q30 -26 60 -8 t40 -6 V100 H0z" fill="#f8f9fa"/><path d="M0 74 q30 -26 60 -8 t40 -6" stroke="#a5d8ff" stroke-width="3" fill="none"/>
+    <path d="M10 30 l26 22" stroke="#8d5a2b" stroke-width="8" stroke-linecap="round"/><path d="M8 28 l6 -6" stroke="#5c3d22" stroke-width="5" stroke-linecap="round"/>
+    <path d="M30 40 q8 -6 14 2 M28 48 q10 -4 16 4" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(-25 62 46)">
+      <ellipse cx="62" cy="52" rx="20" ry="14" fill="#e03131"/><path d="M44 50 h36 M45 57 h34" stroke="#b02525" stroke-width="2"/>
+      <circle cx="68" cy="34" r="13" fill="#9c6433"/><ellipse cx="71" cy="37" rx="8" ry="6" fill="#f3d3a6"/>
+      <circle cx="66" cy="31" r="2.2" fill="#2b1a0e"/><circle cx="74" cy="31" r="2.2" fill="#2b1a0e"/>
+      <path d="M56 28 q12 -16 24 0z" fill="#e03131"/><rect x="55" y="26" width="26" height="5" rx="2.5" fill="#fff"/><circle cx="68" cy="14" r="4" fill="#fff"/>
+      <path d="M82 58 q10 2 12 10" stroke="#9c6433" stroke-width="5" fill="none" stroke-linecap="round"/>
     </g>
-    <circle cx="20" cy="18" r="3" fill="#fff"/><circle cx="84" cy="14" r="2.5" fill="#fff"/><circle cx="60" cy="10" r="2" fill="#fff"/>`,
+    <circle cx="20" cy="12" r="2.5" fill="#fff"/><circle cx="88" cy="14" r="2" fill="#fff"/><circle cx="46" cy="8" r="2" fill="#fff"/>`,
 };
 
 function iconeJeu(id, classe = "icone-jeu") {

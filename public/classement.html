@@ -25,11 +25,12 @@
 </main>
 <script src="/assets/sons.js"></script>
 <script src="/assets/icones.js"></script>
+<script src="/assets/singes.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
   document.getElementById("onglets-jeu").innerHTML = JEUX.map((j) => `<button data-jeu="${j.id}">${j.emoji} ${j.nom}</button>`).join("")
     + `<button data-jeu="duel_echecs">⚔️ Duels d'échecs</button><button data-jeu="duel_bataille">⚔️ Duels navals</button>`
-    + `<button data-jeu="fortune">🪙 Pièces d'or</button>`;
+    + `<button data-jeu="fortune">🍌 Bananes</button>`;
   const EXPLICATIONS = {
     memory: "Meilleur score de chaque joueur. Le score monte avec le temps restant au chrono et baisse avec les erreurs (le mode difficile rapporte plus).",
     bataille: "Meilleur score de chaque joueur sur une victoire. Moins il faut de tirs pour couler la flotte ennemie, plus le score est haut.",
@@ -37,12 +38,14 @@
     demineur: "Meilleur score sur une victoire : plus le terrain est grand et plus on est rapide, plus le score est haut.",
     echecs: "Meilleur score sur une victoire (ou une nulle) : dépend du niveau de l'ordinateur et de la rapidité du mat.",
     flipper: "Meilleur score de chaque joueur au flipper.",
-    runner: "Meilleur score à Rail Rush : distance parcourue + 10 points par pièce ramassée (x2 avec le bonus).",
+    runner: "Meilleur score à Safari Rush : distance parcourue + 10 points par banane ramassée (x2 avec le bonus).",
     candy: "Meilleur score à Bonbons Folies en 20 coups.",
+    jet: "Meilleur score à Moka Jet : 10 points par bambou passé, 5 par banane.",
+    pingouin: "Meilleur score à Moka Glisse : mètres parcourus + 25 par banane + 10 par obstacle sauté.",
     tetris: "Meilleur score à Blocomania : les lignes rapportent plus à chaque niveau.",
     duel_echecs: "Nombre de duels d'échecs gagnés contre d'autres joueurs.",
     duel_bataille: "Nombre de duels de bataille navale gagnés contre d'autres joueurs.",
-    fortune: "Pièces d'or gagnées en jouant, tous jeux confondus (multiplicateurs de la roue compris).",
+    fortune: "Bananes gagnées en jouant, tous jeux confondus (multiplicateurs de la roue compris).",
   };
   const etat = { jeu: new URLSearchParams(location.search).get("jeu") || "memory", periode: "semaine" };
 
@@ -65,11 +68,11 @@
     const rangs = ["or", "argent", "bronze"];
     const moi = MJ.joueur && MJ.joueur.pseudo;
     zone.innerHTML = `<table class="tableau">
-      <thead><tr><th>Rang</th><th>Joueur</th><th>Parties</th><th style="text-align:right">${etat.jeu === "fortune" ? "Pièces d'or" : etat.jeu.startsWith("duel_") ? "Victoires" : "Meilleur score"}</th></tr></thead>
+      <thead><tr><th>Rang</th><th>Joueur</th><th>Parties</th><th style="text-align:right">${etat.jeu === "fortune" ? "Bananes" : etat.jeu.startsWith("duel_") ? "Victoires" : "Meilleur score"}</th></tr></thead>
       <tbody>${r.lignes.map((l, i) => `
         <tr class="${rangs[i] || ""} ${l.pseudo === moi ? "moi" : ""}">
           <td>${medailles[i] || i + 1}</td>
-          <td>${echapper(l.pseudo)}${l.pseudo === moi ? " (toi)" : ""}</td>
+          <td>${pseudoAvecAvatar(l.pseudo, l.avatar)}${l.pseudo === moi ? " (toi)" : ""}</td>
           <td class="doux">${l.parties}</td>
           <td class="valeur">${l.valeur}${etat.jeu === "fortune" ? ' <i class="piece"></i>' : ""}</td>
         </tr>`).join("")}</tbody></table>`;

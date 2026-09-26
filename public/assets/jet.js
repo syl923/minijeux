@@ -47,7 +47,10 @@ function pas(appui) {
   let mort = s.y + RAYON >= SOL || s.y - RAYON <= 0;
   for (const b of s.bambous) {
     if (b.x > px + 200) break;
-    if (!b.passe && b.x + LARGEUR_BAMBOU < px - RAYON) { b.passe = true; s.points++; Sons.jouer("mange"); }
+    if (!b.passe && b.x + LARGEUR_BAMBOU < px - RAYON) {
+      b.passe = true; s.points++; Sons.jouer("mange");
+      if (s.points % 10 === 0) mokaDit([`${s.points} bambous ! Je suis un as du pilotage !`, "Yaaa ! Plein gaz !", "Même pas peur des bambous !"][Math.floor(Math.random() * 3)], "etoiles", 1600);
+    }
     if (toucheRect(px, s.y, b.x, -1000, b.x + LARGEUR_BAMBOU, b.haut) || toucheRect(px, s.y, b.x, b.bas, b.x + LARGEUR_BAMBOU, SOL)) mort = true;
     if (b.banane && !b.prise) {
       const dx = px - b.bx, dy = s.y - b.by;
@@ -141,6 +144,7 @@ async function crash() {
   jeu.flash = 1;
   Sons.musique.arreter();
   Sons.jouer("crash");
+  mokaDit("Aïeuh ! Bonjour le bambou…", "ko", 2200);
   etincelles(X_JOUEUR, jeu.sim.y, "#ffffff", 30);
   let r;
   try {

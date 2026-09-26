@@ -1,10 +1,10 @@
-// Éléments communs à toutes les pages : en-tête, compte joueur, bourse de pièces d'or, fenêtres, roue.
+// Éléments communs à toutes les pages : en-tête, compte joueur, bourse de bananes, fenêtres, roue.
 
 // Catalogue des jeux : catégorie pour le menu, thème graphique de la page, badge éventuel.
 const JEUX = [
   { id: "jet", nom: "Moka Jet", emoji: "🚀", cat: "arcade", theme: "jungle", badge: "NOUVEAU", desc: "Pilote Moka et son jetpack entre les bambous et attrape les bananes !" },
-  { id: "pingouin", nom: "Pingu Glisse", emoji: "🐧", cat: "action", theme: "banquise", badge: "NOUVEAU", desc: "Plonge dans les descentes, envole-toi sur les bosses et fuis la tempête de neige !" },
-  { id: "runner", nom: "Rail Rush", emoji: "🛹", cat: "action", theme: "ville", badge: "HOT", desc: "Cours sur les rails, saute par-dessus les trains et ramasse les pièces et les bonus !" },
+  { id: "pingouin", nom: "Moka Glisse", emoji: "🏏", cat: "action", theme: "banquise", badge: "NOUVEAU", desc: "Un coup de batte bien dosé, un vol plané et une glissade en doudoune sur la banquise !" },
+  { id: "runner", nom: "Safari Rush", emoji: "🐒", cat: "action", theme: "savane", badge: "HOT", desc: "Moka s'est échappé du zoo ! Cours dans la savane, évite les camions et sème le gardien." },
   { id: "candy", nom: "Bonbons Folies", emoji: "🍬", cat: "reflexion", theme: "bonbons", badge: "NOUVEAU", desc: "Aligne 3 bonbons ou plus. Rayés, emballés, arc-en-ciel : déclenche des combos sucrés !" },
   { id: "tetris", nom: "Blocomania", emoji: "🧱", cat: "arcade", theme: "arcade", badge: "NOUVEAU", desc: "Empile les blocs qui tombent et complète des lignes. Ça accélère !" },
   { id: "flipper", nom: "Flipper Néon", emoji: "🪩", cat: "arcade", theme: "futur", badge: "HOT", desc: "Bumpers, flammes, multibille et jackpot sur fond de rock !" },
@@ -15,7 +15,7 @@ const JEUX = [
   { id: "bataille", nom: "Bataille navale", emoji: "🚢", cat: "duel", theme: "ocean", badge: "EN LIGNE", desc: "Coule la flotte de l'ordinateur… ou celle d'un autre joueur en ligne." },
 ];
 const CATEGORIES = { tous: "⭐ Tous", action: "🏃 Action", arcade: "👾 Arcade", reflexion: "🧠 Réflexion", duel: "⚔️ Duels" };
-const THEMES_PAGES = { roue: "ciel", classement: "ciel", accueil: "ciel", duels: "ciel" };
+const THEMES_PAGES = { roue: "ciel", classement: "ciel", accueil: "ciel", duels: "ciel", avatars: "ciel" };
 
 // Moka, la mascotte (dessin original)
 const MASCOTTE = `<svg class="mascotte" viewBox="0 0 120 140" aria-hidden="true">
@@ -25,8 +25,8 @@ const MASCOTTE = `<svg class="mascotte" viewBox="0 0 120 140" aria-hidden="true"
   <g class="bras-salut"><path d="M36 104 q-20 -8 -22 -30" fill="none" stroke="#8b5a2b" stroke-width="10" stroke-linecap="round"/>
     <circle cx="14" cy="72" r="8" fill="#f3d3a6"/></g>
   <path d="M84 104 q14 -2 16 -12" fill="none" stroke="#8b5a2b" stroke-width="10" stroke-linecap="round"/>
-  <g class="piece-mascotte"><circle cx="102" cy="88" r="12" fill="#ffd43b" stroke="#e8a200" stroke-width="3"/>
-    <text x="102" y="93" text-anchor="middle" font-size="14" font-weight="900" fill="#c98a00">★</text></g>
+  <g class="piece-mascotte"><path d="M92 74 c-4 14 3 26 17 26 c-10 -4 -14 -14 -12 -26 z" fill="#ffd43b" stroke="#8a6400" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M90 76 l2 -6 4 1 -1 6z" fill="#7a5a10"/></g>
   <circle cx="24" cy="54" r="14" fill="#8b5a2b"/><circle cx="24" cy="54" r="8" fill="#f3b894"/>
   <circle cx="96" cy="54" r="14" fill="#8b5a2b"/><circle cx="96" cy="54" r="8" fill="#f3b894"/>
   <circle cx="60" cy="56" r="35" fill="#9c6433"/>
@@ -105,6 +105,7 @@ function construireEntete() {
       </span>
       ${lien("/duels.html", "duels", "⚔️ Duels en ligne")}
       ${lien("/roue.html", "roue", "🎡 Roue")}
+      ${lien("/avatars.html", "avatars", "🐒 Avatars")}
       ${lien("/classement.html", "classement", "🏆 Classements")}
     </nav>`;
   document.body.prepend(entete);
@@ -119,7 +120,7 @@ function construireEntete() {
   const pied = document.createElement("footer");
   pied.className = "pied";
   pied.innerHTML = `<div class="pied-mascotte">${MASCOTTE}</div>
-    <b>Moka Arcade</b> — petits jeux gratuits, sans publicité · Les pièces d'or sont virtuelles et n'ont aucune valeur monétaire<br>
+    <b>Moka Arcade</b> — petits jeux gratuits, sans publicité · Les bananes sont virtuelles et n'ont aucune valeur monétaire<br>
     ${JEUX.map((j) => `<a href="/${j.id}.html">${j.nom}</a>`).join(" · ")}<br>
     <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité et cookies</a> ·
     <a href="/cgu.html">Règles du site</a> · <a href="/compte.html">Mon compte</a>`;
@@ -127,6 +128,60 @@ function construireEntete() {
   const h1 = document.querySelector(".titre-page h1");
   if (jeu && h1) h1.innerHTML = iconeJeu(jeu.id, "icone-titre") + h1.textContent.replace(/^\S+\s/, "");
   document.body.append(pied);
+  if (jeu && typeof TENUES !== "undefined" && TENUES[jeu.id]) construireCoach(jeu.id);
+}
+
+// Petit avatar + pseudo pour les listes (classements, salon des duels…)
+function pseudoAvecAvatar(pseudo, avatar) {
+  return `<span class="avec-avatar">${avatarSVG(avatar || "moka", "mini-avatar")}${echapper(pseudo)}</span>`;
+}
+
+// ------------------------------------------------------------ Moka, le coach de chaque jeu
+const COACH = { jeu: null, minuteur: null, retour: null };
+const ASTUCES_COACH = {
+  jet: ["Tape doucement : de petits coups de jetpack valent mieux qu'un gros !", "Les bananes rapportent 5 points chacune.", "Plus tu passes de bambous, plus ça va vite. Concentre-toi !"],
+  pingouin: ["Clique quand la batte est au maximum de la jauge pour un lancer parfait !", "Saute par-dessus les bonshommes de neige et les rochers.", "Les tremplins te renvoient dans les airs !"],
+  runner: ["Le gardien du zoo me poursuit ! Si je me cogne deux fois de suite, il m'attrape…", "Monte sur les troncs par les rampes : il y a plein de bananes là-haut.", "Glisse sous les lianes, saute par-dessus les barrières !"],
+  candy: ["Aligne 4 bonbons pour un bonbon rayé, 5 pour un arc-en-ciel !", "Deux bonbons spéciaux échangés ensemble, c'est explosif.", "Les cascades rapportent de plus en plus."],
+  tetris: ["Garde une colonne libre pour placer un bâton : 4 lignes d'un coup !", "La pièce fantôme montre où ton bloc va tomber.", "Tu peux mettre une pièce en réserve avec C."],
+  flipper: ["Touche les 3 cibles pour allumer le feu !", "Le trou mystère cache des surprises…", "Rock'n'roll ! Garde la bille en l'air le plus longtemps possible."],
+  snake: ["Ne fonce pas dans les murs, explorateur !", "Plus le serpent grandit, plus c'est dur. Prévois tes virages.", "Chaque fruit rapporte des points."],
+  memory: ["Abracadabra ! Retiens bien où sont les cartes.", "Chaque paire te rend 5 secondes.", "Commence par les coins : c'est plus facile à mémoriser."],
+  demineur: ["Le chiffre dit combien de bombes touchent la case.", "Clic droit (ou appui long) pour poser un drapeau.", "Quand tu doutes… respire. Ou fuis."],
+  echecs: ["Contrôle le centre de l'échiquier, jeune élève.", "Roque tôt pour protéger ton roi.", "Avant chaque coup : qu'est-ce que mon adversaire menace ?"],
+  bataille: ["Tire en damier : tu trouveras les navires plus vite, moussaillon !", "Quand tu touches, vise les cases autour.", "Les navires ne se touchent jamais, même en diagonale."],
+};
+
+function construireCoach(jeu) {
+  COACH.jeu = jeu;
+  const c = document.createElement("div");
+  c.className = "coach";
+  c.id = "coach";
+  c.innerHTML = `<div class="coach-bulle" id="coach-bulle"></div><button class="coach-singe" id="coach-singe" title="${TENUES[jeu].nom}">${tenueSVG(jeu)}</button>`;
+  document.body.append(c);
+  c.querySelector("#coach-singe").onclick = () => {
+    const a = ASTUCES_COACH[jeu] || [];
+    mokaDit(a[Math.floor(Math.random() * a.length)] || "Bonne partie !", "malin", 5000);
+  };
+  setTimeout(() => mokaDit(`Salut ! C'est moi, ${TENUES[jeu].nom} !`, "content", 3500), 900);
+}
+
+// Fait parler Moka : texte dans la bulle et humeur passagère (content, rire, choc, triste, colere, malin, ko, etoiles).
+function mokaDit(texte, humeur = "content", duree = 2600) {
+  const bulle = document.getElementById("coach-bulle");
+  const singe = document.getElementById("coach-singe");
+  if (!bulle || !singe) return;
+  bulle.textContent = texte;
+  bulle.classList.add("visible");
+  singe.innerHTML = tenueSVG(COACH.jeu, humeur);
+  singe.classList.remove("saute");
+  void singe.offsetWidth;
+  singe.classList.add("saute");
+  clearTimeout(COACH.minuteur);
+  COACH.minuteur = setTimeout(() => {
+    bulle.classList.remove("visible");
+    singe.innerHTML = tenueSVG(COACH.jeu);
+  }, duree);
 }
 
 function afficherCompte() {
@@ -139,8 +194,9 @@ function afficherCompte() {
     return;
   }
   zone.innerHTML = `
-    ${j.secours ? `<button class="bouton petit" id="btn-secours" title="Tu n'as plus de quoi jouer : 20 pièces offertes une fois par jour">🆘 +20 pièces</button>` : ""}
-    <span class="bourse" id="bourse" title="Pièces d'or"><i class="piece"></i><span id="nb-pieces">${j.pieces}</span></span>
+    ${j.secours ? `<button class="bouton petit" id="btn-secours" title="Tu n'as plus de quoi jouer : 20 bananes offertes une fois par jour">🆘 +20 bananes</button>` : ""}
+    <span class="bourse" id="bourse" title="Bananes"><i class="piece"></i><span id="nb-pieces">${j.pieces}</span></span>
+    <a class="avatar-entete" href="/avatars.html" title="Changer d'avatar">${avatarSVG(j.avatar)}</a>
     <a class="pseudo" href="/compte.html" title="Mon compte">${echapper(j.pseudo)}</a>
     <button class="bouton secondaire petit" id="btn-deco" title="Se déconnecter">⏻</button>`;
   zone.querySelector("#btn-deco").onclick = async () => {
@@ -190,14 +246,14 @@ function ouvrirConnexion() {
       <label for="f-mdp">Mot de passe</label>
       <input type="password" id="f-mdp" autocomplete="new-password" required>
       <p class="erreur" id="f-erreur"></p>
-      <button class="bouton" style="width:100%" id="f-valider">Créer mon compte (+20 pièces offertes)</button>
+      <button class="bouton" style="width:100%" id="f-valider">Créer mon compte (+20 bananes offertes)</button>
     </form>`);
   let mode = "inscription";
   f.querySelectorAll(".onglets button").forEach((b) => {
     b.onclick = () => {
       mode = b.dataset.mode;
       f.querySelectorAll(".onglets button").forEach((x) => x.classList.toggle("actif", x === b));
-      f.querySelector("#f-valider").textContent = mode === "inscription" ? "Créer mon compte (+20 pièces offertes)" : "Me connecter";
+      f.querySelector("#f-valider").textContent = mode === "inscription" ? "Créer mon compte (+20 bananes offertes)" : "Me connecter";
       f.querySelector("#f-mdp").autocomplete = mode === "inscription" ? "new-password" : "current-password";
     };
   });
@@ -220,13 +276,13 @@ function ouvrirConnexion() {
 function ouvrirFauche(message) {
   const j = MJ.joueur || {};
   const f = ouvrirFenetre(`
-    <p class="gros">🪙</p>
-    <h2>Plus assez de pièces</h2>
+    <p class="gros">🍌</p>
+    <h2>Plus assez de bananes</h2>
     <p class="doux">${echapper(message)}</p>
     ${j.secours
-      ? `<p>Pas de panique : voici <b>20 pièces de secours</b>, une fois par jour.</p>
-         <div class="actions"><button class="bouton" id="f-secours">🆘 Récupérer 20 pièces</button></div>`
-      : `<p>Reviens demain pour tes pièces de secours !</p>
+      ? `<p>Pas de panique : voici <b>20 bananes de secours</b>, une fois par jour.</p>
+         <div class="actions"><button class="bouton" id="f-secours">🆘 Récupérer 20 bananes</button></div>`
+      : `<p>Reviens demain pour tes bananes de secours !</p>
          <div class="actions"><button class="bouton secondaire" onclick="fermerFenetre()">OK</button></div>`}`);
   const b = f.querySelector("#f-secours");
   if (b) b.onclick = prendreSecours;
@@ -331,11 +387,11 @@ async function roueDeFin(fin) {
   return new Promise((suite) => {
     const f = ouvrirFenetre(`
       <h2>🎡 Roue de la fortune !</h2>
-      <p class="doux" style="margin:0 0 10px">Ton tour gratuit du jour : multiplie les <b class="gain">${fin.pieces} pièces</b> de cette partie.</p>
+      <p class="doux" style="margin:0 0 10px">Ton tour gratuit du jour : multiplie les <b class="gain">${fin.pieces} bananes</b> de cette partie.</p>
       <div class="roue-cadre petite">
         <div class="fleche"></div>
         <canvas width="640" height="640"></canvas>
-        <div class="moyeu">🪙</div>
+        <div class="moyeu">🍌</div>
       </div>
       <p class="resultat-roue" id="resultat-roue"></p>
       <div class="actions"><button class="bouton gros-bouton" id="btn-lancer-roue">🎡 Lancer la roue !</button></div>`,
@@ -357,7 +413,7 @@ async function roueDeFin(fin) {
       if (r.mult > 1) {
         Sons.jouer("bonus");
         if (r.mult >= 3) confettis();
-        texte.innerHTML = `${formatMult(r.mult)} ! <span class="gain">${fin.pieces} → ${r.pieces} pièces</span>`;
+        texte.innerHTML = `${formatMult(r.mult)} ! <span class="gain">${fin.pieces} → ${r.pieces} bananes</span>`;
       } else {
         Sons.jouer("rate");
         texte.innerHTML = "x1… tes gains restent les mêmes.";
@@ -369,10 +425,12 @@ async function roueDeFin(fin) {
   });
 }
 
-// Affiche le résultat d'une partie (après la roue si elle est disponible) et fait voler les pièces.
+// Affiche le résultat d'une partie (après la roue si elle est disponible) et fait voler les bananes.
 async function afficherResultat({ titre, emoji, lignes = [], fin, rejouer, victoire = fin.score > 0 }) {
   if (fin.roue) fin = await roueDeFin(fin);
   Sons.jouer(victoire ? "victoire" : "perdu");
+  if (fin.record) mokaDit("Nouveau record ! Je suis fier de toi !", "etoiles", 4000);
+  else mokaDit(victoire ? "Bravo ! On en refait une ?" : "Pas grave, la prochaine sera la bonne !", victoire ? "content" : "triste", 3500);
   const net = fin.pieces - fin.mise;
   const f = ouvrirFenetre(`
     <p class="gros">${emoji}</p>
@@ -381,7 +439,7 @@ async function afficherResultat({ titre, emoji, lignes = [], fin, rejouer, victo
     ${fin.score > 0 ? `<p style="font-size:22px;margin:12px 0 0">Score : <b>${fin.score}</b></p>` : ""}
     ${fin.record ? `<p class="record">🏆 Nouveau record personnel !</p>` : ""}
     <div class="gain-total"><i class="piece"></i>+${fin.pieces}</div>
-    ${fin.mult > 1 ? `<p class="doux" style="margin:0">${fin.pieces_base} pièces ${formatMult(fin.mult)} grâce à la roue</p>` : ""}
+    ${fin.mult > 1 ? `<p class="doux" style="margin:0">${fin.pieces_base} bananes ${formatMult(fin.mult)} grâce à la roue</p>` : ""}
     <p class="doux" style="margin:6px 0 0">Mise : ${fin.mise} · bilan de la partie : <b style="color:${net >= 0 ? "var(--vert)" : "var(--rouge)"}">${net >= 0 ? "+" : ""}${net}</b></p>
     <div class="actions">
       <button class="bouton" id="r-rejouer">Rejouer (${prixPartie()})</button>

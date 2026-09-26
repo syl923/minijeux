@@ -66,7 +66,8 @@ Autres possibilités, si besoin :
      MINIJEUX_HTTPS=1
      MINIJEUX_PROXY=1
      ```
-     (alwaysdata fournit lui-même la variable `PORT`.)
+     (alwaysdata fournit lui-même la variable `PORT`. Avec `MINIJEUX_HTTPS=1`, le compte de test toto/toto
+     n'est jamais créé ; s'il existe dans une base copiée depuis ton ordinateur, supprime-le avant.)
 4. Ouvrir l'adresse provisoire donnée par alwaysdata : le site doit s'afficher.
 
 Mettre à jour le site plus tard : `cd ~/minijeux && git pull`, puis *Redémarrer* le site dans l'interface.
@@ -103,9 +104,9 @@ passer à une installation plus costaude (plusieurs processus, base PostgreSQL) 
 
 ## À garder en tête pour plus tard
 
-- **Récompenses réelles (cadeaux, lots)** : tant que tout est gratuit et que les pièces n'ont aucune valeur, ce n'est pas un jeu d'argent.
+- **Récompenses réelles (cadeaux, lots)** : tant que tout est gratuit et que les bananes n'ont aucune valeur, ce n'est pas un jeu d'argent.
   Si un jour des lots réels sont offerts, il faudra un règlement de jeu-concours (participation gratuite, règles publiées)
-  et ne jamais permettre d'acheter des pièces ou des tours de roue. Mieux vaut en parler avant de le faire.
+  et ne jamais permettre d'acheter des bananes ou des tours de roue. Mieux vaut en parler avant de le faire.
 - **Publicité** : si tu ajoutes des publicités, il faudra un bandeau de consentement aux cookies conforme et mettre à jour la page de confidentialité.
 - **Statistiques de visite** : un outil sans cookie (comme GoatCounter, déjà utilisé sur quiditquoi2027) ne demande pas de bandeau ;
   il faudra juste le mentionner dans la page de confidentialité.

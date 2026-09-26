@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Avatars — Moka Arcade</title>
+  <meta name="description" content="Personnalise ton compte avec des avatars de singes : fun, déjantés, tristes, pirates, ninjas… à acheter avec tes bananes.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐒</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="avatars">
+<main>
+  <div class="titre-page">
+    <h1>🐒 La boutique d'avatars</h1>
+    <span class="doux">Dépense tes bananes pour changer de tête ! Ton avatar apparaît en haut de la page, dans les classements et dans les duels.</span>
+  </div>
+
+  <div class="vitrine-avatar" id="vitrine"></div>
+
+  <div class="categories" id="filtres" style="margin-bottom:18px">
+    <button data-f="tous" class="actif">⭐ Tous</button>
+    <button data-f="miens">✔ Les miens</button>
+    <button data-f="commun">Communs</button>
+    <button data-f="rare">Rares</button>
+    <button data-f="epique">Épiques</button>
+    <button data-f="legendaire">Légendaires</button>
+  </div>
+  <div class="boutique" id="boutique"></div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/icones.js"></script>
+<script src="/assets/singes.js"></script>
+<script src="/assets/commun.js"></script>
+<script>
+  let cat = null;
+  let filtre = "tous";
+  const rarete = (prix) => prix >= 500 ? "legendaire" : prix >= 200 ? "epique" : prix >= 100 ? "rare" : "commun";
+  const NOMS_RARETE = { commun: "Commun", rare: "Rare", epique: "Épique", legendaire: "Légendaire" };
+
+  async function charger() {
+    cat = await api("/api/avatars");
+    afficher();
+  }
+
+  function afficher() {
+    const j = MJ.joueur;
+    const actuel = j ? j.avatar : "moka";
+    const moi = cat.avatars.find((a) => a.id === actuel) || cat.avatars[0];
+    document.getElementById("vitrine").innerHTML = `
+      <div class="grand-avatar">${avatarSVG(actuel)}</div>
+      <div>
+        <h2 style="margin:0">${j ? echapper(j.pseudo) : "Pas encore connecté"}</h2>
+        <p class="doux" style="margin:4px 0 10px">Avatar porté : <b>${echapper(moi.nom)}</b></p>
+        ${j ? `<p style="margin:0">Collection : <b>${cat.possedes.length} / ${cat.avatars.length}</b> · Tu as <b>${j.pieces}</b> <i class="piece"></i></p>`
+            : `<button class="bouton" onclick="ouvrirConnexion()">Choisir mon pseudo</button>`}
+      </div>`;
+    const liste = cat.avatars.filter((a) => filtre === "tous" || (filtre === "miens" ? cat.possedes.includes(a.id) : rarete(a.prix) === filtre));
+    const zone = document.getElementById("boutique");
+    zone.innerHTML = liste.map((a) => {
+      const r = rarete(a.prix);
+      const possede = cat.possedes.includes(a.id) || a.prix === 0;
+      const porte = j && a.id === actuel;
+      let bouton;
+      if (porte) bouton = `<button class="bouton secondaire" disabled>Porté</button>`;
+      else if (possede && j) bouton = `<button class="bouton secondaire" data-choisir="${a.id}">Porter</button>`;
+      else if (a.prix === 0) bouton = `<button class="bouton secondaire" data-choisir="${a.id}">Gratuit</button>`;
+      else bouton = `<button class="bouton" data-acheter="${a.id}" ${j && j.pieces < a.prix ? "disabled" : ""}>${a.prix} <i class="piece"></i></button>`;
+      return `<div class="carte-avatar ${r} ${porte ? "porte" : ""} ${possede ? "" : "verrouille"}">
+        <div class="portrait">${avatarSVG(a.id)}</div>
+        <h3>${echapper(a.nom)}</h3>
+        <span class="rarete ${r}">${NOMS_RARETE[r]}</span>
+        ${bouton}
+      </div>`;
+    }).join("") || `<p class="doux">Aucun avatar ici pour l'instant.</p>`;
+    zone.querySelectorAll("[data-acheter]").forEach((b) => (b.onclick = () => exigerConnexion(() => acheter(b.dataset.acheter))));
+    zone.querySelectorAll("[data-choisir]").forEach((b) => (b.onclick = () => exigerConnexion(() => choisir(b.dataset.choisir))));
+  }
+
+  function acheter(id) {
+    const a = cat.avatars.find((x) => x.id === id);
+    const f = ouvrirFenetre(`
+      <div class="grand-avatar">${avatarSVG(id)}</div>
+      <h2>${echapper(a.nom)}</h2>
+      <p class="doux">Acheter cet avatar pour <b>${a.prix} bananes</b> ? Il sera à toi pour toujours.</p>
+      <p class="erreur" id="a-erreur"></p>
+      <div class="actions"><button class="bouton" id="a-ok">🍌 Acheter</button><button class="bouton secondaire" onclick="fermerFenetre()">Annuler</button></div>`);
+    f.querySelector("#a-ok").onclick = async () => {
+      try {
+        const r = await api("/api/avatars/acheter", { avatar: id });
+        cat.possedes = r.possedes;
+        Sons.jouer("bonus");
+        confettis();
+        fermerFenetre();
+        majJoueur(r.joueur);
+      } catch (e) {
+        f.querySelector("#a-erreur").textContent = e.message;
+      }
+    };
+  }
+
+  async function choisir(id) {
+    const r = await api("/api/avatars/choisir", { avatar: id });
+    Sons.jouer("clic");
+    majJoueur(r.joueur);
+  }
+
+  document.querySelectorAll("#filtres button").forEach((b) => {
+    b.onclick = () => {
+      filtre = b.dataset.f;
+      document.querySelectorAll("#filtres button").forEach((x) => x.classList.toggle("actif", x === b));
+      afficher();
+    };
+  });
+  MJ.surChangement.push(() => charger());
+</script>
+</body>
+</html>

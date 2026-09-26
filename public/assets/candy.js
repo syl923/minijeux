@@ -122,7 +122,9 @@ async function echanger(a, b) {
     e.retire.forEach(([x, y]) => caseEl(x, y).firstChild.classList.add("croque"));
     e.speciaux.forEach(([x, y]) => caseEl(x, y).classList.add("naissance"));
     Sons.jouer("pop", 1 + (e.cascade - 1) * .18);
-    if (e.speciaux.length) Sons.jouer("bonus");
+    if (e.speciaux.length) { Sons.jouer("bonus"); mokaDit(["Un bonbon spécial, miam !", "Oh la belle friandise !"][Math.floor(Math.random() * 2)], "etoiles", 1600); }
+    else if (e.cascade === 3) mokaDit("Cascade sucrée !", "content", 1400);
+    else if (e.cascade >= 5) mokaDit("DÉLICIEUX ! Quelle cascade !", "etoiles", 1800);
     if (e.retire.length >= 12) Sons.jouer("explosion");
     if (e.retire.length) {
       const [mx, my] = e.retire[Math.floor(e.retire.length / 2)];

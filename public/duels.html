@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Duels en ligne — Moka Arcade</title>
-  <meta name="description" content="Défie d'autres joueurs en ligne aux échecs et à la bataille navale. Le gagnant empoche les pièces d'or.">
+  <meta name="description" content="Défie d'autres joueurs en ligne aux échecs et à la bataille navale. Le gagnant empoche les bananes.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -44,6 +44,7 @@
 </main>
 <script src="/assets/sons.js"></script>
 <script src="/assets/icones.js"></script>
+<script src="/assets/singes.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
   const NOMS = { echecs: "♞ Échecs", bataille: "🚢 Bataille navale" };
@@ -118,7 +119,7 @@
         <a class="bouton petit" href="/${d.jeu}.html?duel=${d.id}">Reprendre</a></div>`).join("")
       : `<p class="doux">Aucun duel en cours.</p>`;
     document.getElementById("en-ligne").innerHTML = r.en_ligne.length ? r.en_ligne.map((p) => `
-      <div class="ligne-duel"><span class="point-vert"></span><b>${echapper(p)}</b>
+      <div class="ligne-duel"><span class="point-vert"></span><b>${pseudoAvecAvatar(p, (r.avatars || {})[p])}</b>
         <button class="bouton secondaire petit" onclick="defier('${echapper(p)}')">Défier</button></div>`).join("")
       : `<p class="doux">Personne d'autre en ligne pour le moment. Lance un défi ouvert : il attendra un adversaire !</p>`;
   }

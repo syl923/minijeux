@@ -385,7 +385,7 @@ class TestApi(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertIn("recents", a)
 
-    # ------------------------------------------------------------ Moka Jet et Pingu Glisse
+    # ------------------------------------------------------------ Moka Jet et Moka Glisse
     def test_jet_rejoue(self):
         c, _ = nouveau_joueur("Pilote")
         _, r = c.appel("/api/jet/debut", {})
@@ -421,11 +421,39 @@ class TestApi(unittest.TestCase):
     def test_pingouin_plausible(self):
         c, _ = nouveau_joueur("Pingu")
         _, r = c.appel("/api/pingouin/debut", {})
-        self.assertEqual(c.appel("/api/pingouin/fin", {"partie": r["partie"], "metres": 5000, "poissons": 0, "parfaits": 0})[0], 400)
+        self.assertEqual(c.appel("/api/pingouin/fin", {"partie": r["partie"], "metres": 5000, "bananes": 0, "sauts": 0})[0], 400)
         with noyau.db:
             noyau.db.execute("UPDATE parties SET debut = debut - 100 WHERE id = ?", (r["partie"],))
-        code, f = c.appel("/api/pingouin/fin", {"partie": r["partie"], "metres": 4000, "poissons": 12, "parfaits": 20})
-        self.assertEqual((code, f["fin"]["score"]), (200, 4000 + 12 * 25 + 20 * 10))
+        code, f = c.appel("/api/pingouin/fin", {"partie": r["partie"], "metres": 900, "bananes": 12, "sauts": 20})
+        self.assertEqual((code, f["fin"]["score"]), (200, 900 + 12 * 25 + 20 * 10))
+
+
+    def test_avatars(self):
+        c, j = nouveau_joueur("Coquet", pieces=100)
+        self.assertEqual(j["avatar"], "moka")
+        code, cat = c.appel("/api/avatars")
+        self.assertEqual(code, 200)
+        self.assertIn("content", cat["possedes"])
+        self.assertEqual(c.appel("/api/avatars/choisir", {"avatar": "pirate"})[0], 400)   # pas acheté
+        self.assertEqual(c.appel("/api/avatars/acheter", {"avatar": "dore"})[0], 400)     # trop cher
+        self.assertEqual(c.appel("/api/avatars/acheter", {"avatar": "nimporte"})[0], 400)
+        code, r = c.appel("/api/avatars/acheter", {"avatar": "cool"})
+        self.assertEqual((code, r["joueur"]["pieces"], r["joueur"]["avatar"]), (200, 40, "cool"))
+        self.assertEqual(c.appel("/api/avatars/acheter", {"avatar": "cool"})[0], 400)     # déjà à lui
+        code, r = c.appel("/api/avatars/choisir", {"avatar": "content"})
+        self.assertEqual((code, r["joueur"]["avatar"]), (200, "content"))
+        self.assertEqual(c.appel("/api/avatars/choisir", {"avatar": "cool"})[1]["joueur"]["avatar"], "cool")
+        self.assertEqual(Client().appel("/api/avatars/acheter", {"avatar": "cool"})[0], 401)
+
+    def test_compte_de_test(self):
+        noyau.compte_de_test()
+        c = Client()
+        code, r = c.appel("/api/connexion", {"pseudo": "toto", "mot_de_passe": "toto"})
+        self.assertEqual((code, r["joueur"]["pieces"]), (200, 1000))
+        with noyau.db:
+            noyau.db.execute("UPDATE joueurs SET pieces = 3 WHERE pseudo = 'toto'")
+        noyau.compte_de_test()
+        self.assertEqual(c.appel("/api/moi")[1]["joueur"]["pieces"], 1000)
 
 
 if __name__ == "__main__":

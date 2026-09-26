@@ -234,7 +234,7 @@ const Sons = (() => {
         if (temps % 2) bruitPlanifie(t, 0.08, 0.1, 3000, 1500, bus, "bandpass");
       },
     },
-    // Rail Rush : électro qui avance (grosse caisse à chaque temps, basse à contretemps)
+    // Safari Rush (ancien morceau de course) : électro qui avance (grosse caisse à chaque temps, basse à contretemps)
     course: {
       tempo: 128,
       accords: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]],
@@ -265,7 +265,7 @@ const Sons = (() => {
         bruitPlanifie(t + beat / 2, 0.04, 0.05, 8000, 5000, bus, "highpass"); // maracas
       },
     },
-    // Pingu Glisse : valse de clochettes sur la banquise
+    // Moka Glisse : valse de clochettes sur la banquise
     banquise: {
       tempo: 132,
       accords: [[64, 67, 71, 76], [60, 64, 67, 72], [62, 66, 69, 74], [59, 62, 66, 71]],

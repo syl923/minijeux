@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Moka Arcade — petits jeux gratuits, pièces d'or et duels en ligne</title>
-  <meta name="description" content="Moka Arcade : 11 petits jeux gratuits (Rail Rush, Moka Jet, Pingu Glisse, Bonbons Folies, flipper, snake, échecs et bataille navale en ligne…). Gagne des pièces d'or et grimpe au classement.">
+  <title>Moka Arcade — petits jeux gratuits, bananes et duels en ligne</title>
+  <meta name="description" content="Moka Arcade : 11 petits jeux gratuits (Safari Rush, Moka Jet, Moka Glisse, Bonbons Folies, flipper, snake, échecs et bataille navale en ligne…). Gagne des bananes et grimpe au classement.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐵</text></svg>">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -14,7 +14,7 @@
     <div id="mascotte-banniere"></div>
     <div>
       <span class="bulle" id="bulle">Salut, moi c'est Moka ! Prêt à jouer ?</span>
-      <h1 class="titre-flash">Joue, gagne des pièces d'or<br>et deviens le roi de l'arcade !</h1>
+      <h1 class="titre-flash">Joue, gagne des bananes<br>et deviens le roi de l'arcade !</h1>
       <p>11 jeux gratuits, des classements chaque semaine, des duels en ligne… et chaque jour, la roue de la fortune peut multiplier tes gains jusqu'à x10 !</p>
       <a class="bouton" href="#salle">🎮 Choisir un jeu</a>
       <a class="bouton secondaire" href="/duels.html">⚔️ Défier un joueur</a>
@@ -67,6 +67,7 @@
 </main>
 <script src="/assets/sons.js"></script>
 <script src="/assets/icones.js"></script>
+<script src="/assets/singes.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
   document.getElementById("mascotte-banniere").innerHTML = MASCOTTE;
@@ -83,14 +84,14 @@
 
   const ASTUCES = [
     "La roue de la fortune se lance à la fin de ta première partie gagnée de la journée : garde ta meilleure partie pour elle !",
-    "À Pingu Glisse, relâche le bouton en haut des bosses et plonge dans les descentes : les glissades parfaites donnent un gros coup de vitesse.",
-    "À Rail Rush, les rampes jaunes permettent de courir sur le toit des trains… et il y a souvent des pièces là-haut !",
+    "À Moka Glisse, un lancer à 40° avec la jauge au maximum, c'est un HOME RUN ! Et rebondis sur les pingouins pour repartir.",
+    "À Safari Rush, les rampes en bois permettent de grimper sur les camions du zoo… et il y a souvent des bananes là-haut !",
     "Au flipper, 14 coups de bumper mettent la bille en feu : tous les points sont doublés pendant 15 secondes.",
     "À Bonbons Folies, échange deux bonbons spéciaux entre eux pour un super combo.",
     "Au Memory, chaque paire trouvée ajoute 5 secondes au chrono : enchaîne vite !",
     "À la bataille navale, les navires ne se touchent jamais : inutile de tirer autour d'un navire coulé.",
-    "Plus de pièces ? Le bouton 🆘 t'en offre 20 une fois par jour.",
-    "Aux échecs, un mat rapide contre l'ordinateur difficile rapporte jusqu'à 65 pièces.",
+    "Plus de bananes ? Le bouton 🆘 t'en offre 20 une fois par jour.",
+    "Aux échecs, un mat rapide contre l'ordinateur difficile rapporte jusqu'à 65 bananes.",
     "À Moka Jet, de petites tapes régulières valent mieux qu'une grosse poussée.",
   ];
   let numeroAstuce = jour % ASTUCES.length;
@@ -118,19 +119,19 @@
   MJ.surChangement.push(async (j) => {
     const zone = document.getElementById("mon-compte");
     if (!j) {
-      zone.innerHTML = `${MASCOTTE}<p>Choisis un pseudo pour jouer, gagner des pièces et apparaître dans les classements.</p>
-        <button class="bouton" onclick="ouvrirConnexion()">✨ Je m'inscris</button><p class="doux" style="font-size:12px">+20 pièces offertes</p>`;
+      zone.innerHTML = `${MASCOTTE}<p>Choisis un pseudo pour jouer, gagner des bananes et apparaître dans les classements.</p>
+        <button class="bouton" onclick="ouvrirConnexion()">✨ Je m'inscris</button><p class="doux" style="font-size:12px">+20 bananes offertes</p>`;
       records = {};
       return afficherJeux();
     }
     records = (await api("/api/mes_records")).records;
     const parties = Object.values(records).reduce((a, r) => a + r.parties, 0);
-    zone.innerHTML = `${MASCOTTE}
-      <p style="margin:4px 0 10px;font:900 18px var(--police)">${echapper(j.pseudo)}</p>
-      <div class="stat-ligne"><span>Pièces d'or</span><b>${j.pieces} <i class="piece"></i></b></div>
+    zone.innerHTML = `<a href="/avatars.html" class="grand-avatar" style="display:block;width:110px;height:110px;border-width:4px" title="Changer d'avatar">${avatarSVG(j.avatar)}</a>
+      <p style="margin:8px 0 10px;font:900 18px var(--police)">${echapper(j.pseudo)}</p>
+      <div class="stat-ligne"><span>Bananes</span><b>${j.pieces} <i class="piece"></i></b></div>
       <div class="stat-ligne"><span>Parties jouées</span><b>${parties}</b></div>
       <div class="stat-ligne"><span>Roue du jour</span><b>${j.tour_gratuit ? "✨ disponible" : "✔ utilisée"}</b></div>
-      <p style="margin:10px 0 0"><a href="/compte.html">Gérer mon compte</a></p>`;
+      <p style="margin:10px 0 0"><a href="/avatars.html">🐒 Boutique d'avatars</a> · <a href="/compte.html">Gérer mon compte</a></p>`;
     document.getElementById("bulle").textContent = j.tour_gratuit
       ? `Salut ${j.pseudo} ! Ta roue du jour t'attend à la fin de ta première partie gagnée !`
       : `Re-salut ${j.pseudo} ! On se refait une partie ?`;
@@ -140,20 +141,20 @@
   const medailles = ["🥇", "🥈", "🥉"];
   api("/api/classement?jeu=fortune&periode=semaine").then((r) => {
     document.getElementById("top-semaine").innerHTML = r.lignes.length
-      ? r.lignes.slice(0, 5).map((l, i) => `<li>${medailles[i] || i + 1 + "."} ${echapper(l.pseudo)}<b>${l.valeur} <i class="piece"></i></b></li>`).join("")
+      ? r.lignes.slice(0, 5).map((l, i) => `<li>${medailles[i] || i + 1 + "."} ${pseudoAvecAvatar(l.pseudo, l.avatar)}<b>${l.valeur} <i class="piece"></i></b></li>`).join("")
       : "<li>Personne n'a encore joué cette semaine !</li>";
   });
   api("/api/activite").then((a) => {
     document.getElementById("stats").innerHTML = `
       <div class="stat-ligne"><span>👥 Joueurs inscrits</span><b>${a.joueurs}</b></div>
       <div class="stat-ligne"><span>🎮 Parties du jour</span><b>${a.parties_jour}</b></div>
-      <div class="stat-ligne"><span>🪙 Pièces gagnées</span><b>${a.pieces_jour}</b></div>`;
+      <div class="stat-ligne"><span>🍌 Bananes gagnées</span><b>${a.pieces_jour}</b></div>`;
     document.getElementById("exploits").innerHTML = a.recents.length ? a.recents.map((r) => `
-      <li>${iconeJeu(r.jeu, "icone-mini")}<span><b>${echapper(r.pseudo)}</b> · ${NOMS[r.jeu] || r.jeu}<br><small>${r.score} points · +${r.pieces} <i class="piece"></i></small></span></li>`).join("")
+      <li>${avatarSVG(r.avatar || "moka", "icone-mini mini-avatar")}<span><b>${echapper(r.pseudo)}</b> · ${NOMS[r.jeu] || r.jeu}<br><small>${r.score} points · +${r.pieces} <i class="piece"></i></small></span></li>`).join("")
       : `<li class="doux">Aucun exploit pour l'instant : sois le premier !</li>`;
     const infos = [`Bienvenue sur Moka Arcade ! ★ Jeu du jour : ${duJour.nom} ★ ${a.parties_jour} parties jouées aujourd'hui`];
     a.recents.slice(0, 4).forEach((r) => infos.push(`${r.pseudo} vient de faire ${r.score} points à ${NOMS[r.jeu] || r.jeu}`));
-    infos.push("Nouveaux jeux : Moka Jet et Pingu Glisse !");
+    infos.push("Nouveau : la boutique d'avatars ! Dépense tes bananes pour changer de tête 🐒");
     document.getElementById("infos").textContent = infos.join("  ★  ");
   });
   api("/api/duels/salon").then((r) => {

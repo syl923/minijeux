@@ -153,6 +153,9 @@ function eclair() { // éclair qui traverse la table pour les grands moments
 
 function grandMoment(texte, son = "riff") {
   flash(texte, 2);
+  const repliques = { feu: ["ÇA BRÛLE ! Rock'n'roll !", "etoiles"], extra: ["Une bille en plus, yeah !", "rire"], sirene: ["MULTIBILLE ! Faites du bruit !", "etoiles"] };
+  const [dit, humeur] = repliques[son] || ["JACKPOT ! Encore, encore !", "etoiles"];
+  mokaDit(dit, humeur, 2000);
   Sons.jouer(son);
   jeu.secousse = 14;
   jeu.eclat = 1;
@@ -526,6 +529,7 @@ function perdreBille(b) {
   jeu.feu = 0;
   jeu.combo = 0;
   Sons.jouer("perte_bille");
+  if (jeu.reserve > 0) mokaDit(["Nooon, la bille ! Allez, on se reprend !", "Le public attend un rappel !"][Math.floor(Math.random() * 2)], "triste", 1800);
   if (jeu.reserve <= 0) return finDePartie();
   jeu.numeroBille++;
   majAfficheur();
@@ -644,8 +648,11 @@ function dessiner(dt) {
   ctx.font = "900 44px Trebuchet MS, sans-serif";
   ctx.textAlign = "center";
   ctx.fillStyle = feu ? "rgba(255, 146, 43, .18)" : "rgba(255, 201, 60, .12)";
-  ctx.fillText(feu ? "EN FEU !" : "MINIJEUX", 222, 470);
+  ctx.fillText(feu ? "EN FEU !" : "MOKA ROCK", 222, 470);
   ctx.restore();
+  // Moka la rockstar peinte sur la table
+  const moka = imageTenue("flipper", feu ? "etoiles" : "");
+  if (moka.complete) { ctx.globalAlpha = feu ? .35 : .22; ctx.drawImage(moka, 157, 300, 130, 130); ctx.globalAlpha = 1; }
 
   // murs néon
   ctx.lineCap = "round";

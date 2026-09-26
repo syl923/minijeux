@@ -149,6 +149,9 @@ function poser() {
   }));
   Sons.jouer("pose");
   if (dehors) return perdu();
+  const hautPile = jeu.grille.findIndex((l) => l.some(Boolean));
+  if (hautPile >= 0 && hautPile < 5 && !jeu.alerteHaut) { jeu.alerteHaut = true; mokaDit("Attention, ça monte trop haut !", "choc", 1800); }
+  if (hautPile > 9) jeu.alerteHaut = false;
   const pleines = [];
   for (let y = 0; y < H; y++) if (jeu.grille[y].every(Boolean)) pleines.push(y);
   if (pleines.length) {
@@ -158,13 +161,14 @@ function poser() {
     jeu.score += gain;
     jeu.lignes += n;
     Sons.jouer("ligne", n);
-    if (n === 4) { Sons.jouer("bonus"); jeu.secousse = 16; }
+    if (n === 4) { Sons.jouer("bonus"); jeu.secousse = 16; mokaDit("BLOCOMANIA ! 4 lignes d'un coup, chef de chantier !", "etoiles", 2200); }
+    else if (n >= 2 && Math.random() < .5) mokaDit(n === 3 ? "Triple ! Du beau travail !" : "Double ! Bien empilé !", "content", 1500);
     jeu.textes.push({ t: n === 4 ? "BLOCOMANIA !" : ["", "Simple", "Double !", "Triple !!"][n], s: "+" + gain, vie: 1.4, gros: n === 4 });
     pleines.forEach((y) => { for (let x = 0; x < L; x++) etincelles(x, y, COULEURS[jeu.grille[y][x]]); });
     const niveau = 1 + Math.floor(jeu.lignes / 10);
     if (niveau > jeu.niveau) {
       jeu.niveau = niveau;
-      setTimeout(() => { Sons.jouer("extra"); jeu.textes.push({ t: `NIVEAU ${niveau} !`, s: "", vie: 1.6, gros: true }); }, 300);
+      setTimeout(() => { Sons.jouer("extra"); mokaDit(`Niveau ${niveau} ! Ça va aller plus vite…`, "choc", 1800); jeu.textes.push({ t: `NIVEAU ${niveau} !`, s: "", vie: 1.6, gros: true }); }, 300);
     }
     majCompteurs();
   }

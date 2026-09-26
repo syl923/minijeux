@@ -120,6 +120,7 @@ function basculerDrapeau(x, y) {
     t.innerHTML = SVG_DRAPEAU;
     t.classList.add("avec-drapeau");
     Sons.jouer("drapeau");
+    if (Math.random() < .2) mokaDit("Drapeau planté, bien joué !", "malin", 1400);
   }
   majRestantes();
 }
@@ -162,6 +163,7 @@ function afficherCases(liste, ox, oy) {
       t.innerHTML = n ? `<span>${n}</span>` : "";
     }, d * 28);
   });
+  if (liste.length > 20) mokaDit(["Waouh, tout un terrain déminé !", "Quelle zone ! Le chantier avance !"][Math.floor(Math.random() * 2)], "etoiles", 1800);
   if (liste.length > 8) { // cascade : une rafale de petits « pops »
     for (let i = 0; i < Math.min(8, liste.length / 4); i++) setTimeout(() => Sons.jouer("pop", 1 + i * .15), i * 60);
   } else if (liste.length) {
@@ -189,6 +191,7 @@ async function terminer(r, x, y) {
     t.className = "tuile explosee";
     t.innerHTML = svgBombe(deBombe(), "boum") + SVG_KABOOM;
     Sons.jouer("kaboom");
+    mokaDit("KABOOOM ! Mes sourcils…", "ko", 3000);
     document.querySelector(".zone-demineur").classList.add("secousse");
     setTimeout(() => document.querySelector(".zone-demineur").classList.remove("secousse"), 700);
     const autres = r.bombes.filter(([a, b]) => a !== bx || b !== by);

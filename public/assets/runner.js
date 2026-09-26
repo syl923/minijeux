@@ -1,6 +1,7 @@
-// Rail Rush : course sans fin sur 3 voies, en fausse 3D (projection en perspective dessinée à la main).
-// Monde : x = côté (voies en -2,4 / 0 / 2,4), y = hauteur, z = distance devant le joueur.
-// Nouveautés : rampes pour courir sur le toit des trains, cycle jour/nuit, portiques, murets tagués.
+// Safari Rush : Moka s'est échappé du zoo ! Course sans fin sur 3 chemins, en fausse 3D (perspective dessinée à la main).
+// Monde : x = côté (chemins en -2,4 / 0 / 2,4), y = hauteur, z = distance devant le joueur.
+// Moka peut se cogner une fois : il trébuche et le gardien du zoo le rattrape. Un second choc avant d'avoir semé
+// le gardien, et c'est l'épuisette !
 
 const W = 540, H = 760;
 const toile = document.getElementById("course");
@@ -11,9 +12,10 @@ const VOIES = [-2.4, 0, 2.4];
 const CAM_H = 3.6, CAM_D = 6.5, HORIZON = 240;
 const VITESSE_DEPART = 13, VITESSE_MAX = 30;
 const GRAVITE = 32, SAUT = 11, SUPER_SAUT = 16;
-const H_TRAIN = 2.7;
+const H_CAMION = 2.7, H_TRONC = 2.2;
 const DUREES = { aimant: 10, jetpack: 7, double: 12, baskets: 12 };
-const COULEURS_TRAINS = ["#f76707", "#1c7ed6", "#2f9e44", "#e03131", "#7048e8", "#0c8599"];
+const DUREE_TREBUCHE = 7;   // secondes pendant lesquelles le gardien reste sur les talons de Moka
+const COULEURS_CAMIONS = ["#5c7a29", "#c98a1a", "#2f7d4f", "#d9480f", "#1c6e8c"];
 
 let jeu = null;
 let camX = 0, focale = 470, roulis = 0;
@@ -23,21 +25,22 @@ function projeter(x, y, z) {
   return [W / 2 + (x - camX) * k, HORIZON + (CAM_H - y) * k, k];
 }
 
-// ------------------------------------------------------------ ambiance : jour, coucher de soleil, nuit, aube
+// ------------------------------------------------------------ ambiances : savane, forêt, coucher de soleil, nuit
 const AMBIANCES = [
-  { haut: [74, 144, 226], bas: [170, 214, 255], sol: [120, 105, 90], nuit: 0 },
-  { haut: [95, 61, 196], bas: [255, 146, 90], sol: [110, 88, 78], nuit: 0.35 },
-  { haut: [12, 10, 40], bas: [52, 40, 110], sol: [55, 50, 62], nuit: 1 },
-  { haut: [240, 101, 149], bas: [255, 212, 150], sol: [115, 96, 86], nuit: 0.2 },
+  { haut: [70, 150, 230], bas: [255, 228, 170], sol: [201, 170, 88], chemin: [184, 128, 74], nuit: 0, foret: 0 },
+  { haut: [40, 120, 110], bas: [170, 225, 160], sol: [74, 138, 62], chemin: [125, 88, 55], nuit: 0.15, foret: 1 },
+  { haut: [110, 55, 160], bas: [255, 145, 75], sol: [176, 124, 62], chemin: [155, 98, 58], nuit: 0.3, foret: 0 },
+  { haut: [10, 14, 42], bas: [38, 52, 108], sol: [56, 70, 52], chemin: [78, 60, 48], nuit: 1, foret: 0.4 },
 ];
 function ambiance(distance) {
   const p = (distance / 700) % AMBIANCES.length;
   const i = Math.floor(p), f = Math.min(1, Math.max(0, (p - i - 0.7) / 0.3)); // transition sur la fin de chaque période
   const a = AMBIANCES[i], b = AMBIANCES[(i + 1) % AMBIANCES.length];
   const mix = (u, v) => u.map((c, k) => Math.round(c + (v[k] - c) * f));
-  return { haut: mix(a.haut, b.haut), bas: mix(a.bas, b.bas), sol: mix(a.sol, b.sol), nuit: a.nuit + (b.nuit - a.nuit) * f };
+  return { haut: mix(a.haut, b.haut), bas: mix(a.bas, b.bas), sol: mix(a.sol, b.sol), chemin: mix(a.chemin, b.chemin),
+    nuit: a.nuit + (b.nuit - a.nuit) * f, foret: a.foret + (b.foret - a.foret) * f };
 }
-const rgb = (c, k = 1) => `rgb(${Math.round(c[0] * k)},${Math.round(c[1] * k)},${Math.round(c[2] * k)})`;
+const rgb = (c, k = 1, a = 1) => `rgba(${Math.round(c[0] * k)},${Math.round(c[1] * k)},${Math.round(c[2] * k)},${a})`;
 
 // ------------------------------------------------------------ génération du parcours
 function hasard(a, b) { return a + Math.random() * (b - a); }
@@ -47,27 +50,29 @@ function genererJusqua(zMax) {
   while (jeu.zGen < zMax) {
     const z = jeu.zGen;
     const difficulte = Math.min(1, jeu.distance / 2500);
-    const libre = Math.floor(Math.random() * 3);  // une voie toujours praticable au sol
+    const libre = Math.floor(Math.random() * 3);  // un chemin toujours praticable au sol
     const motif = Math.random();
     for (let v = 0; v < 3; v++) {
       if (v === libre) continue;
       const r = Math.random();
       if (r < 0.4 + difficulte * 0.2) {
-        const long = choix([10, 14, 20]);
-        const roule = Math.random() < difficulte * 0.4;
-        const train = { type: "train", voie: v, z, long, h: H_TRAIN, v: roule ? hasard(4, 8) : 0, couleur: choix(COULEURS_TRAINS), numero: 100 + Math.floor(Math.random() * 900) };
-        jeu.objets.push(train);
-        if (!roule && Math.random() < 0.45) { // rampe pour monter sur le toit, avec des pièces là-haut
-          jeu.objets.push({ type: "rampe", voie: v, z: z - 7, long: 7, h: H_TRAIN });
-          for (let k = 0; k < Math.floor(long / 2.2); k++) jeu.objets.push({ type: "piece", voie: v, z: z + 1 + k * 2.2, long: .3, y: H_TRAIN + 1 });
+        const tronc = Math.random() < 0.35;
+        const long = tronc ? choix([8, 12]) : choix([10, 14, 20]);
+        const roule = !tronc && Math.random() < difficulte * 0.4;
+        const h = tronc ? H_TRONC : H_CAMION;
+        jeu.objets.push({ type: tronc ? "tronc" : "camion", voie: v, z, long, h, v: roule ? hasard(4, 8) : 0,
+          couleur: choix(COULEURS_CAMIONS), numero: 1 + Math.floor(Math.random() * 99), zebre: Math.random() < 0.5 });
+        if (!roule && Math.random() < 0.45) { // rampe pour grimper dessus, avec des bananes là-haut
+          jeu.objets.push({ type: "rampe", voie: v, z: z - 7, long: 7, h });
+          for (let k = 0; k < Math.floor(long / 2.2); k++) jeu.objets.push({ type: "banane", voie: v, z: z + 1 + k * 2.2, long: .3, y: h + 1 });
         }
       } else if (r < 0.64) {
-        jeu.objets.push({ type: motif < .5 ? "basse" : "haute", voie: v, z: z + hasard(0, 4), long: 0.4 });
+        jeu.objets.push({ type: motif < .5 ? "basse" : "haute", voie: v, z: z + hasard(0, 4), long: 0.4, style: Math.random() < .5 ? 0 : 1 });
       }
     }
-    // la voie libre : pièces, parfois un obstacle franchissable, parfois un bonus
+    // le chemin libre : bananes, parfois un obstacle franchissable, parfois un bonus
     const r = Math.random();
-    if (r < 0.25) jeu.objets.push({ type: choix(["basse", "haute"]), voie: libre, z: z + 6, long: 0.4 });
+    if (r < 0.25) jeu.objets.push({ type: choix(["basse", "haute"]), voie: libre, z: z + 6, long: 0.4, style: Math.random() < .5 ? 0 : 1 });
     if (Math.random() < 0.09 && jeu.distance > 150) {
       jeu.objets.push({ type: "bonus", genre: choix(Object.keys(DUREES)), voie: libre, z: z + 10, long: 0.5, y: 1 });
     } else {
@@ -75,22 +80,23 @@ function genererJusqua(zMax) {
       for (let k = 0; k < 6; k++) {
         const zz = z + 3 + k * 1.8;
         const y = saut ? 1 + Math.max(0, 2.2 - Math.abs(zz - (z + 6)) * 0.55) : 1;
-        jeu.objets.push({ type: "piece", voie: libre, z: zz, long: 0.3, y });
+        jeu.objets.push({ type: "banane", voie: libre, z: zz, long: 0.3, y });
       }
     }
     jeu.zGen += Math.max(13, 24 - difficulte * 9);
   }
 }
 
+// Décor du bord du chemin : arbres, rochers, animaux… selon qu'on est en savane ou en forêt.
 function ajouterDecor(z) {
+  const amb = ambiance((jeu ? jeu.distance : 0) + z);
   for (const cote of [-1, 1]) {
-    const haut = hasard(7, 20);
-    jeu.decor.push({
-      cote, z: z + hasard(0, 2), larg: hasard(4, 7), haut, prof: hasard(5, 8),
-      couleur: choix(["#5f3dc4", "#862e9c", "#364fc7", "#c2255c", "#495057", "#0b7285", "#e8590c", "#2b8a3e"]),
-      fenetres: Array.from({ length: 3 * Math.floor(haut / 2.5) }, () => Math.random() < 0.55),
-      enseigne: Math.random() < 0.25 ? choix(["#ff2fd0", "#3ee0e8", "#ffd43b", "#51cf66"]) : null,
-    });
+    const foret = Math.random() < amb.foret;
+    const type = foret
+      ? choix(["jungle", "jungle", "jungle", "palmier", "fougere", "fougere", "buisson", "rocher"])
+      : choix(["acacia", "acacia", "acacia", "buisson", "buisson", "rocher", "termitiere", "baobab", "girafe", "elephant", "palmier"]);
+    const grand = ["acacia", "baobab", "jungle", "palmier", "girafe", "elephant"].includes(type);
+    jeu.decor.push({ cote, z: z + hasard(0, 2.5), type, dx: grand ? hasard(6.5, 12) : hasard(4.9, 7), taille: hasard(.8, 1.25), graine: Math.random() * 100 });
   }
 }
 
@@ -109,14 +115,15 @@ async function lancer() {
     partie: r.partie, distance: 0, pieces: 0, score: 0, scoreDistance: 0, pointsPieces: 0, vitesse: VITESSE_DEPART,
     voie: 1, x: 0, y: 0, vy: 0, sol: 0, glisse: 0, bonus: {}, objets: [], zGen: 30, decor: [],
     particules: [], pieceHud: [], textes: [], fini: false, temps: 0, secousse: 0, flash: 0, compte: 3,
-    dernier: performance.now(), pas: 0, horsSol: 0,
+    dernier: performance.now(), pas: 0, trebuche: 0, ralenti: 0, gardien: 1, attrape: 0, etourdi: 0,
   };
   camX = 0; roulis = 0;
-  for (let z = 0; z < 170; z += 7.5) ajouterDecor(z);
+  for (let z = 0; z < 170; z += 5) ajouterDecor(z);
   genererJusqua(170);
   surcouche.classList.add("cache");
   toile.scrollIntoView({ block: "center", behavior: "smooth" });
-  Sons.musique.jouer("course");
+  Sons.musique.jouer("jungle");
+  mokaDit("Le gardien du zoo me poursuit ! Cours !", "choc", 2500);
   for (const n of [3, 2, 1, "GO !"]) {
     jeu.compte = n;
     Sons.jouer(n === "GO !" ? "bonus" : "tic");
@@ -124,6 +131,7 @@ async function lancer() {
     await new Promise((ok) => setTimeout(ok, n === "GO !" ? 300 : 500));
   }
   jeu.compte = 0;
+  jeu.textes.push({ t: "Reviens ici, Moka !", vie: 1.6, petit: true });
   jeu.dernier = performance.now();
   requestAnimationFrame(boucle);
 }
@@ -167,32 +175,45 @@ function boucle(t) {
   const dt = Math.min(0.05, (t - jeu.dernier) / 1000);
   jeu.dernier = t;
   if (!jeu.fini) avancer(dt);
+  else jeu.attrape = Math.min(1, jeu.attrape + dt * 2.5);
   dessiner(dt);
-  if (!jeu.fini || jeu.particules.length || jeu.secousse > 0) requestAnimationFrame(boucle);
+  if (!jeu.fini || jeu.particules.length || jeu.secousse > 0 || jeu.attrape < 1) requestAnimationFrame(boucle);
 }
 
 const voieDe = (x) => VOIES.reduce((m, v, i) => (Math.abs(x - v) < Math.abs(x - VOIES[m]) ? i : m), 0);
+const estLong = (o) => o.type === "camion" || o.type === "tronc";
 
-// Hauteur du sol sous le joueur : rails, rampe ou toit d'un train (si on est déjà dessus).
+// Hauteur du sol sous le joueur : chemin, rampe ou dessus d'un camion / tronc (si on est déjà dessus).
 function solSous(voie) {
   let sol = 0;
   for (const o of jeu.objets) {
     if (o.voie !== voie || o.z > 0.3 || o.z + o.long < -0.3) continue;
     if (o.type === "rampe") sol = Math.max(sol, o.h * Math.min(1, Math.max(0, -o.z / o.long)));
-    else if (o.type === "train" && jeu.y >= o.h - 0.45) sol = Math.max(sol, o.h);
+    else if (estLong(o) && jeu.y >= o.h - 0.45) sol = Math.max(sol, o.h);
   }
   return sol;
 }
 
 function avancer(dt) {
   jeu.temps += dt;
-  jeu.vitesse = Math.min(VITESSE_MAX, VITESSE_DEPART + jeu.temps * 0.22);
+  const ralenti = jeu.ralenti > 0 ? 0.6 : 1;
+  jeu.vitesse = Math.min(VITESSE_MAX, VITESSE_DEPART + jeu.temps * 0.22) * ralenti;
+  if (jeu.ralenti > 0) jeu.ralenti -= dt;
   const dz = jeu.vitesse * dt;
   jeu.distance += dz;
   const mult = jeu.bonus.double ? 2 : 1;
   jeu.scoreDistance += dz * mult;
   jeu.score = Math.floor(jeu.scoreDistance) + jeu.pointsPieces;
   jeu.pas += dz;
+
+  // le gardien : sur les talons au départ et après un choc, puis semé
+  if (jeu.trebuche > 0) {
+    jeu.trebuche -= dt;
+    if (jeu.trebuche <= 0) { jeu.textes.push({ t: "Ouf, semé !", vie: 1.4 }); mokaDit("Hé hé, trop lent le gardien !", "rire", 2200); }
+  }
+  if (jeu.etourdi > 0) jeu.etourdi -= dt;
+  const cible = jeu.trebuche > 0 ? 1 : jeu.temps < 2.5 ? 0.9 : 0;
+  jeu.gardien += (cible - jeu.gardien) * Math.min(1, dt * (cible > jeu.gardien ? 5 : 1.2));
 
   // déplacement latéral (la caméra suit et penche dans le virage)
   const avantX = jeu.x;
@@ -202,7 +223,7 @@ function avancer(dt) {
   camX += (jeu.x * 0.6 - camX) * Math.min(1, dt * 5);
   focale += (470 + (jeu.vitesse - VITESSE_DEPART) * 5 - focale) * Math.min(1, dt * 2);
 
-  // hauteur : jetpack, sinon gravité avec sol variable (rampes et toits)
+  // hauteur : jetpack, sinon gravité avec sol variable (rampes, camions, troncs)
   const voie = voieDe(jeu.x);
   jeu.sol = solSous(voie);
   if (jeu.bonus.jetpack) {
@@ -227,13 +248,13 @@ function avancer(dt) {
       if (b === "jetpack") jeu.vy = 0;
     }
   }
-  // poussière sous les pieds
-  if (jeu.y <= jeu.sol + 0.05 && Math.random() < .35) jeu.particules.push({ x: jeu.x + hasard(-.3, .3), y: jeu.y + .05, z: -.2, vx: hasard(-.5, .5), vy: hasard(.5, 1.5), vz: -jeu.vitesse * .3, vie: .35, couleur: "rgba(220,200,170,.8)" });
+  // poussière rouge de la piste sous les pieds
+  if (jeu.y <= jeu.sol + 0.05 && Math.random() < .45) jeu.particules.push({ x: jeu.x + hasard(-.3, .3), y: jeu.y + .05, z: -.2, vx: hasard(-.6, .6), vy: hasard(.5, 1.6), vz: -jeu.vitesse * .3, vie: .4, couleur: jeu.sol > 0 ? "rgba(200,180,140,.7)" : "rgba(214,160,100,.8)" });
 
-  // le monde avance vers le joueur ; l'aimant attire les pièces
+  // le monde avance vers le joueur ; l'aimant attire les bananes
   for (const o of jeu.objets) {
     o.z -= dz + (o.v || 0) * dt;
-    if (jeu.bonus.aimant && o.type === "piece" && o.z < 16 && o.z > -1) {
+    if (jeu.bonus.aimant && o.type === "banane" && o.z < 16 && o.z > -1) {
       o.xAimant = (o.xAimant ?? VOIES[o.voie]) + (jeu.x - (o.xAimant ?? VOIES[o.voie])) * Math.min(1, dt * 6);
       o.y += (jeu.y + 1 - o.y) * Math.min(1, dt * 6);
     }
@@ -241,15 +262,15 @@ function avancer(dt) {
   for (const d of jeu.decor) d.z -= dz;
   jeu.zGen -= dz;
   jeu.objets = jeu.objets.filter((o) => o.z + (o.long || 0) > -7 && !o.pris);
-  jeu.decor = jeu.decor.filter((d) => d.z + d.prof > -9);
-  while (jeu.decor.length < 50) ajouterDecor(Math.max(...jeu.decor.map((d) => d.z), 100) + 7.5);
+  jeu.decor = jeu.decor.filter((d) => d.z > -CAM_D);
+  while (jeu.decor.length < 70) ajouterDecor(Math.max(...jeu.decor.map((d) => d.z), 100) + 5);
   genererJusqua(175);
 
   // collisions
   for (const o of jeu.objets) {
     const devant = o.z < 0.6 && o.z + (o.long || 0) > -0.6;
-    if (!devant) continue;
-    if (o.type === "piece") {
+    if (!devant || o.touche) continue;
+    if (o.type === "banane") {
       const px = o.xAimant ?? VOIES[o.voie];
       const proche = Math.abs(px - jeu.x) < 1.1 || jeu.bonus.aimant;
       if (proche && (Math.abs(o.y - (jeu.y + 1)) < 1.6 || jeu.bonus.aimant || jeu.bonus.jetpack)) {
@@ -268,27 +289,51 @@ function avancer(dt) {
       jeu.bonus[o.genre] = DUREES[o.genre];
       Sons.jouer(o.genre === "jetpack" ? "jetpack" : "bonus_pris");
       jeu.flash = .5;
-      jeu.textes.push({ t: { aimant: "AIMANT !", jetpack: "JETPACK !", double: "SCORE x2 !", baskets: "SUPER-BASKETS !" }[o.genre], vie: 1.5 });
-      if (o.genre === "jetpack") jeu.objets.push(...Array.from({ length: 30 }, (_, k) => ({ type: "piece", voie, z: 12 + k * 2.2, long: .3, y: 6.5 })));
+      jeu.textes.push({ t: { aimant: "AIMANT !", jetpack: "JETPACK !", double: "SCORE x2 !", baskets: "SUPER-BOND !" }[o.genre], vie: 1.5 });
+      if (o.genre === "jetpack") jeu.objets.push(...Array.from({ length: 30 }, (_, k) => ({ type: "banane", voie, z: 12 + k * 2.2, long: .3, y: 6.5 })));
       continue;
     }
     if (jeu.bonus.jetpack || o.type === "rampe") continue;
-    const touche = o.type === "train" ? jeu.y < o.h - 0.45
+    const touche = estLong(o) ? jeu.y < o.h - 0.45
       : o.type === "basse" ? jeu.y < 0.9
       : o.type === "haute" ? !(jeu.glisse > 0 && jeu.y < 0.5) && jeu.y < 2.4 : false;
-    if (touche) return crash(o);
+    if (touche) {
+      if (jeu.trebuche > 0) return attrape(o);
+      choc(o);
+    }
   }
 }
 
-async function crash(o) {
+// Premier choc : Moka trébuche (il rebondit sur le camion ou renverse l'obstacle) et le gardien arrive.
+function choc(o) {
+  o.touche = true;
+  jeu.trebuche = DUREE_TREBUCHE;
+  jeu.ralenti = 0.7;
+  jeu.etourdi = 1.2;
+  jeu.secousse = 14;
+  jeu.flash = .35;
+  jeu.glisse = 0;
+  Sons.jouer("boing");
+  Sons.jouer("alerte");
+  if (estLong(o)) { jeu.y = o.h + 0.05; jeu.vy = 6; } // rebond sur le capot, Moka finit sur le toit
+  for (let i = 0; i < 16; i++) jeu.particules.push({ x: jeu.x, y: jeu.y + 1.2, z: 0.3, vx: hasard(-4, 4), vy: hasard(2, 6), vz: hasard(-1, 2), vie: .7, couleur: choix(["#ffd43b", "#fff", "#8ce99a"]) });
+  jeu.textes.push({ t: "OUILLE !", vie: 1.3 });
+  mokaDit("Aïe ! Le gardien me rattrape… plus le droit à l'erreur !", "choc", 3000);
+}
+
+// Second choc pendant que le gardien est sur ses talons : capturé !
+async function attrape(o) {
   jeu.fini = true;
+  jeu.attrape = 0;
+  jeu.gardien = 1;
   jeu.secousse = 24;
   jeu.flash = 1;
   Sons.musique.arreter();
   Sons.jouer("crash");
   Sons.jouer("perte_bille");
-  for (let i = 0; i < 40; i++) jeu.particules.push({ x: jeu.x, y: jeu.y + 1, z: 0.3, vx: hasard(-6, 6), vy: hasard(1, 9), vz: hasard(-2, 3), vie: 1, couleur: choix(["#fff", "#ffd43b", "#ff6b6b", "#74c0fc"]) });
-  jeu.textes.push({ t: o.type === "train" ? "BOUM ! Un train !" : "AÏE ! La barrière !", vie: 2 });
+  for (let i = 0; i < 40; i++) jeu.particules.push({ x: jeu.x, y: jeu.y + 1, z: 0.3, vx: hasard(-6, 6), vy: hasard(1, 9), vz: hasard(-2, 3), vie: 1, couleur: choix(["#fff", "#ffd43b", "#ff6b6b", "#8ce99a"]) });
+  jeu.textes.push({ t: "ATTRAPÉ !", vie: 2.2 });
+  mokaDit("Nooon ! Retour au zoo…", "ko", 3500);
   requestAnimationFrame(boucle);
   let r;
   try {
@@ -300,13 +345,13 @@ async function crash(o) {
   setTimeout(() => {
     surcouche.classList.remove("cache");
     afficherResultat({
-      titre: "Fin de la course !",
-      emoji: jeu.score >= 3000 ? "🏆" : "🛹",
-      lignes: [`${Math.floor(jeu.distance)} m parcourus · ${jeu.pieces} pièces ramassées`],
+      titre: "Moka s'est fait attraper !",
+      emoji: jeu.score >= 3000 ? "🏆" : "🐒",
+      lignes: [`${Math.floor(jeu.distance)} m de cavale · ${jeu.pieces} bananes ramassées`],
       fin: r.fin,
       rejouer: lancer,
     });
-  }, 1300);
+  }, 1500);
 }
 
 // ------------------------------------------------------------ dessin : outils
@@ -318,12 +363,14 @@ function polygone(points, couleur) {
   ctx.fill();
 }
 
-function assombrir(hex, k) {
+function teinte(hex, amb, k = 1) {
   const n = parseInt(hex.slice(1), 16);
-  return `rgb(${Math.floor((n >> 16) * k)},${Math.floor(((n >> 8) & 255) * k)},${Math.floor((n & 255) * k)})`;
+  const f = k * (1 - amb.nuit * .55);
+  const bleu = amb.nuit * 25;
+  return `rgb(${Math.floor((n >> 16) * f)},${Math.floor(((n >> 8) & 255) * f)},${Math.floor((n & 255) * f + bleu)})`;
 }
 
-// Point interpolé sur un quadrilatère projeté (u de gauche à droite, v de haut en bas) : pour poser fenêtres et portes.
+// Point interpolé sur un quadrilatère projeté (u de gauche à droite, v de haut en bas).
 function surFace(A, B, C, D, u, v) {
   const hx = A[0] + (B[0] - A[0]) * u, hy = A[1] + (B[1] - A[1]) * u;
   const bx = D[0] + (C[0] - D[0]) * u, by = D[1] + (C[1] - D[1]) * u;
@@ -348,42 +395,57 @@ function boite(x, largeur, hauteur, z0, z1, couleurs, base = 0) {
   return P;
 }
 
-// ------------------------------------------------------------ dessin : objets
-function dessinerTrain(o, amb) {
+// ------------------------------------------------------------ dessin : obstacles
+function dessinerCamion(o, amb) {
   const x = VOIES[o.voie];
   const nuit = amb.nuit;
-  const P = boite(x, 2.1, o.h, o.z, o.z + o.long, { avant: o.couleur, cote: assombrir(o.couleur, .7), dessus: "#ced4da" });
+  const P = boite(x, 2.1, o.h, o.z, o.z + o.long, { avant: teinte(o.couleur, amb), cote: teinte(o.couleur, amb, .72), dessus: teinte("#d8c08a", amb) });
   if (!P) return;
-  // côté : bande, fenêtres éclairées la nuit, portes
   const [A, B, C, D] = P.coteGauche ? [P.agh1, P.agh, P.ag0, P.ag1] : [P.adh, P.adh1, P.ad1, P.ad0];
-  const sens = P.coteGauche ? (u) => 1 - u : (u) => u; // u = 0 à l'avant du train
-  rectSurFace(A, B, C, D, 0, 1, .58, .66, "rgba(255,255,255,.85)");
-  const nb = Math.floor(o.long / 2.2);
-  for (let i = 0; i < nb; i++) {
-    const u0 = sens((i + .2) / nb), u1 = sens((i + .75) / nb);
-    rectSurFace(A, B, C, D, Math.min(u0, u1), Math.max(u0, u1), .18, .45, nuit > .4 ? "rgba(255, 224, 130, .9)" : "#1b1340");
+  const sens = P.coteGauche ? (u) => 1 - u : (u) => u; // u = 0 à l'avant du camion
+  // flanc : rayures de zèbre ou cage à barreaux, lettrage ZOO
+  if (o.zebre) {
+    for (let i = 0; i < o.long * 1.2; i++) {
+      const u0 = sens(.18 + i / (o.long * 1.2) * .8), u1 = sens(.18 + (i + .45) / (o.long * 1.2) * .8);
+      polygone([surFace(A, B, C, D, Math.min(u0, u1), .08), surFace(A, B, C, D, Math.max(u0, u1), .08),
+        surFace(A, B, C, D, Math.max(u0, u1) - .03, .8), surFace(A, B, C, D, Math.min(u0, u1) - .03, .8)], teinte("#1a1a1a", amb));
+    }
+  } else {
+    rectSurFace(A, B, C, D, Math.min(sens(.25), sens(.95)), Math.max(sens(.25), sens(.95)), .1, .78, teinte("#2b2b2b", amb, .9));
+    const nb = Math.floor(o.long * 1.5);
+    for (let i = 0; i <= nb; i++) {
+      const u = sens(.25 + i / nb * .7);
+      rectSurFace(A, B, C, D, u - .006, u + .006, .1, .78, teinte("#adb5bd", amb));
+    }
   }
-  rectSurFace(A, B, C, D, 0, 1, .9, 1, "#212529"); // châssis
-  // toit : climatiseurs
-  if (o.z > -3) {
-    for (let k = 1; k < o.long / 5; k++) boite(x, .9, .35, o.z + k * 5, o.z + k * 5 + 1.4, { avant: "#adb5bd", cote: "#868e96", dessus: "#dee2e6" }, o.h);
+  const [cx, cy] = surFace(A, B, C, D, sens(.12), .45);
+  ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.font = `900 ${Math.max(6, Math.abs(B[1] - C[1]) * .28)}px Arial Black, sans-serif`; ctx.textAlign = "center";
+  ctx.fillText("ZOO", cx, cy); ctx.textAlign = "start";
+  rectSurFace(A, B, C, D, 0, 1, .86, 1, "#212529"); // châssis
+  // roues
+  for (const u of [.12, .88]) {
+    const [rx, ry] = surFace(A, B, C, D, sens(u), 1);
+    const r = Math.abs(B[1] - C[1]) * .2;
+    ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(rx, ry, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#868e96"; ctx.beginPath(); ctx.arc(rx, ry, r * .45, 0, Math.PI * 2); ctx.fill();
   }
-  // face avant : pare-brise en deux parties, phares, numéro
+  // face avant : pare-brise, calandre, phares, plaque
   const F = [P.agh, P.adh, P.ad0, P.ag0];
   if (o.z < -CAM_D + 1.2) return;
-  rectSurFace(...F, .08, .47, .1, .42, "#1b1340");
-  rectSurFace(...F, .53, .92, .1, .42, "#1b1340");
-  rectSurFace(...F, .12, .3, .14, .2, "rgba(255,255,255,.35)");
-  rectSurFace(...F, .1, .9, .55, .62, "#fff");
-  rectSurFace(...F, .38, .62, .66, .78, "#212529");
-  const [nx, ny] = surFace(...F, .5, .74), l = P.adh[0] - P.agh[0];
-  ctx.fillStyle = "#ffe066"; ctx.font = `900 ${Math.max(6, l * .09)}px Arial Black, sans-serif`; ctx.textAlign = "center";
-  ctx.fillText(o.numero, nx, ny); ctx.textAlign = "start";
-  for (const u of [.18, .82]) {
-    const [px, py] = surFace(...F, u, .82);
+  rectSurFace(...F, .08, .92, .08, .4, "#10223a");
+  rectSurFace(...F, .12, .32, .12, .2, "rgba(255,255,255,.35)");
+  rectSurFace(...F, .26, .74, .55, .8, "#343a40");
+  for (let i = 0; i < 5; i++) rectSurFace(...F, .28 + i * .095, .31 + i * .095, .58, .77, "#868e96");
+  rectSurFace(...F, .05, .95, .84, .93, "#adb5bd");
+  const [nx, ny] = surFace(...F, .5, .5), l = P.adh[0] - P.agh[0];
+  ctx.fillStyle = "#fff"; ctx.fillRect(nx - l * .14, ny - l * .05, l * .28, l * .09);
+  ctx.fillStyle = "#212529"; ctx.font = `900 ${Math.max(5, l * .07)}px Arial Black, sans-serif`; ctx.textAlign = "center";
+  ctx.fillText("ZOO " + o.numero, nx, ny + l * .025); ctx.textAlign = "start";
+  for (const u of [.13, .87]) {
+    const [px, py] = surFace(...F, u, .66);
     ctx.fillStyle = "#fff9db";
     ctx.shadowColor = "#ffe066"; ctx.shadowBlur = (o.v ? 25 : 8) + nuit * 25;
-    ctx.beginPath(); ctx.arc(px, py, l * .06, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py, l * .07, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
   }
   if (o.v && nuit > .3 && o.z > 2) { // faisceau des phares la nuit
@@ -391,76 +453,132 @@ function dessinerTrain(o, amb) {
     g.addColorStop(0, `rgba(255, 240, 180, ${.35 * nuit})`); g.addColorStop(1, "rgba(255, 240, 180, 0)");
     polygone([P.ag0, P.ad0, projeter(x + 1.6, 0, Math.max(-CAM_D + 1, o.z - 12)), projeter(x - 1.6, 0, Math.max(-CAM_D + 1, o.z - 12))], g);
   }
+  if (o.v && o.z > 1 && o.z < 40) { // gyrophare orange sur les camions qui roulent
+    const [gx, gy] = projeter(x, o.h + .25, o.z + .5);
+    const on = Math.sin(performance.now() / 90) > 0;
+    ctx.fillStyle = on ? "#ff922b" : "#a64b00"; ctx.shadowColor = "#ff922b"; ctx.shadowBlur = on ? 20 : 0;
+    ctx.beginPath(); ctx.arc(gx, gy, Math.max(2, l * .06), 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+  }
 }
 
-function dessinerRampe(o) {
+function dessinerTronc(o, amb) {
+  const x = VOIES[o.voie];
+  const P = boite(x, 2, o.h, o.z, o.z + o.long, { avant: teinte("#8a5a32", amb), cote: teinte("#6b4226", amb), dessus: teinte("#5a7a2a", amb) });
+  if (!P) return;
+  const [A, B, C, D] = P.coteGauche ? [P.agh1, P.agh, P.ag0, P.ag1] : [P.adh, P.adh1, P.ad1, P.ad0];
+  for (let i = 1; i < 7; i++) rectSurFace(A, B, C, D, 0, 1, i / 7 - .015, i / 7 + .015, teinte("#4a2e18", amb)); // écorce
+  for (let i = 0; i < o.long / 3; i++) { // champignons et mousse sur le dessus
+    const [mx, my, k] = projeter(x + ((i * 37) % 10 - 5) / 8, o.h, o.z + 1.5 + i * 3);
+    if (o.z + 1.5 + i * 3 < -CAM_D + 1) continue;
+    ctx.fillStyle = teinte("#e03131", amb); ctx.beginPath(); ctx.ellipse(mx, my - k * .12, k * .16, k * .1, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.fillRect(mx - k * .03, my - k * .12, k * .06, k * .12);
+  }
+  if (o.z < -CAM_D + 1.2) return;
+  // face avant : cernes du bois
+  const [cx, cy] = surFace(P.agh, P.adh, P.ad0, P.ag0, .5, .5);
+  const r = (P.adh[0] - P.agh[0]) * .46;
+  ctx.fillStyle = teinte("#e0b27a", amb); ctx.beginPath(); ctx.ellipse(cx, cy, r, r * .95, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = teinte("#a8743f", amb); ctx.lineWidth = Math.max(1, r * .05);
+  for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.ellipse(cx, cy, r * i / 5, r * .95 * i / 5, 0, 0, Math.PI * 2); ctx.stroke(); }
+}
+
+function dessinerRampe(o, amb) {
   const x = VOIES[o.voie];
   const z0 = Math.max(o.z, -CAM_D + 0.9), z1 = o.z + o.long;
   if (z1 <= z0) return;
   const hz = (z) => o.h * Math.min(1, Math.max(0, (z - o.z) / o.long));
   const a = projeter(x - 1, hz(z0), z0), b = projeter(x + 1, hz(z0), z0), c = projeter(x + 1, o.h, z1), d = projeter(x - 1, o.h, z1);
   const cote = x > camX ? [projeter(x - 1, 0, z0), a, d, projeter(x - 1, 0, z1)] : [projeter(x + 1, 0, z0), b, c, projeter(x + 1, 0, z1)];
-  polygone(cote, "#5c5f66");
-  polygone([a, b, c, d], "#fab005");
-  ctx.save(); // bandes noires en biais
-  ctx.beginPath(); [a, b, c, d].forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.clip();
-  for (let i = 0; i < 8; i++) {
-    const p = surFace(d, c, b, a, 0, (i + .3) / 8), q = surFace(d, c, b, a, 1, (i + .55) / 8);
-    ctx.strokeStyle = "#212529"; ctx.lineWidth = Math.max(1, a[2] * .12);
+  polygone(cote, teinte("#5c3d22", amb));
+  polygone([a, b, c, d], teinte("#b07a45", amb));
+  // planches
+  for (let i = 1; i < 9; i++) {
+    const p = surFace(d, c, b, a, 0, i / 9), q = surFace(d, c, b, a, 1, i / 9);
+    ctx.strokeStyle = teinte("#6b4226", amb); ctx.lineWidth = Math.max(1, a[2] * .05);
     ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
   }
-  ctx.restore();
+  for (const u of [.12, .88]) { // clous / cordes
+    const p = surFace(d, c, b, a, u, 0), q = surFace(d, c, b, a, u, 1);
+    ctx.strokeStyle = teinte("#d8c08a", amb); ctx.lineWidth = Math.max(1, a[2] * .04);
+    ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+  }
 }
 
-function dessinerBarriere(o, t) {
+// Obstacle bas (à sauter) : tronc couché ou barrière du zoo. Obstacle haut (à glisser dessous) : branche et lianes.
+function dessinerObstacle(o, amb, t) {
   const x = VOIES[o.voie];
-  const haute = o.type === "haute";
   const pg = projeter(x - 1.05, 0, o.z), pd = projeter(x + 1.05, 0, o.z);
   const k = pg[2];
-  const bas = haute ? 1.35 : 0.25, haut = haute ? 2.35 : 0.95;
-  const yb = projeter(x, bas, o.z)[1], yh = projeter(x, haut, o.z)[1];
-  ctx.fillStyle = "#adb5bd";
-  ctx.fillRect(pg[0], yh, k * .13, pg[1] - yh);
-  ctx.fillRect(pd[0] - k * .13, yh, k * .13, pd[1] - yh);
-  ctx.save();
-  ctx.beginPath(); ctx.rect(pg[0], yh, pd[0] - pg[0], yb - yh); ctx.clip();
-  const w = (pd[0] - pg[0]) / 8;
-  for (let i = -2; i < 12; i++) {
-    ctx.fillStyle = i % 2 ? "#fff" : "#e03131";
-    ctx.beginPath(); ctx.moveTo(pg[0] + i * w, yb); ctx.lineTo(pg[0] + (i + 1) * w, yb); ctx.lineTo(pg[0] + (i + 2) * w, yh); ctx.lineTo(pg[0] + (i + 1) * w, yh); ctx.fill();
+  if (o.touche) { ctx.globalAlpha = .45; }
+  if (o.type === "basse") {
+    const yb = projeter(x, .1, o.z)[1], yh = projeter(x, .85, o.z)[1];
+    if (o.style === 0) { // tronc couché
+      const hh = yb - yh;
+      ctx.fillStyle = teinte("#7a4a24", amb);
+      ctx.beginPath(); ctx.roundRect(pg[0] - k * .1, yh, pd[0] - pg[0] + k * .2, hh, hh / 2); ctx.fill();
+      ctx.strokeStyle = teinte("#4a2e18", amb); ctx.lineWidth = Math.max(1, k * .03);
+      for (let i = 1; i < 3; i++) { ctx.beginPath(); ctx.moveTo(pg[0], yh + hh * i / 3); ctx.lineTo(pd[0], yh + hh * i / 3); ctx.stroke(); }
+      ctx.fillStyle = teinte("#e0b27a", amb);
+      ctx.beginPath(); ctx.ellipse(pd[0] + k * .05, yh + hh / 2, hh * .28, hh / 2 * .95, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = teinte("#51cf66", amb); // petite pousse
+      ctx.beginPath(); ctx.ellipse((pg[0] + pd[0]) / 2, yh - k * .06, k * .1, k * .05, -.5, 0, Math.PI * 2); ctx.fill();
+    } else { // barrière du zoo en bois, avec panneau
+      ctx.fillStyle = teinte("#8d5a2b", amb);
+      for (const px of [pg[0], (pg[0] + pd[0]) / 2, pd[0]]) ctx.fillRect(px - k * .06, yh - k * .15, k * .12, yb - yh + k * .15);
+      ctx.fillStyle = teinte("#c08040", amb);
+      ctx.fillRect(pg[0], yh, pd[0] - pg[0], (yb - yh) * .3);
+      ctx.fillRect(pg[0], yh + (yb - yh) * .55, pd[0] - pg[0], (yb - yh) * .3);
+      if (o.z > 1.5) {
+        ctx.fillStyle = "#ffd43b"; ctx.fillRect((pg[0] + pd[0]) / 2 - k * .35, yh - k * .42, k * .7, k * .3);
+        ctx.fillStyle = "#212529"; ctx.font = `900 ${Math.max(5, k * .18)}px Arial Black, sans-serif`; ctx.textAlign = "center";
+        ctx.fillText("ZOO", (pg[0] + pd[0]) / 2, yh - k * .21); ctx.textAlign = "start";
+      }
+    }
+  } else { // branche basse avec lianes et feuilles : il faut glisser
+    const yb = projeter(x, 1.35, o.z)[1], yh = projeter(x, 2.2, o.z)[1];
+    const hh = yb - yh;
+    ctx.fillStyle = teinte("#6b4226", amb); // poteaux-arbres de chaque côté
+    ctx.fillRect(pg[0] - k * .12, yh - k * .3, k * .18, pg[1] - yh + k * .3);
+    ctx.fillRect(pd[0] - k * .06, yh - k * .3, k * .18, pd[1] - yh + k * .3);
+    ctx.fillStyle = teinte("#7a4a24", amb);
+    ctx.beginPath(); ctx.roundRect(pg[0] - k * .1, yh, pd[0] - pg[0] + k * .2, hh * .45, hh * .2); ctx.fill();
+    for (let i = 0; i < 7; i++) { // lianes qui pendent
+      const lx = pg[0] + (pd[0] - pg[0]) * (i + .5) / 7;
+      const bal = Math.sin(t * 3 + i) * k * .05;
+      ctx.strokeStyle = teinte("#2b8a3e", amb); ctx.lineWidth = Math.max(1, k * .04);
+      ctx.beginPath(); ctx.moveTo(lx, yh + hh * .3); ctx.quadraticCurveTo(lx + bal, yb - hh * .1, lx + bal * 2, yb + (i % 2) * k * .1); ctx.stroke();
+      ctx.fillStyle = teinte(i % 2 ? "#40c057" : "#69db7c", amb);
+      ctx.beginPath(); ctx.ellipse(lx + bal * 2, yb + (i % 2) * k * .1, k * .09, k * .05, .6, 0, Math.PI * 2); ctx.fill();
+    }
+    for (let i = 0; i < 5; i++) { // feuillage sur la branche
+      ctx.fillStyle = teinte(["#2f9e44", "#37b24d", "#2b8a3e"][i % 3], amb);
+      ctx.beginPath(); ctx.ellipse(pg[0] + (pd[0] - pg[0]) * (i + .5) / 5, yh, k * .22, k * .12, (i - 2) * .3, 0, Math.PI * 2); ctx.fill();
+    }
+    if (o.z > 2) {
+      ctx.fillStyle = "#ffe066"; ctx.font = `900 ${Math.max(8, k * .5)}px Arial Black, sans-serif`; ctx.textAlign = "center";
+      ctx.fillText("▼", (pg[0] + pd[0]) / 2, yb + k * .55); ctx.textAlign = "start";
+    }
   }
-  ctx.restore();
-  ctx.strokeStyle = "#343a40"; ctx.lineWidth = Math.max(1, k * .04);
-  ctx.strokeRect(pg[0], yh, pd[0] - pg[0], yb - yh);
-  // feux clignotants
-  const allume = Math.sin(t * 10 + o.z) > 0;
-  for (const px of [pg[0] + k * .07, pd[0] - k * .07]) {
-    ctx.fillStyle = allume ? "#ffd43b" : "#7a5c00";
-    ctx.shadowColor = "#ffd43b"; ctx.shadowBlur = allume ? 14 : 0;
-    ctx.beginPath(); ctx.arc(px, yh - k * .08, k * .08, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-  }
-  if (haute && o.z > 2) {
-    ctx.fillStyle = "#ffe066";
-    ctx.font = `900 ${Math.max(8, k * .5)}px Arial Black, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.fillText("▼", (pg[0] + pd[0]) / 2, (yh + yb) / 2 + k * .18);
-    ctx.textAlign = "start";
-  }
+  ctx.globalAlpha = 1;
 }
 
-function dessinerPiece(o, t) {
+function dessinerBanane(o, t) {
   const [sx, sy, k] = projeter(o.xAimant ?? VOIES[o.voie], o.y, o.z);
-  const r = k * .36;
-  const l = Math.abs(Math.cos(t * 5 + o.z)) * r + 1;
-  ctx.shadowColor = "#ffd43b"; ctx.shadowBlur = 10;
-  ctx.fillStyle = "#e8a200";
-  ctx.beginPath(); ctx.ellipse(sx, sy, l, r, 0, 0, Math.PI * 2); ctx.fill();
+  const r = k * .42;
+  const l = Math.cos(t * 4 + o.z); // la banane tourne sur elle-même
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(Math.max(.25, Math.abs(l)) * Math.sign(l || 1), 1);
+  ctx.rotate(-.5);
+  ctx.shadowColor = "#ffd43b"; ctx.shadowBlur = 12;
+  ctx.fillStyle = "#f0b400";
+  ctx.beginPath(); ctx.moveTo(-r, -r * .2); ctx.quadraticCurveTo(0, r * 1.2, r, -r * .2); ctx.quadraticCurveTo(0, r * .5, -r, -r * .2); ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.fillStyle = "#ffd43b";
-  ctx.beginPath(); ctx.ellipse(sx, sy, l * .78, r * .78, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,.75)";
-  ctx.beginPath(); ctx.ellipse(sx - l * .25, sy - r * .3, l * .2, r * .15, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ffe14d";
+  ctx.beginPath(); ctx.moveTo(-r * .85, -r * .12); ctx.quadraticCurveTo(0, r * .95, r * .85, -r * .12); ctx.quadraticCurveTo(0, r * .62, -r * .85, -r * .12); ctx.fill();
+  ctx.fillStyle = "#6b4a00";
+  ctx.beginPath(); ctx.arc(-r, -r * .2, r * .1, 0, Math.PI * 2); ctx.arc(r, -r * .2, r * .08, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 
 const ICONES = { aimant: ["🧲", "#e03131"], jetpack: ["🚀", "#1c7ed6"], double: ["x2", "#f08c00"], baskets: ["👟", "#2f9e44"] };
@@ -484,114 +602,238 @@ function dessinerBonus(o, t) {
   ctx.restore();
 }
 
-function dessinerPortique(z, amb, t) { // portique électrique au-dessus des voies
-  const g1 = projeter(-4.1, 0, z), g2 = projeter(-4.1, 6.2, z), d1 = projeter(4.1, 0, z), d2 = projeter(4.1, 6.2, z);
+// Portique en bois au-dessus des chemins, avec panneau et lianes (lanternes la nuit).
+function dessinerPortique(z, amb, t, n) {
+  const g1 = projeter(-4.3, 0, z), g2 = projeter(-4.3, 6, z), d1 = projeter(4.3, 0, z), d2 = projeter(4.3, 6, z);
   const k = g1[2];
-  ctx.strokeStyle = "#495057"; ctx.lineWidth = Math.max(1, k * .18);
-  ctx.beginPath(); ctx.moveTo(g1[0], g1[1]); ctx.lineTo(g2[0], g2[1]); ctx.lineTo(d2[0], d2[1]); ctx.lineTo(d1[0], d1[1]); ctx.stroke();
-  ctx.lineWidth = Math.max(1, k * .04);
-  ctx.strokeStyle = "#868e96";
-  const f1 = projeter(-4.1, 5.6, z), f2 = projeter(4.1, 5.6, z);
-  ctx.beginPath(); ctx.moveTo(f1[0], f1[1]); ctx.lineTo(f2[0], f2[1]); ctx.stroke();
-  // feux de signalisation
-  const [sx, sy] = projeter(-3.6, 5.4, z);
-  ctx.fillStyle = "#212529"; ctx.fillRect(sx - k * .15, sy - k * .1, k * .3, k * .6);
-  const vert = Math.floor(t + z) % 3 !== 0;
-  ctx.fillStyle = vert ? "#51cf66" : "#ff6b6b";
-  ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10 + amb.nuit * 20;
-  ctx.beginPath(); ctx.arc(sx, sy + (vert ? k * .35 : k * .08), k * .09, 0, Math.PI * 2); ctx.fill();
-  ctx.shadowBlur = 0;
-}
-
-function dessinerImmeuble(d, amb) {
-  const x = d.cote * (6.4 + d.larg / 2);
-  const P = boite(x, d.larg, d.haut, d.z, d.z + d.prof, { avant: rgbMix(d.couleur, amb), cote: rgbMix(d.couleur, amb, .65), dessus: amb.nuit > .5 ? "#212529" : "#495057" });
-  if (!P) return;
-  const F = [P.agh, P.adh, P.ad0, P.ag0];
-  const lignes = Math.floor(d.haut / 2.5);
-  for (let j = 0; j < lignes; j++) for (let i = 0; i < 3; i++) {
-    const allume = d.fenetres[j * 3 + i];
-    const couleur = allume ? `rgba(255, 224, 130, ${.35 + amb.nuit * .6})` : `rgba(20, 20, 50, ${.4 + amb.nuit * .3})`;
-    rectSurFace(...F, .12 + i * .28, .3 + i * .28, .05 + j / lignes * .9, .05 + j / lignes * .9 + .45 / lignes, couleur);
+  ctx.fillStyle = teinte("#6b4226", amb);
+  ctx.fillRect(g1[0] - k * .18, g2[1], k * .36, g1[1] - g2[1]);
+  ctx.fillRect(d1[0] - k * .18, d2[1], k * .36, d1[1] - d2[1]);
+  ctx.fillStyle = teinte("#8d5a2b", amb);
+  ctx.fillRect(g2[0] - k * .4, g2[1] - k * .1, d2[0] - g2[0] + k * .8, k * .38);
+  ctx.fillStyle = teinte("#5c3d22", amb);
+  for (const [px, py] of [[g2[0], g2[1]], [d2[0], d2[1]]]) { ctx.beginPath(); ctx.moveTo(px - k * .3, py - k * .1); ctx.lineTo(px, py - k * .5); ctx.lineTo(px + k * .3, py - k * .1); ctx.fill(); }
+  // panneau
+  const [px, py] = projeter(0, 6.35, z);
+  const textes = ["SAFARI", "SORTIE", "BANANES →", "SAVANE", "NE PAS NOURRIR"];
+  const txt = textes[((n % textes.length) + textes.length) % textes.length];
+  ctx.font = `900 ${Math.max(6, k * .42)}px Arial Black, sans-serif`;
+  const lw = ctx.measureText(txt).width + k * .5;
+  ctx.fillStyle = teinte("#f2d49b", amb); ctx.fillRect(px - lw / 2, py - k * .42, lw, k * .6);
+  ctx.strokeStyle = teinte("#5c3d22", amb); ctx.lineWidth = Math.max(1, k * .06); ctx.strokeRect(px - lw / 2, py - k * .42, lw, k * .6);
+  ctx.fillStyle = teinte("#5c3d22", amb); ctx.textAlign = "center"; ctx.fillText(txt, px, py + k * .05); ctx.textAlign = "start";
+  // lianes
+  for (let i = 0; i < 9; i++) {
+    const lx = g2[0] + (d2[0] - g2[0]) * (i + .5) / 9;
+    const long = k * (.6 + ((i * 7) % 5) * .25);
+    ctx.strokeStyle = teinte("#2b8a3e", amb); ctx.lineWidth = Math.max(1, k * .05);
+    ctx.beginPath(); ctx.moveTo(lx, g2[1] + k * .25); ctx.quadraticCurveTo(lx + Math.sin(t * 2 + i) * k * .1, g2[1] + long * .6, lx, g2[1] + long); ctx.stroke();
+    ctx.fillStyle = teinte("#51cf66", amb); ctx.beginPath(); ctx.ellipse(lx, g2[1] + long, k * .09, k * .05, .5, 0, Math.PI * 2); ctx.fill();
   }
-  if (d.enseigne) { // enseigne lumineuse
-    rectSurFace(...F, .1, .9, .9, .96, d.enseigne);
+  if (amb.nuit > .4) { // lanternes
+    for (const [lx, ly] of [projeter(-4.3, 4.8, z), projeter(4.3, 4.8, z)]) {
+      ctx.fillStyle = "#ffe066"; ctx.shadowColor = "#ffa94d"; ctx.shadowBlur = 30 * amb.nuit;
+      ctx.beginPath(); ctx.arc(lx, ly, k * .16, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    }
   }
 }
 
-function rgbMix(hex, amb, k = 1) {
-  const n = parseInt(hex.slice(1), 16);
-  const f = k * (1 - amb.nuit * .55);
-  return `rgb(${Math.floor((n >> 16) * f)},${Math.floor(((n >> 8) & 255) * f)},${Math.floor((n & 255) * f)})`;
+// ------------------------------------------------------------ dessin : décor (arbres, animaux, rochers)
+function dessinerDecor(d, amb, t) {
+  const [sx, sy, k] = projeter(d.cote * d.dx, 0, d.z);
+  if (sx < -300 || sx > W + 300) return;
+  const u = k * d.taille;
+  const c = (hex, f = 1) => teinte(hex, amb, f);
+  ctx.save();
+  ctx.translate(sx, sy);
+  if (d.cote > 0) ctx.scale(-1, 1); // dessins en miroir de l'autre côté
+  ctx.fillStyle = "rgba(0,0,0,.18)";
+  ctx.beginPath(); ctx.ellipse(0, 0, u * 1.2, u * .2, 0, 0, Math.PI * 2); ctx.fill();
+  switch (d.type) {
+    case "acacia": {
+      ctx.strokeStyle = c("#5c3d22"); ctx.lineCap = "round";
+      ctx.lineWidth = u * .28; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(u * .2, -u * 2, -u * .1, -u * 3.4); ctx.stroke();
+      ctx.lineWidth = u * .14;
+      ctx.beginPath(); ctx.moveTo(-u * .05, -u * 2.8); ctx.lineTo(-u * 1.4, -u * 4); ctx.moveTo(0, -u * 3); ctx.lineTo(u * 1.3, -u * 4.2); ctx.stroke();
+      ctx.fillStyle = c("#5c7a29"); ctx.beginPath(); ctx.ellipse(0, -u * 4.2, u * 2.8, u * .55, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = c("#7a9a33"); ctx.beginPath(); ctx.ellipse(-u * .6, -u * 4.45, u * 1.9, u * .4, 0, 0, Math.PI * 2); ctx.ellipse(u * 1.2, -u * 4.35, u * 1.2, u * .35, 0, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case "baobab": {
+      ctx.fillStyle = c("#8d6e4a");
+      ctx.beginPath(); ctx.moveTo(-u * 1, 0); ctx.bezierCurveTo(-u * 1.3, -u * 1.5, -u * .6, -u * 3, -u * .5, -u * 3.4);
+      ctx.lineTo(u * .5, -u * 3.4); ctx.bezierCurveTo(u * .6, -u * 3, u * 1.3, -u * 1.5, u * 1, 0); ctx.fill();
+      ctx.strokeStyle = c("#8d6e4a"); ctx.lineWidth = u * .16; ctx.lineCap = "round";
+      for (const [bx, by] of [[-1.2, -4.2], [-.4, -4.5], [.5, -4.4], [1.3, -4]]) { ctx.beginPath(); ctx.moveTo(bx * .3 * u, -u * 3.3); ctx.lineTo(bx * u, by * u); ctx.stroke(); }
+      ctx.fillStyle = c("#6b8e23");
+      for (const [bx, by] of [[-1.2, -4.3], [-.4, -4.6], [.5, -4.5], [1.3, -4.1]]) { ctx.beginPath(); ctx.arc(bx * u, by * u, u * .45, 0, Math.PI * 2); ctx.fill(); }
+      break;
+    }
+    case "palmier": {
+      ctx.strokeStyle = c("#8d6e4a"); ctx.lineWidth = u * .22; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(u * .8, -u * 2.5, u * .3, -u * 4.6); ctx.stroke();
+      ctx.fillStyle = c("#2f9e44");
+      for (let i = 0; i < 7; i++) {
+        const a = -Math.PI / 2 + (i - 3) * .5;
+        ctx.save(); ctx.translate(u * .3, -u * 4.6); ctx.rotate(a + Math.sin(t * 1.5 + i) * .04);
+        ctx.beginPath(); ctx.ellipse(u * 1.1, 0, u * 1.2, u * .22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      }
+      ctx.fillStyle = c("#7a4a24"); ctx.beginPath(); ctx.arc(u * .2, -u * 4.4, u * .18, 0, Math.PI * 2); ctx.arc(u * .45, -u * 4.35, u * .18, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case "jungle": {
+      ctx.fillStyle = c("#4a3020"); ctx.fillRect(-u * .28, -u * 5.5, u * .56, u * 5.5);
+      ctx.fillStyle = c("#3a2515"); ctx.beginPath(); ctx.moveTo(-u * .28, 0); ctx.lineTo(-u * .9, 0); ctx.lineTo(-u * .28, -u * .9); ctx.fill();
+      for (const [bx, by, r, col] of [[-1.2, -5.6, 1.5, "#1f6b33"], [1.2, -5.9, 1.4, "#237a3a"], [0, -6.8, 1.6, "#2b8a3e"], [-.3, -5.3, 1.1, "#2f9e44"]]) {
+        ctx.fillStyle = c(col); ctx.beginPath(); ctx.arc(bx * u, by * u, r * u, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = c("#2b8a3e"); ctx.lineWidth = Math.max(1, u * .06);
+      for (const lx of [-1.4, .9]) { ctx.beginPath(); ctx.moveTo(lx * u, -u * 5); ctx.quadraticCurveTo((lx + .2) * u, -u * 3, lx * u, -u * 2); ctx.stroke(); }
+      ctx.fillStyle = c("#ff6b9d"); ctx.beginPath(); ctx.arc(u * .9, -u * 6.4, u * .15, 0, Math.PI * 2); ctx.arc(-u * 1.1, -u * 6.1, u * .12, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case "fougere": {
+      for (let i = 0; i < 6; i++) {
+        ctx.save(); ctx.rotate(-1.2 + i * .48 + Math.sin(t * 2 + d.graine + i) * .03);
+        ctx.fillStyle = c(i % 2 ? "#2f9e44" : "#40c057");
+        ctx.beginPath(); ctx.ellipse(0, -u * .8, u * .22, u * .85, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      }
+      break;
+    }
+    case "buisson": {
+      const col = amb.foret > .5 ? ["#2b8a3e", "#37b24d"] : ["#8a9a3b", "#a3b04a"];
+      ctx.fillStyle = c(col[0]); ctx.beginPath(); ctx.arc(-u * .5, -u * .4, u * .55, 0, Math.PI * 2); ctx.arc(u * .4, -u * .45, u * .6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = c(col[1]); ctx.beginPath(); ctx.arc(0, -u * .75, u * .55, 0, Math.PI * 2); ctx.fill();
+      if (d.graine > 60) { ctx.fillStyle = c("#e03131"); ctx.beginPath(); ctx.arc(u * .2, -u * .9, u * .08, 0, Math.PI * 2); ctx.arc(-u * .4, -u * .6, u * .07, 0, Math.PI * 2); ctx.fill(); }
+      break;
+    }
+    case "rocher": {
+      ctx.fillStyle = c("#868e96");
+      ctx.beginPath(); ctx.moveTo(-u * 1, 0); ctx.quadraticCurveTo(-u * 1.1, -u * .9, -u * .2, -u * 1.1); ctx.quadraticCurveTo(u * 1, -u * 1, u * 1, 0); ctx.fill();
+      ctx.fillStyle = c("#adb5bd"); ctx.beginPath(); ctx.ellipse(-u * .3, -u * .8, u * .35, u * .15, -.3, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case "termitiere": {
+      ctx.fillStyle = c("#c0763a");
+      ctx.beginPath(); ctx.moveTo(-u * .7, 0); ctx.quadraticCurveTo(-u * .5, -u * 1.5, -u * .1, -u * 2.6); ctx.quadraticCurveTo(u * .1, -u * 2.8, u * .2, -u * 2.3);
+      ctx.quadraticCurveTo(u * .5, -u * 1.4, u * .7, 0); ctx.fill();
+      ctx.fillStyle = c("#a0602c"); ctx.beginPath(); ctx.moveTo(u * .15, -u * 1.6); ctx.quadraticCurveTo(u * .6, -u * 1.9, u * .55, -u * 1.3); ctx.fill();
+      break;
+    }
+    case "girafe": {
+      const bob = Math.sin(t * 1.3 + d.graine) * u * .08;
+      ctx.strokeStyle = c("#d9a441"); ctx.lineWidth = u * .16; ctx.lineCap = "round";
+      for (const lx of [-.6, -.35, .45, .7]) { ctx.beginPath(); ctx.moveTo(lx * u, -u * 1.9); ctx.lineTo(lx * u, 0); ctx.stroke(); }
+      ctx.fillStyle = c("#e8b04b"); ctx.beginPath(); ctx.ellipse(0, -u * 2.1, u * .95, u * .45, -.12, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = u * .3; ctx.beginPath(); ctx.moveTo(-u * .6, -u * 2.3); ctx.lineTo(-u * 1.3, -u * 4 + bob); ctx.stroke();
+      ctx.fillStyle = c("#e8b04b"); ctx.beginPath(); ctx.ellipse(-u * 1.5, -u * 4.1 + bob, u * .38, u * .2, -.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = c("#8d5a2b");
+      for (const [px, py] of [[-.2, -2.2], [.4, -2.1], [-.5, -2], [.1, -1.95], [-.85, -2.9], [-1.05, -3.4]]) { ctx.beginPath(); ctx.arc(px * u, py * u + (py < -2.5 ? bob * (py + 2.3) / -1.7 : 0), u * .1, 0, Math.PI * 2); ctx.fill(); }
+      ctx.strokeStyle = c("#8d5a2b"); ctx.lineWidth = u * .06;
+      ctx.beginPath(); ctx.moveTo(-u * 1.35, -u * 4.25 + bob); ctx.lineTo(-u * 1.3, -u * 4.55 + bob); ctx.moveTo(-u * 1.5, -u * 4.25 + bob); ctx.lineTo(-u * 1.5, -u * 4.55 + bob); ctx.stroke();
+      break;
+    }
+    case "elephant": {
+      const bat = Math.sin(t * 2 + d.graine) * .15;
+      ctx.fillStyle = c("#8a8f98");
+      for (const lx of [-.8, -.35, .35, .8]) ctx.fillRect(lx * u - u * .17, -u * 1, u * .34, u * 1);
+      ctx.beginPath(); ctx.ellipse(0, -u * 1.35, u * 1.25, u * .75, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-u * 1.25, -u * 1.55, u * .5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = c("#8a8f98"); ctx.lineWidth = u * .2; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(-u * 1.6, -u * 1.4); ctx.quadraticCurveTo(-u * 1.9, -u * .8, -u * 1.7, -u * .4 + bat * u); ctx.stroke();
+      ctx.fillStyle = c("#727780"); ctx.beginPath(); ctx.ellipse(-u * .95, -u * 1.55, u * .35, u * .45, bat, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(-u * 1.45, -u * 1.25); ctx.lineTo(-u * 1.75, -u * 1.05); ctx.lineTo(-u * 1.5, -u * 1.15); ctx.fill();
+      break;
+    }
+  }
+  ctx.restore();
 }
 
-// ------------------------------------------------------------ dessin : le coureur
-function dessinerJoueur(t) {
+// ------------------------------------------------------------ dessin : Moka vu de dos
+function dessinerMoka(t) {
   const [sx, sy, k] = projeter(jeu.x, jeu.y, 0);
   const [, ombreY, ko] = projeter(jeu.x, jeu.sol, 0);
   const u = k / 100; // 1 unité de dessin = 1 cm
   const haut = jeu.y - jeu.sol;
   ctx.fillStyle = `rgba(0,0,0,${.35 / (1 + haut * .4)})`;
-  ctx.beginPath(); ctx.ellipse(sx, ombreY, 48 * ko / 100 / (1 + haut * .15), 13 * ko / 100, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(sx, ombreY, 44 * ko / 100 / (1 + haut * .15), 12 * ko / 100, 0, 0, Math.PI * 2); ctx.fill();
 
   ctx.save();
   ctx.translate(sx, sy);
-  ctx.rotate((VOIES[jeu.voie] - jeu.x) * -0.12);
+  ctx.rotate((VOIES[jeu.voie] - jeu.x) * -0.12 + (jeu.etourdi > 0 ? Math.sin(t * 20) * .12 : 0));
   const glisse = jeu.glisse > 0 && haut < 0.3;
   const enAir = haut > 0.05 && !jeu.bonus.jetpack;
   const p = jeu.fini ? 0 : Math.sin(jeu.pas * 1.6);
-  if (jeu.fini) ctx.rotate(1.2);
-  const membre = (x1, y1, a, long, larg, couleur) => {
+  const FOUR = "#9c6433", FOUR2 = "#7a4a1f", PEAU = "#f3c89a";
+  const membre = (x1, y1, a, long, larg, couleur, main) => {
     ctx.save(); ctx.translate(x1 * u, y1 * u); ctx.rotate(a);
     ctx.fillStyle = couleur; ctx.beginPath(); ctx.roundRect(-larg / 2 * u, 0, larg * u, long * u, larg / 2 * u); ctx.fill();
+    if (main) { ctx.fillStyle = main; ctx.beginPath(); ctx.arc(0, long * u, larg * .7 * u, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
   };
-  const basket = jeu.bonus.baskets ? "#51cf66" : "#f8f9fa";
-  if (glisse) { // roulade : boule qui tourne
-    ctx.translate(0, -40 * u);
-    ctx.rotate(jeu.pas * 3);
-    ctx.fillStyle = "#e03131"; ctx.beginPath(); ctx.arc(0, 0, 40 * u, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#1864ab"; ctx.beginPath(); ctx.arc(0, 0, 40 * u, 0, Math.PI); ctx.fill();
-    ctx.fillStyle = "#ffd43b"; ctx.beginPath(); ctx.arc(14 * u, -14 * u, 14 * u, 0, Math.PI * 2); ctx.fill();
+  const queue = (base, amp) => {
+    ctx.strokeStyle = FOUR2; ctx.lineWidth = 9 * u; ctx.lineCap = "round";
+    const q = Math.sin(t * 6) * amp;
+    ctx.beginPath(); ctx.moveTo(0, base * u);
+    ctx.bezierCurveTo((30 + q) * u, (base + 10) * u, (55 + q) * u, (base - 30) * u, (38 + q * 1.4) * u, (base - 55) * u);
+    ctx.bezierCurveTo((30 + q) * u, (base - 68) * u, (18 + q) * u, (base - 58) * u, (24 + q) * u, (base - 50) * u);
+    ctx.stroke();
+  };
+  if (glisse) { // roulé-boulé : boule de poils qui tourne
+    ctx.translate(0, -38 * u);
+    ctx.save(); ctx.rotate(jeu.pas * 3);
+    ctx.fillStyle = FOUR; ctx.beginPath(); ctx.arc(0, 0, 38 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = FOUR2; ctx.beginPath(); ctx.arc(0, 0, 38 * u, 0, Math.PI * .6); ctx.fill();
+    ctx.fillStyle = "#2f9e44"; ctx.beginPath(); ctx.arc(0, 0, 26 * u, Math.PI, Math.PI * 1.8); ctx.lineTo(0, 0); ctx.fill();
     ctx.restore();
-    return;
+    ctx.fillStyle = "#e03131"; ctx.beginPath(); ctx.arc(0, -30 * u, 20 * u, Math.PI, 0); ctx.fill();
+    ctx.restore();
+    return [sx, sy - 40 * u];
   }
-  const rebond = enAir ? 0 : Math.abs(Math.sin(jeu.pas * 1.6)) * 6;
+  const rebond = enAir ? 0 : Math.abs(Math.sin(jeu.pas * 1.6)) * 7;
   ctx.translate(0, -rebond * u);
-  // jambes et baskets
-  const jambe = (x, a, couleur) => {
-    membre(x, -88, a, 50, 17, couleur);
-    ctx.save(); ctx.translate(x * u + Math.sin(a) * -48 * u, -88 * u + Math.cos(a) * 48 * u);
-    ctx.fillStyle = basket; ctx.beginPath(); ctx.roundRect(-10 * u, -4 * u, 26 * u, 12 * u, 5 * u); ctx.fill();
-    ctx.fillStyle = "#e03131"; ctx.fillRect(-10 * u, 4 * u, 26 * u, 4 * u);
+  // jambes courtes et pieds de singe
+  const jambe = (x, a) => {
+    membre(x, -62, a, 40, 16, FOUR, null);
+    ctx.save(); ctx.translate(x * u + Math.sin(a) * -40 * u, -62 * u + Math.cos(a) * 40 * u);
+    ctx.fillStyle = jeu.bonus.baskets ? "#51cf66" : PEAU; ctx.beginPath(); ctx.ellipse(0, 0, 13 * u, 7 * u, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   };
-  jambe(-10, enAir ? .9 : p * .75, "#1864ab");
-  jambe(10, enAir ? -.2 : -p * .75, "#1c7ed6");
-  // sac à dos (ou jetpack)
-  ctx.fillStyle = jeu.bonus.jetpack ? "#adb5bd" : "#1098ad";
-  ctx.beginPath(); ctx.roundRect(-30 * u, -150 * u, 60 * u, 52 * u, 12 * u); ctx.fill();
+  jambe(-14, enAir ? .8 : p * .8);
+  jambe(14, enAir ? -.3 : -p * .8);
+  queue(-60, enAir ? 12 : 6);
+  // jetpack ou petit sac à bananes
   if (jeu.bonus.jetpack) {
+    ctx.fillStyle = "#adb5bd"; ctx.beginPath(); ctx.roundRect(-26 * u, -128 * u, 52 * u, 50 * u, 10 * u); ctx.fill();
     ctx.fillStyle = "#ff922b";
-    for (const bx of [-18, 18]) { ctx.beginPath(); ctx.moveTo((bx - 7) * u, -98 * u); ctx.lineTo(bx * u, (-98 + 30 + Math.random() * 18) * u); ctx.lineTo((bx + 7) * u, -98 * u); ctx.fill(); }
+    for (const bx of [-15, 15]) { ctx.beginPath(); ctx.moveTo((bx - 7) * u, -78 * u); ctx.lineTo(bx * u, (-78 + 30 + Math.random() * 18) * u); ctx.lineTo((bx + 7) * u, -78 * u); ctx.fill(); }
   }
-  // corps : sweat à capuche
-  const g = ctx.createLinearGradient(0, -160 * u, 0, -84 * u);
-  g.addColorStop(0, "#ff6b6b"); g.addColorStop(1, "#c92a2a");
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.roundRect(-25 * u, -156 * u, 50 * u, 74 * u, 16 * u); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.fillRect(-4 * u, -140 * u, 8 * u, 30 * u);
-  // bras
-  membre(-25, -148, enAir ? 2.6 : -p * .9 + .2, 46, 14, "#e03131");
-  membre(25, -148, enAir ? -2.6 : p * .9 - .2, 46, 14, "#e03131");
-  // tête : capuche, visage (vu de dos : nuque), casquette à l'envers, casque audio
-  ctx.fillStyle = "#c92a2a"; ctx.beginPath(); ctx.arc(0, -160 * u, 26 * u, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = "#f3c89a"; ctx.beginPath(); ctx.arc(0, -178 * u, 22 * u, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#5c3d1e"; ctx.beginPath(); ctx.arc(0, -182 * u, 22 * u, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
-  ctx.fillStyle = "#ffd43b"; ctx.beginPath(); ctx.arc(0, -186 * u, 23 * u, Math.PI, 0); ctx.fill();
-  ctx.fillRect(-16 * u, -190 * u, 32 * u, 7 * u);
-  ctx.fillStyle = "#212529";
-  ctx.beginPath(); ctx.arc(-22 * u, -178 * u, 6 * u, 0, Math.PI * 2); ctx.arc(22 * u, -178 * u, 6 * u, 0, Math.PI * 2); ctx.fill();
+  // corps : poils + débardeur vert n° 7
+  ctx.fillStyle = FOUR; ctx.beginPath(); ctx.ellipse(0, -96 * u, 30 * u, 40 * u, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#2f9e44"; ctx.beginPath(); ctx.roundRect(-24 * u, -126 * u, 48 * u, 56 * u, 14 * u); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = `900 ${26 * u}px Arial Black, sans-serif`; ctx.textAlign = "center"; ctx.fillText("7", 0, -86 * u); ctx.textAlign = "start";
+  // longs bras de singe qui balancent
+  membre(-24, -118, enAir ? 2.7 : -p * 1.1 + .25, 58, 13, FOUR, PEAU);
+  membre(24, -118, enAir ? -2.7 : p * 1.1 - .25, 58, 13, FOUR, PEAU);
+  // tête vue de dos : oreilles, casquette rouge
+  ctx.fillStyle = FOUR;
+  ctx.beginPath(); ctx.arc(-26 * u, -150 * u, 11 * u, 0, Math.PI * 2); ctx.arc(26 * u, -150 * u, 11 * u, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f3b894";
+  ctx.beginPath(); ctx.arc(-27 * u, -150 * u, 6 * u, 0, Math.PI * 2); ctx.arc(27 * u, -150 * u, 6 * u, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FOUR; ctx.beginPath(); ctx.arc(0, -152 * u, 26 * u, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FOUR2; ctx.beginPath(); ctx.arc(0, -146 * u, 18 * u, .2, Math.PI - .2); ctx.fill();
+  ctx.fillStyle = "#e03131"; ctx.beginPath(); ctx.arc(0, -160 * u, 26 * u, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+  ctx.fillStyle = "#c92a2a"; ctx.fillRect(-12 * u, -162 * u, 24 * u, 5 * u);
+  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, -186 * u, 4 * u, 0, Math.PI * 2); ctx.fill();
+  // étoiles qui tournent après un choc
+  if (jeu.etourdi > 0) {
+    for (let i = 0; i < 3; i++) {
+      const a = t * 6 + i * 2.1;
+      ctx.fillStyle = "#ffd43b"; ctx.font = `${18 * u}px sans-serif`; ctx.textAlign = "center";
+      ctx.fillText("★", Math.cos(a) * 34 * u, -190 * u + Math.sin(a) * 8 * u);
+    }
+    ctx.textAlign = "start";
+  }
   ctx.restore();
 
   if (jeu.bonus.aimant) {
@@ -603,6 +845,64 @@ function dessinerJoueur(t) {
     ctx.fillStyle = "rgba(255, 146, 43, .25)";
     ctx.beginPath(); ctx.arc(sx, sy - 100 * u, 70 * u, 0, Math.PI * 2); ctx.fill();
   }
+  return [sx, sy - 100 * u];
+}
+
+// ------------------------------------------------------------ dessin : le gardien du zoo (vu de dos, en bas de l'écran)
+let gardienX = W / 2 + 120;
+function dessinerGardien(t, cibleMoka) {
+  const p = jeu.gardien;
+  if (p < 0.02) return;
+  const vise = Math.min(W - 70, Math.max(70, cibleMoka[0] + 115));
+  gardienX += (vise - gardienX) * .12;
+  const attrape = jeu.fini ? jeu.attrape : 0;
+  const s = .88;
+  const pieds = H + 290 - 300 * Math.min(1, p) - attrape * 40;
+  const course = jeu.fini ? 0 : Math.sin(t * 13);
+  ctx.save();
+  ctx.translate(gardienX, pieds + Math.abs(course) * -8);
+  ctx.scale(s, s);
+  // jambes (short + chaussettes + bottes)
+  for (const [lx, a] of [[-18, course * .5], [18, -course * .5]]) {
+    ctx.save(); ctx.translate(lx, -120); ctx.rotate(a);
+    ctx.fillStyle = "#f3c89a"; ctx.fillRect(-10, 0, 20, 70);
+    ctx.fillStyle = "#fff"; ctx.fillRect(-11, 60, 22, 22);
+    ctx.fillStyle = "#4a2e18"; ctx.beginPath(); ctx.roundRect(-13, 80, 26, 34, 6); ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = "#8d6e3a"; ctx.beginPath(); ctx.roundRect(-40, -150, 80, 50, 10); ctx.fill(); // short
+  // chemise kaki
+  ctx.fillStyle = "#c2a878"; ctx.beginPath(); ctx.roundRect(-46, -270, 92, 128, 22); ctx.fill();
+  ctx.fillStyle = "#6b4226"; ctx.fillRect(-46, -158, 92, 10); // ceinture
+  ctx.fillStyle = "#a88f5c"; ctx.fillRect(-4, -262, 8, 104);
+  ctx.fillStyle = "#1c7ed6"; ctx.font = "900 15px Arial Black, sans-serif"; ctx.textAlign = "center"; ctx.fillText("ZOO", 0, -225); ctx.textAlign = "start";
+  // bras gauche qui balance, bras droit qui tient l'épuisette
+  ctx.save(); ctx.translate(-44, -258); ctx.rotate(.3 + course * .4);
+  ctx.fillStyle = "#c2a878"; ctx.fillRect(-11, 0, 22, 40); ctx.fillStyle = "#f3c89a"; ctx.fillRect(-9, 40, 18, 44);
+  ctx.restore();
+  // épuisette : cerceau au-dessus de Moka (et sur lui quand il est attrapé)
+  const [mx, my] = cibleMoka;
+  const hx0 = -140, hy0 = -420 + course * 10;
+  const hx = hx0 + ((mx - gardienX) / s - hx0) * attrape;
+  const hy = hy0 + ((my - pieds) / s + 10 - hy0) * attrape;
+  ctx.strokeStyle = "#8d5a2b"; ctx.lineWidth = 8; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(40, -240); ctx.lineTo(hx + 30, hy + 30); ctx.stroke();
+  ctx.fillStyle = "#c2a878"; ctx.beginPath(); ctx.arc(40, -245, 13, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.28)"; ctx.strokeStyle = "#e9ecef"; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.ellipse(hx, hy, 58, 40, -.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1.5;
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath(); ctx.moveTo(hx + i * 15 - 20, hy - 30); ctx.lineTo(hx + i * 15 + 20, hy + 30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx + i * 15 + 20, hy - 30); ctx.lineTo(hx + i * 15 - 20, hy + 30); ctx.stroke();
+  }
+  // tête vue de dos : nuque, cheveux, chapeau de brousse
+  ctx.fillStyle = "#f3c89a"; ctx.fillRect(-12, -292, 24, 26);
+  ctx.fillStyle = "#6b4226"; ctx.beginPath(); ctx.arc(0, -308, 30, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f3c89a"; ctx.beginPath(); ctx.ellipse(-30, -304, 7, 11, 0, 0, Math.PI * 2); ctx.ellipse(30, -304, 7, 11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#d8c08a"; ctx.beginPath(); ctx.ellipse(0, -322, 62, 14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -326, 32, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#8d6e3a"; ctx.fillRect(-32, -334, 64, 8);
+  ctx.restore();
 }
 
 // ------------------------------------------------------------ dessin : scène complète
@@ -626,96 +926,116 @@ function dessiner(dt) {
   ctx.fillRect(-60, -60, W + 120, HORIZON + 62);
   if (amb.nuit > .3) { // étoiles
     ctx.fillStyle = `rgba(255,255,255,${(amb.nuit - .3) * 1.3})`;
-    for (let i = 0; i < 50; i++) ctx.fillRect((i * 97) % W, (i * 53) % (HORIZON - 40), 2, 2);
+    for (let i = 0; i < 60; i++) ctx.fillRect((i * 97) % W, (i * 53) % (HORIZON - 40), 2, 2);
   }
-  // soleil ou lune
-  const astre = amb.nuit > .6;
-  ctx.fillStyle = astre ? "#f1f3f5" : "#ffe066";
-  ctx.shadowColor = astre ? "#fff" : "#ffd43b"; ctx.shadowBlur = 40;
-  ctx.beginPath(); ctx.arc(W * .74 - camX * 4, HORIZON - 70, astre ? 30 : 46, 0, Math.PI * 2); ctx.fill();
+  // soleil (énorme et orangé en savane) ou lune
+  const lune = amb.nuit > .6;
+  ctx.fillStyle = lune ? "#f1f3f5" : amb.nuit > .2 ? "#ff922b" : "#ffe066";
+  ctx.shadowColor = lune ? "#fff" : "#ffd43b"; ctx.shadowBlur = 50;
+  ctx.beginPath(); ctx.arc(W * .7 - camX * 4, HORIZON - 60, lune ? 30 : 62, 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
-  // nuages
-  ctx.fillStyle = `rgba(255,255,255,${.7 - amb.nuit * .5})`;
+  // nuages allongés
+  ctx.fillStyle = `rgba(255,255,255,${.6 - amb.nuit * .45})`;
   for (let i = 0; i < 4; i++) {
-    const x = ((i * 160 - dist * .6 - camX * 6) % (W + 200) + W + 200) % (W + 200) - 100, y = 40 + i * 30;
-    ctx.beginPath(); ctx.ellipse(x, y, 50, 14, 0, 0, Math.PI * 2); ctx.ellipse(x + 30, y - 8, 36, 14, 0, 0, Math.PI * 2); ctx.fill();
+    const x = ((i * 160 - dist * .6 - camX * 6) % (W + 200) + W + 200) % (W + 200) - 100, y = 36 + i * 28;
+    ctx.beginPath(); ctx.ellipse(x, y, 60, 10, 0, 0, Math.PI * 2); ctx.ellipse(x + 34, y - 6, 36, 10, 0, 0, Math.PI * 2); ctx.fill();
   }
-  // ville lointaine en deux plans
-  for (const [plan, couleur, vit, hmax] of [[0, amb.nuit > .5 ? "#1b1340" : "#5f4b8b", 8, 90], [1, amb.nuit > .5 ? "#251a55" : "#4a3a78", 14, 60]]) {
-    ctx.fillStyle = couleur;
-    for (let i = 0; i < 16; i++) {
-      const bx = ((i * 53 + plan * 25 - camX * vit) % (W + 100) + W + 100) % (W + 100) - 50, bh = 25 + (i * 37 + plan * 11) % hmax;
-      ctx.fillRect(bx, HORIZON - bh, 42, bh);
-      if (amb.nuit > .4) {
-        ctx.fillStyle = "rgba(255, 224, 130, .7)";
-        for (let w = 0; w < 4; w++) if ((i + w) % 3) ctx.fillRect(bx + 6 + (w % 2) * 18, HORIZON - bh + 8 + Math.floor(w / 2) * 14, 5, 5);
-        ctx.fillStyle = couleur;
-      }
+  // vol d'oiseaux
+  ctx.strokeStyle = `rgba(30,20,20,${.55 - amb.nuit * .4})`; ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    const bx = ((W + 60 - (t * 22 + i * 26) % (W + 120)) + W) % (W + 120) - 60, by = 70 + i * 9 + Math.sin(t * 2 + i) * 4;
+    const ail = Math.sin(t * 8 + i) * 4;
+    ctx.beginPath(); ctx.moveTo(bx - 7, by - ail); ctx.lineTo(bx, by); ctx.lineTo(bx + 7, by - ail); ctx.stroke();
+  }
+  // montagne au loin avec neige au sommet
+  ctx.fillStyle = rgb(amb.haut, .75, .9);
+  ctx.beginPath(); ctx.moveTo(-40 - camX * 3, HORIZON); ctx.lineTo(150 - camX * 3, HORIZON - 120); ctx.lineTo(190 - camX * 3, HORIZON - 128); ctx.lineTo(360 - camX * 3, HORIZON); ctx.fill();
+  ctx.fillStyle = `rgba(255,255,255,${.85 - amb.nuit * .5})`;
+  ctx.beginPath(); ctx.moveTo(122 - camX * 3, HORIZON - 90); ctx.lineTo(150 - camX * 3, HORIZON - 120); ctx.lineTo(190 - camX * 3, HORIZON - 128); ctx.lineTo(222 - camX * 3, HORIZON - 96);
+  ctx.lineTo(200 - camX * 3, HORIZON - 102); ctx.lineTo(180 - camX * 3, HORIZON - 92); ctx.lineTo(158 - camX * 3, HORIZON - 104); ctx.fill();
+  // collines : acacias en savane, canopée en forêt
+  const plan = rgb(amb.sol, .55 - amb.nuit * .2);
+  ctx.fillStyle = plan;
+  ctx.beginPath(); ctx.moveTo(-60, HORIZON);
+  for (let x = -60; x <= W + 60; x += 20) ctx.lineTo(x, HORIZON - 18 - Math.sin((x + camX * 8) * .02) * 10 - amb.foret * (18 + Math.abs(Math.sin((x + camX * 8) * .05)) * 30));
+  ctx.lineTo(W + 60, HORIZON); ctx.fill();
+  if (amb.foret < .9) {
+    ctx.globalAlpha = 1 - amb.foret;
+    ctx.fillStyle = rgb(amb.sol, .38 - amb.nuit * .15);
+    for (let i = 0; i < 7; i++) {
+      const ax = ((i * 91 - camX * 10) % (W + 120) + W + 120) % (W + 120) - 60, ah = 22 + (i * 13) % 16;
+      ctx.fillRect(ax - 1.5, HORIZON - 18 - ah, 3, ah);
+      ctx.beginPath(); ctx.ellipse(ax, HORIZON - 18 - ah, 18 + (i % 3) * 5, 5, 0, 0, Math.PI * 2); ctx.fill();
     }
+    // silhouettes de girafes au loin
+    for (let i = 0; i < 2; i++) {
+      const gx = ((i * 260 + 120 - camX * 10 - t * 3) % (W + 120) + W + 120) % (W + 120) - 60, gy = HORIZON - 20;
+      ctx.fillRect(gx - 8, gy - 10, 3, 10); ctx.fillRect(gx + 5, gy - 10, 3, 10);
+      ctx.beginPath(); ctx.ellipse(gx, gy - 12, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.translate(gx - 7, gy - 14); ctx.rotate(-.35); ctx.fillRect(-1.5, -20, 3, 20); ctx.fillRect(-4, -23, 8, 4); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
   }
-  // sol
+  // sol : herbe de la savane / de la forêt
   const sol = ctx.createLinearGradient(0, HORIZON, 0, H);
-  sol.addColorStop(0, rgb(amb.sol, .85)); sol.addColorStop(1, rgb(amb.sol, .5));
+  sol.addColorStop(0, rgb(amb.sol, .8)); sol.addColorStop(1, rgb(amb.sol, .55));
   ctx.fillStyle = sol;
   ctx.fillRect(-60, HORIZON, W + 120, H - HORIZON + 60);
-  // brume à l'horizon
+  // brume de chaleur à l'horizon
   const brume = ctx.createLinearGradient(0, HORIZON - 30, 0, HORIZON + 40);
   brume.addColorStop(0, "rgba(255,255,255,0)"); brume.addColorStop(.5, `rgba(${amb.bas.join(",")},.55)`); brume.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = brume; ctx.fillRect(-60, HORIZON - 30, W + 120, 70);
 
-  // murets tagués le long des voies
-  for (const cote of [-1, 1]) {
-    const x = cote * 4.3;
-    for (let z = -(dist % 6) - 6; z < 90; z += 6) {
-      const idx = Math.floor((z + dist) / 6);
-      const c = ["#e64980", "#15aabf", "#fab005", "#7950f2", "#40c057"][((idx % 5) + 5) % 5];
-      const z0 = Math.max(z, -CAM_D + 1);
-      const a = projeter(x, 0, z0), b = projeter(x, 1.2, z0), cc = projeter(x, 1.2, z + 6), d = projeter(x, 0, z + 6);
-      polygone([a, b, cc, d], rgbMix("#868e96", amb));
-      if (z > -2 && z < 60) { // tag coloré
-        const p1 = surFace(b, cc, d, a, .15, .25), p2 = surFace(b, cc, d, a, .85, .75);
-        ctx.strokeStyle = c; ctx.lineWidth = Math.max(1, a[2] * .12); ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.quadraticCurveTo((p1[0] + p2[0]) / 2, p1[1] - a[2] * .5, p2[0], p2[1]); ctx.stroke();
-      }
+  // la piste de terre rouge et ses trois chemins
+  polygone([projeter(-3.75, 0, -6), projeter(3.75, 0, -6), projeter(3.75, 0, 220), projeter(-3.75, 0, 220)], rgb(amb.chemin));
+  for (const x of VOIES) {
+    for (const r of [-.55, .55]) { // ornières
+      polygone([projeter(x + r - .13, 0, -6), projeter(x + r + .13, 0, -6), projeter(x + r + .13, 0, 220), projeter(x + r - .13, 0, 220)], rgb(amb.chemin, .8));
+    }
+    for (let z = -(dist % 1.6) - 3.5; z < 70; z += 1.6) { // cailloux qui défilent
+      const idx = Math.floor((z + dist) / 1.6) + x * 7;
+      const ox = ((idx * 37) % 17) / 17 * 1.6 - .8;
+      const [cx, cy, k] = projeter(x + ox, 0, z);
+      ctx.fillStyle = rgb(amb.chemin, (idx % 3) ? .72 : 1.18, Math.min(1, (70 - z) / 25));
+      ctx.beginPath(); ctx.ellipse(cx, cy, k * .09, k * .04, 0, 0, Math.PI * 2); ctx.fill();
     }
   }
-
-  // voies : ballast, traverses en bois, rails brillants
-  for (const x of VOIES) {
-    const a = projeter(x - 1.15, 0, -6), b = projeter(x + 1.15, 0, -6), c = projeter(x + 1.15, 0, 220), d = projeter(x - 1.15, 0, 220);
-    polygone([a, b, c, d], rgbMix("#8a7866", amb));
-    for (let z = -(dist % 1.4) - 5; z < 75; z += 1.4) {
-      const p1 = projeter(x - 1, 0, z), p2 = projeter(x + 1, 0, z), p3 = projeter(x + 1, 0, z + .38), p4 = projeter(x - 1, 0, z + .38);
-      polygone([p1, p2, p3, p4], z > 45 ? `rgba(92,61,38,${Math.max(0, 1 - (z - 45) / 30)})` : rgbMix("#6b4a2b", amb));
-    }
-    for (const r of [-.58, .58]) {
-      const p1 = projeter(x + r, .12, -6), p2 = projeter(x + r, .12, 220);
-      ctx.strokeStyle = "#495057"; ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
-      ctx.strokeStyle = amb.nuit > .5 ? "#adb5bd" : "#e9ecef"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(p1[0], p1[1] - 2); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
+  for (const x of [-1.2, 1.2]) { // bandes d'herbe entre les chemins
+    polygone([projeter(x - .08, 0, -6), projeter(x + .08, 0, -6), projeter(x + .08, 0, 220), projeter(x - .08, 0, 220)], rgb(amb.sol, .75));
+  }
+  // hautes herbes au bord de la piste
+  for (const cote of [-1, 1]) {
+    for (let z = -(dist % 1.5) - 3.5; z < 65; z += 1.5) {
+      const idx = Math.floor((z + dist) / 1.5);
+      const [hx, hy, k] = projeter(cote * (4 + ((idx * 13) % 7) / 10), 0, z);
+      const hh = k * (.45 + ((idx * 7) % 5) / 12);
+      ctx.strokeStyle = rgb(amb.sol, (idx % 2) ? .6 : .85); ctx.lineWidth = Math.max(1, k * .05);
+      ctx.beginPath();
+      for (const a of [-.35, 0, .35]) { ctx.moveTo(hx, hy); ctx.quadraticCurveTo(hx + a * hh * .3, hy - hh * .6, hx + a * hh * .8 + Math.sin(t * 3 + idx) * k * .04, hy - hh); }
+      ctx.stroke();
     }
   }
   if (!jeu) return ctx.restore();
 
   // tout ce qui a de la profondeur, du plus lointain au plus proche
   const scene = [
-    ...jeu.decor.map((d) => ({ z: d.z, dessin: () => dessinerImmeuble(d, amb) })),
-    ...Array.from({ length: 5 }, (_, i) => { const z = i * 24 - (dist % 24) + 4; return { z, dessin: () => dessinerPortique(z, amb, t) }; }).filter((e) => e.z > -CAM_D + 1.5),
-    ...jeu.objets.filter((o) => (o.type === "train" || o.type === "rampe") ? o.z + o.long > -CAM_D + 1 : o.z > -CAM_D + 1).map((o) => ({ z: o.z, dessin: () => {
-      if (o.type === "train") dessinerTrain(o, amb);
-      else if (o.type === "rampe") dessinerRampe(o);
-      else if (o.type === "piece") dessinerPiece(o, t);
+    ...jeu.decor.filter((d) => d.z > -CAM_D + 1).map((d) => ({ z: d.z, dessin: () => dessinerDecor(d, amb, t) })),
+    ...Array.from({ length: 5 }, (_, i) => { const z = i * 30 - (dist % 30) + 4; const n = Math.floor((dist + z) / 30); return { z, dessin: () => dessinerPortique(z, amb, t, n) }; }).filter((e) => e.z > -CAM_D + 1.5),
+    ...jeu.objets.filter((o) => (estLong(o) || o.type === "rampe") ? o.z + o.long > -CAM_D + 1 : o.z > -CAM_D + 1).map((o) => ({ z: o.z, dessin: () => {
+      if (o.type === "camion") dessinerCamion(o, amb);
+      else if (o.type === "tronc") dessinerTronc(o, amb);
+      else if (o.type === "rampe") dessinerRampe(o, amb);
+      else if (o.type === "banane") dessinerBanane(o, t);
       else if (o.type === "bonus") dessinerBonus(o, t);
-      else dessinerBarriere(o, t);
+      else dessinerObstacle(o, amb, t);
     } })),
   ].filter((e) => e.z < 160).sort((a, b) => b.z - a.z);
-  let place = false;
+  let place = false, moka = [W / 2, H / 2];
   for (const e of scene) {
-    if (!place && e.z < 0.2) { dessinerJoueur(t); place = true; }
+    if (!place && e.z < 0.2) { moka = dessinerMoka(t); place = true; }
     e.dessin();
   }
-  if (!place) dessinerJoueur(t);
+  if (!place) moka = dessinerMoka(t);
 
   // particules
   for (let i = jeu.particules.length - 1; i >= 0; i--) {
@@ -728,6 +1048,7 @@ function dessiner(dt) {
     ctx.beginPath(); ctx.arc(px, py, k * .07, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
+  dessinerGardien(t, moka);
 
   // lignes de vitesse
   if (!jeu.fini && jeu.vitesse > 17) {
@@ -741,6 +1062,12 @@ function dessiner(dt) {
       ctx.stroke();
     }
   }
+  // vignette rouge quand le gardien est sur les talons
+  if (jeu.trebuche > 0 && !jeu.fini) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, H * .3, W / 2, H / 2, H * .75);
+    g.addColorStop(0, "rgba(255,0,0,0)"); g.addColorStop(1, `rgba(220,30,30,${.25 + .12 * Math.sin(t * 8)})`);
+    ctx.fillStyle = g; ctx.fillRect(-60, -60, W + 120, H + 120);
+  }
   ctx.restore();
 
   // ------------------------------------------------------------ interface (hors caméra)
@@ -748,14 +1075,20 @@ function dessiner(dt) {
   ctx.setTransform(toile.width / W, 0, 0, toile.height / H, 0, 0);
   const texte = (s, x, y, taille, couleur = "#fff", aligne = "left") => {
     ctx.font = `900 ${taille}px Arial Black, sans-serif`; ctx.textAlign = aligne;
-    ctx.lineWidth = 5; ctx.strokeStyle = "#1b1340"; ctx.strokeText(s, x, y);
+    ctx.lineWidth = 5; ctx.strokeStyle = "#3b2308"; ctx.strokeText(s, x, y);
     ctx.fillStyle = couleur; ctx.fillText(s, x, y); ctx.textAlign = "start";
   };
   const panneau = (x, y, w, h) => {
     const g = ctx.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, "rgba(40, 20, 90, .8)"); g.addColorStop(1, "rgba(20, 10, 50, .8)");
+    g.addColorStop(0, "rgba(110, 60, 20, .85)"); g.addColorStop(1, "rgba(60, 30, 8, .85)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x, y, w, h, 14); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = "rgba(255,220,150,.7)"; ctx.lineWidth = 2; ctx.stroke();
+  };
+  const bananeHud = (x, y, r) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-.5);
+    ctx.fillStyle = "#ffd43b"; ctx.strokeStyle = "#8a6400"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-r, -r * .2); ctx.quadraticCurveTo(0, r * 1.2, r, -r * .2); ctx.quadraticCurveTo(0, r * .5, -r, -r * .2); ctx.fill(); ctx.stroke();
+    ctx.restore();
   };
   panneau(10, 10, 170, 66);
   if (jeu.bonus.double) { ctx.shadowColor = "#ff922b"; ctx.shadowBlur = 20; }
@@ -763,17 +1096,21 @@ function dessiner(dt) {
   ctx.shadowBlur = 0;
   texte(`${Math.floor(jeu.distance)} m`, 22, 68, 15, "#ffe066");
   panneau(W - 130, 10, 120, 46);
-  ctx.fillStyle = "#e8a200"; ctx.beginPath(); ctx.arc(W - 106, 33, 13, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#ffd43b"; ctx.beginPath(); ctx.arc(W - 106, 33, 10, 0, Math.PI * 2); ctx.fill();
+  bananeHud(W - 106, 30, 14);
   texte(String(jeu.pieces), W - 20, 43, 24, "#ffd43b", "right");
   if (jeu.bonus.double) texte("x2", W - 20, 82, 24, "#ff922b", "right");
-  // pièces qui s'envolent vers le compteur
+  // bananes qui s'envolent vers le compteur
   for (let i = jeu.pieceHud.length - 1; i >= 0; i--) {
     const p = jeu.pieceHud[i];
     p.t += dt * 2.5;
     if (p.t >= 1) { jeu.pieceHud.splice(i, 1); continue; }
-    const x = p.x + (W - 106 - p.x) * p.t, y = p.y + (33 - p.y) * p.t - Math.sin(p.t * Math.PI) * 60;
-    ctx.fillStyle = "#ffd43b"; ctx.beginPath(); ctx.arc(x, y, 9 * (1 - p.t * .4), 0, Math.PI * 2); ctx.fill();
+    bananeHud(p.x + (W - 106 - p.x) * p.t, p.y + (30 - p.y) * p.t - Math.sin(p.t * Math.PI) * 60, 11 * (1 - p.t * .4));
+  }
+  // alerte gardien
+  if (jeu.trebuche > 0 && !jeu.fini) {
+    panneau(W / 2 - 110, 86, 220, 34);
+    ctx.fillStyle = "#ff6b6b"; ctx.beginPath(); ctx.roundRect(W / 2 - 104, 108, 208 * jeu.trebuche / DUREE_TREBUCHE, 6, 3); ctx.fill();
+    texte("⚠ GARDIEN AUX TROUSSES", W / 2, 104, 14, "#ffe3e3", "center");
   }
   let yb = H - 24;
   for (const [b, reste] of Object.entries(jeu.bonus)) {
@@ -791,8 +1128,8 @@ function dessiner(dt) {
     if (x.vie <= 0) { jeu.textes.splice(i, 1); continue; }
     ctx.globalAlpha = Math.min(1, x.vie * 2);
     const echelle = 1 + Math.max(0, x.vie - 1.2) * 1.5;
-    ctx.save(); ctx.translate(W / 2, 170); ctx.scale(echelle, echelle);
-    texte(x.t, 0, 0, 34, "#ffe066", "center");
+    ctx.save(); ctx.translate(W / 2, x.petit ? 560 : 170); ctx.scale(echelle, echelle);
+    texte(x.t, 0, 0, x.petit ? 24 : 34, x.petit ? "#fff" : "#ffe066", "center");
     ctx.restore();
     ctx.globalAlpha = 1;
   }

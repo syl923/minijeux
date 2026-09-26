@@ -103,6 +103,22 @@ function appliquer(b, de, vers) {
   return t.join("");
 }
 
+// Les commentaires du professeur Moka
+const NOMS_PIECES = { p: "pion", n: "cavalier", b: "fou", r: "tour", q: "dame" };
+function professeur(prisParMoi, prisParIa, echec) {
+  if (echec) return mokaDit("Échec ! Protège ton roi, jeune élève !", "choc", 2200);
+  if (prisParIa && prisParIa !== ".") {
+    const nom = NOMS_PIECES[prisParIa.toLowerCase()];
+    if (nom && nom !== "pion") return mokaDit(`Aïe, ${{ dame: "ta dame est tombée", tour: "ta tour est tombée", fou: "ton fou est tombé", cavalier: "ton cavalier est tombé" }[nom]}… Réfléchis avant de jouer !`, "triste", 2400);
+  }
+  if (prisParMoi && prisParMoi !== ".") {
+    const nom = NOMS_PIECES[prisParMoi.toLowerCase()];
+    if (nom === "dame") return mokaDit("LA DAME ! Coup de maître !", "etoiles", 2200);
+    if (nom === "tour" || nom === "cavalier" || nom === "fou") return mokaDit(`Belle prise, ce ${nom} !`, "content", 1800);
+  }
+  if (Math.random() < .12) mokaDit(["Hmm… intéressant.", "Pense à développer tes pièces.", "Le centre, toujours le centre !"][Math.floor(Math.random() * 3)], "malin", 1800);
+}
+
 async function clic(sq) {
   if (DUEL) return clicDuel(sq);
   if (!partie || enAttente) return;
@@ -110,6 +126,7 @@ async function clic(sq) {
   if (choisie !== null && coups.some(([d, v]) => d === choisie && v === sq)) {
     const de = choisie;
     const prise = plateau[sq] !== ".";
+    const pieceMangee = plateau[sq];
     plateau = appliquer(plateau, de, sq);
     choisie = null;
     dernier = [de, sq];
@@ -130,6 +147,7 @@ async function clic(sq) {
     }
     await new Promise((ok) => setTimeout(ok, 350));
     echiquier.classList.remove("reflechit");
+    professeur(pieceMangee, r.ia ? plateau[r.ia[1]] : ".", r.echec);
     if (r.ia) {
       const priseIa = plateau[r.ia[1]] !== ".";
       dernier = r.ia;
@@ -188,7 +206,7 @@ function appliquerVue(v) {
   versionDuel = v.version;
   if (v.statut === "attente") return statut("En attente d'un adversaire…");
   retourne = v.couleur === "noirs";
-  document.getElementById("vs-adversaire").textContent = v.adversaire;
+  document.getElementById("vs-adversaire").innerHTML = pseudoAvecAvatar(v.adversaire, v.avatar_adversaire);
   document.getElementById("vs-couleur").textContent = `Tu as les ${v.couleur}`;
   document.getElementById("sous-titre").textContent = `Duel en ligne : tu as les ${v.couleur}. Un pion qui atteint le bout de l'échiquier devient une dame.`;
   const joueAdverse = ancien && ancien.plateau !== v.plateau && v.dernier && ancien.mon_tour === false;
@@ -216,6 +234,7 @@ async function clicDuel(sq) {
   if (choisie !== null && coups.some(([d, v]) => d === choisie && v === sq)) {
     const de = choisie;
     const prise = plateau[sq] !== ".";
+    const pieceMangee = plateau[sq];
     plateau = appliquer(plateau, de, sq);
     choisie = null;
     dernier = [de, sq];

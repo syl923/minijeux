@@ -1,6 +1,6 @@
 """Duels en ligne entre joueurs : échecs et bataille navale.
 
-Chaque joueur mise MISE pièces ; le gagnant empoche GAIN_VICTOIRE, une nulle rend la mise.
+Chaque joueur mise MISE bananes ; le gagnant empoche GAIN_VICTOIRE, une nulle rend la mise.
 Le serveur arbitre tout (coups légaux, flottes cachées) ; les pages interrogent l'état
 régulièrement (toutes les secondes). Un joueur qui dépasse le temps limite perd la partie.
 """
@@ -38,6 +38,11 @@ db.executescript(
 
 # --------------------------------------------------------------------------- outils
 
+def avatar(jid):
+    j = db.execute("SELECT avatar FROM joueurs WHERE id = ?", (jid,)).fetchone() if jid else None
+    return (j["avatar"] or "moka") if j else "moka"
+
+
 def pseudo(jid):
     j = lire_joueur(jid) if jid else None
     return j["pseudo"] if j else ("Joueur supprimé" if jid else None)
@@ -59,12 +64,12 @@ def sauver(d, etat, **champs):
 def payer(jid):
     j = lire_joueur(jid)
     if j["pieces"] < MISE:
-        raise ErreurApi(f"Un duel coûte {MISE} pièces d'or : tu n'en as que {j['pieces']}.", 402)
+        raise ErreurApi(f"Un duel coûte {MISE} bananes : tu n'en as que {j['pieces']}.", 402)
     db.execute("UPDATE joueurs SET pieces = pieces - ? WHERE id = ?", (MISE, jid))
 
 
 def crediter(jid, pieces, jeu, victoire):
-    """Crédite les pièces et garde une trace dans les parties (classements et pièces gagnées)."""
+    """Crédite les bananes et garde une trace dans les parties (classements et bananes gagnées)."""
     db.execute("UPDATE joueurs SET pieces = pieces + ?, pieces_gagnees = pieces_gagnees + ? WHERE id = ?", (pieces, pieces, jid))
     t = maintenant()
     db.execute(
@@ -123,7 +128,7 @@ def salon(joueur, requete):
         (jid, jid),
     ).fetchall()
     en_ligne = db.execute(
-        "SELECT pseudo FROM joueurs WHERE vu_le > ? AND id != ? ORDER BY vu_le DESC LIMIT 30",
+        "SELECT pseudo, avatar FROM joueurs WHERE vu_le > ? AND id != ? ORDER BY vu_le DESC LIMIT 30",
         (maintenant() - EN_LIGNE, jid),
     ).fetchall()
     return {
@@ -131,6 +136,7 @@ def salon(joueur, requete):
                    "a_moi": d["createur"] == jid, "pour_moi": d["invite"] == jid} for d in defis],
         "mes_duels": [{"id": d["id"], "jeu": d["jeu"], "adversaire": pseudo(autre(d, jid))} for d in mes],
         "en_ligne": [l["pseudo"] for l in en_ligne],
+        "avatars": {l["pseudo"]: l["avatar"] or "moka" for l in en_ligne},
         "mise": MISE, "gain": GAIN_VICTOIRE,
     }
 
@@ -211,6 +217,7 @@ def vue_complete(d, jid):
     base = {
         "duel": d["id"], "jeu": d["jeu"], "version": d["version"], "statut": d["statut"],
         "moi": pseudo(jid), "adversaire": pseudo(autre(d, jid)) if d["adversaire"] else None,
+        "avatar_moi": avatar(jid), "avatar_adversaire": avatar(autre(d, jid)) if d["adversaire"] else None,
         "reste": max(0, round(etat.get("limite", 0) - maintenant())) if d["statut"] == "en_cours" else None,
     }
     if d["statut"] == "termine":

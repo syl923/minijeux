@@ -27,6 +27,9 @@ def mes_donnees(joueur, requete):
         "compte": {"pseudo": j["pseudo"], "inscrit_le": j["cree_le"], "pieces": j["pieces"],
                    "pieces_gagnees": j["pieces_gagnees"], "derniere_visite": j["vu_le"]},
         "parties": [dict(p) for p in parties],
+        "avatars": {"actuel": j["avatar"] or "moka",
+                    "achetes": [dict(a) for a in db.execute(
+                        "SELECT avatar, achete_le FROM avatars WHERE joueur_id = ?", (j["id"],)).fetchall()]},
         "note": "Le mot de passe n'est jamais conservé en clair : seule une empreinte chiffrée est stockée.",
     }
 
@@ -53,6 +56,7 @@ def supprimer(joueur, donnees):
                    (gagnant, "L'adversaire a quitté le site", d["id"]))
     db.execute("UPDATE duels SET statut = 'annule', version = version + 1 WHERE statut = 'attente' AND createur = ?", (jid,))
     db.execute("DELETE FROM parties WHERE joueur_id = ?", (jid,))
+    db.execute("DELETE FROM avatars WHERE joueur_id = ?", (jid,))
     db.execute("DELETE FROM sessions WHERE joueur_id = ?", (jid,))
     db.execute("DELETE FROM joueurs WHERE id = ?", (jid,))
     return {"ok": True, "supprime_le": maintenant()}

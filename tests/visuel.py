@@ -428,18 +428,19 @@ def jouer_runner(page, duree_max=40):
     page.wait_for_function("jeu && jeu.compte === 0", timeout=10000)
     debut, captures = time.time(), 0
     while True:
-        e = page.evaluate("""() => ({fini: jeu.fini, voie: jeu.voie, y: jeu.y, obs: jeu.objets.filter(o => o.type !== 'piece'
-            && o.type !== 'bonus' && o.z + o.long > -0.5 && o.z < 14).map(o => [o.type, o.voie, o.z, o.long])})""")
+        e = page.evaluate("""() => ({fini: jeu.fini, voie: jeu.voie, y: jeu.y, obs: jeu.objets.filter(o => o.type !== 'banane'
+            && o.type !== 'bonus' && !o.touche && o.z + o.long > -0.5 && o.z < 14).map(o => [o.type, o.voie, o.z, o.long])})""")
         if e["fini"]:
             break
         rampes = {o[1] for o in e["obs"] if o[0] == "rampe"}  # une rampe devant : on monte sur le toit du train
-        e["obs"] = [o for o in e["obs"] if o[0] != "rampe" and not (o[0] == "train" and (o[1] in rampes or e["y"] > 2))]
+        longs = ("camion", "tronc")
+        e["obs"] = [o for o in e["obs"] if o[0] != "rampe" and not (o[0] in longs and (o[1] in rampes or e["y"] > 2))]
         if time.time() - debut < duree_max:  # ensuite, le robot arrête d'esquiver
             danger = [o for o in e["obs"] if o[1] == e["voie"]]
             if danger:
                 typ, v, z, lg = min(danger, key=lambda o: o[2])
-                if typ == "train":
-                    libres = [w for w in range(3) if not any(o[1] == w and o[0] == "train" for o in e["obs"])]
+                if typ in longs:
+                    libres = [w for w in range(3) if not any(o[1] == w and o[0] in longs for o in e["obs"])]
                     if libres:
                         cible = min(libres, key=lambda w: abs(w - e["voie"]))
                         page.keyboard.press("ArrowLeft" if cible < e["voie"] else "ArrowRight")
@@ -480,26 +481,30 @@ def jouer_jet(page, duree_max=40):
 
 
 def jouer_pingouin(page, duree_max=45):
+    """Moka Glisse : jauge de puissance au maximum, angle proche de 40°, puis sauts devant les obstacles."""
     page.goto(URL + "/pingouin.html")
     page.wait_for_timeout(600)
     capture(page, "pingouin-accueil")
     page.click("#btn-jouer", force=True)
-    page.wait_for_function("jeu && jeu.collines")
-    debut, captures, appui = time.time(), 0, False
+    page.wait_for_function("jeu && jeu.phase === 'puissance'")
+    page.wait_for_function("Math.abs(Math.sin(jeu.t * 2.4)) > 0.96", polling=5)
+    capture(page, "pingouin-jauge")
+    page.keyboard.press("Space")
+    page.wait_for_function("Math.abs(40 + 33 * Math.sin(jeu.t * 2.1) - 40) < 3", polling=5)
+    capture(page, "pingouin-angle")
+    page.keyboard.press("Space")
+    debut, captures = time.time(), 0
     while not page.evaluate("jeu.fini"):
-        e = page.evaluate("({p: pente(jeu.x), sol: jeu.auSol, vy: jeu.vy})")
-        joue = time.time() - debut < duree_max  # ensuite le robot ne plonge plus : la tempête le rattrape
-        veut = joue and ((e["p"] < -0.05) if e["sol"] else (e["vy"] < 0))
-        if veut != appui:
-            (page.keyboard.down if veut else page.keyboard.up)("Space")
-            appui = veut
-        if captures < 3 and time.time() - debut > 6 + captures * 11:
+        if time.time() - debut < duree_max and page.evaluate("""jeu.auSol && jeu.objets.some(o => !o.passe && !o.touche
+                && ['bonhomme', 'rocher', 'sapin', 'pingouin'].includes(o.type) && o.x > jeu.x
+                && o.x - jeu.x < Math.max(3, Math.hypot(jeu.vx, jeu.vy) * 0.35))"""):
+            page.keyboard.press("Space")
+        if captures < 3 and time.time() - debut > 1.5 + captures * 5:
             captures += 1
-            capture(page, f"pingouin-glisse-{captures}")
-        page.wait_for_timeout(20)
-    page.keyboard.up("Space")
+            capture(page, f"pingouin-vol-{captures}")
+        page.wait_for_timeout(40)
     page.wait_for_timeout(900)
-    capture(page, "pingouin-tempete")
+    capture(page, "pingouin-arrivee")
     roue_et_resultat(page, "pingouin")
 
 
@@ -677,7 +682,7 @@ def main():
         page.goto(URL + "/roue.html")
         page.wait_for_timeout(700)
         capture(page, "page-roue")
-        for nom in ("compte", "mentions-legales", "confidentialite"):
+        for nom in ("avatars", "compte", "mentions-legales", "confidentialite"):
             page.goto(URL + f"/{nom}.html")
             page.wait_for_timeout(700)
             capture(page, f"page-{nom}")

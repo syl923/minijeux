@@ -22,7 +22,7 @@ BASE = os.environ.get("MINIJEUX_BASE", os.path.join(RACINE, "donnees", "minijeux
 
 OR_BIENVENUE = 20
 MISE = 10                 # prix d'une partie, tous jeux confondus
-SECOURS = 20              # pièces offertes une fois par jour à un joueur qui n'a plus de quoi jouer
+SECOURS = 20              # bananes offertes une fois par jour à un joueur qui n'a plus de quoi jouer
 DUREE_SESSION = 60 * 60 * 24 * 30
 DELAI_ROUE = 15 * 60      # la roue doit être lancée dans les 15 minutes après la partie
 
@@ -129,12 +129,18 @@ def connexion_base():
             score INTEGER,
             pieces INTEGER
         );
+        CREATE TABLE IF NOT EXISTS avatars (
+            joueur_id INTEGER NOT NULL,
+            avatar TEXT NOT NULL,
+            achete_le REAL NOT NULL,
+            PRIMARY KEY (joueur_id, avatar)
+        );
         CREATE INDEX IF NOT EXISTS parties_classement ON parties (jeu, statut, fin);
         """
     )
     # Colonnes ajoutées après la première version : on complète les bases existantes.
     for table, colonne in (("joueurs", "dernier_secours TEXT"), ("joueurs", "vu_le REAL"), ("parties", "mult REAL"),
-                           ("parties", "pieces_base INTEGER")):
+                           ("parties", "pieces_base INTEGER"), ("joueurs", "avatar TEXT")):
         try:
             base.execute(f"ALTER TABLE {table} ADD COLUMN {colonne}")
         except sqlite3.OperationalError:
@@ -154,6 +160,7 @@ def hacher(mot_de_passe, sel):
 def joueur_public(j):
     return {
         "pseudo": j["pseudo"],
+        "avatar": j["avatar"] or "moka",
         "pieces": j["pieces"],
         "mise": MISE,
         "tour_gratuit": j["dernier_tour_gratuit"] != aujourd_hui(),
@@ -188,6 +195,21 @@ def inscription(donnees):
     return cur.lastrowid
 
 
+def compte_de_test(pseudo="toto", mot_de_passe="toto", solde=1000):
+    """Compte de démonstration pour tester en local (jamais créé en production) :
+    il est recréé s'il manque et remis à au moins `solde` bananes à chaque démarrage."""
+    j = db.execute("SELECT * FROM joueurs WHERE pseudo_min = ?", (pseudo.lower(),)).fetchone()
+    if not j:
+        sel = secrets.token_hex(16)
+        db.execute(
+            "INSERT INTO joueurs (pseudo, pseudo_min, sel, hash, pieces, cree_le) VALUES (?, ?, ?, ?, ?, ?)",
+            (pseudo, pseudo.lower(), sel, hacher(mot_de_passe, sel), solde, maintenant()),
+        )
+    elif j["pieces"] < solde:
+        db.execute("UPDATE joueurs SET pieces = ? WHERE id = ?", (solde, j["id"]))
+    db.commit()
+
+
 def connexion(donnees):
     pseudo = str(donnees.get("pseudo", "")).strip().lower()
     mdp = str(donnees.get("mot_de_passe", ""))
@@ -212,7 +234,7 @@ def joueur_de_session(jeton):
 def secours(joueur, donnees):
     j = lire_joueur(joueur["id"])
     if not joueur_public(j)["secours"]:
-        raise ErreurApi("Les pièces de secours sont réservées aux joueurs à court de pièces, une fois par jour.")
+        raise ErreurApi("Les bananes de secours sont réservées aux joueurs à court de bananes, une fois par jour.")
     db.execute("UPDATE joueurs SET pieces = pieces + ?, dernier_secours = ? WHERE id = ?", (SECOURS, aujourd_hui(), j["id"]))
     return {"joueur": joueur_public(lire_joueur(j["id"]))}
 
@@ -223,7 +245,7 @@ def nouvelle_partie(joueur, jeu, mode, etat):
     """Encaisse la mise et ouvre une partie. Une seule partie en cours par jeu."""
     j = lire_joueur(joueur["id"])
     if j["pieces"] < MISE:
-        raise ErreurApi(f"Une partie coûte {MISE} pièces d'or : tu n'en as que {j['pieces']}.", 402)
+        raise ErreurApi(f"Une partie coûte {MISE} bananes : tu n'en as que {j['pieces']}.", 402)
     db.execute("UPDATE joueurs SET pieces = pieces - ? WHERE id = ?", (MISE, j["id"]))
     db.execute(
         "UPDATE parties SET statut = 'abandon' WHERE joueur_id = ? AND jeu = ? AND statut = 'en_cours'",
@@ -253,7 +275,7 @@ def sauver_etat(pid, etat):
 
 
 def terminer_partie(joueur, partie, score, pieces):
-    """Enregistre le résultat et crédite les pièces. La roue pourra ensuite les multiplier."""
+    """Enregistre le résultat et crédite les bananes. La roue pourra ensuite les multiplier."""
     pieces = max(0, int(pieces))
     record = db.execute(
         "SELECT MAX(score) FROM parties WHERE joueur_id = ? AND jeu = ? AND statut = 'terminee'",
@@ -282,7 +304,7 @@ def terminer_partie(joueur, partie, score, pieces):
 # --------------------------------------------------------------------------- roue
 
 def roue_tourner(joueur, donnees):
-    """Tour de roue gratuit du jour : multiplie les pièces d'une partie qui vient de se terminer."""
+    """Tour de roue gratuit du jour : multiplie les bananes d'une partie qui vient de se terminer."""
     j = lire_joueur(joueur["id"])
     if j["dernier_tour_gratuit"] == aujourd_hui():
         raise ErreurApi("Tu as déjà tourné la roue aujourd'hui. Reviens demain !")
@@ -290,7 +312,7 @@ def roue_tourner(joueur, donnees):
         "SELECT * FROM parties WHERE id = ? AND joueur_id = ?", (donnees.get("partie"), j["id"])
     ).fetchone()
     if not p or p["statut"] != "terminee" or p["mult"] is not None or not p["pieces"]:
-        raise ErreurApi("La roue se lance à la fin d'une partie qui a rapporté des pièces.")
+        raise ErreurApi("La roue se lance à la fin d'une partie qui a rapporté des bananes.")
     if maintenant() - p["fin"] > DELAI_ROUE:
         raise ErreurApi("Trop tard pour lancer la roue sur cette partie.")
     secteur = random.choices(range(len(ROUE)), weights=[s["poids"] for s in ROUE])[0]
@@ -320,7 +342,7 @@ def classement(joueur, requete):
     depuis = debut_semaine() if periode == "semaine" else 0
     if jeu == "fortune":
         lignes = db.execute(
-            """SELECT j.pseudo, SUM(p.pieces) AS valeur, COUNT(*) AS parties
+            """SELECT j.pseudo, j.avatar, SUM(p.pieces) AS valeur, COUNT(*) AS parties
                FROM parties p JOIN joueurs j ON j.id = p.joueur_id
                WHERE p.statut = 'terminee' AND p.fin >= ?
                GROUP BY p.joueur_id HAVING valeur > 0 ORDER BY valeur DESC, MIN(p.fin) LIMIT 50""",
@@ -328,7 +350,7 @@ def classement(joueur, requete):
         ).fetchall()
     elif jeu in ("duel_echecs", "duel_bataille"):  # duels en ligne : nombre de victoires
         lignes = db.execute(
-            """SELECT j.pseudo, SUM(p.score) AS valeur, COUNT(*) AS parties
+            """SELECT j.pseudo, j.avatar, SUM(p.score) AS valeur, COUNT(*) AS parties
                FROM parties p JOIN joueurs j ON j.id = p.joueur_id
                WHERE p.statut = 'terminee' AND p.jeu = ? AND p.fin >= ?
                GROUP BY p.joueur_id HAVING valeur > 0 ORDER BY valeur DESC, parties LIMIT 50""",
@@ -336,7 +358,7 @@ def classement(joueur, requete):
         ).fetchall()
     elif jeu in JEUX_CLASSES:
         lignes = db.execute(
-            """SELECT j.pseudo, MAX(p.score) AS valeur, COUNT(*) AS parties
+            """SELECT j.pseudo, j.avatar, MAX(p.score) AS valeur, COUNT(*) AS parties
                FROM parties p JOIN joueurs j ON j.id = p.joueur_id
                WHERE p.statut = 'terminee' AND p.jeu = ? AND p.fin >= ? AND p.score > 0
                GROUP BY p.joueur_id ORDER BY valeur DESC, MIN(p.fin) LIMIT 50""",
@@ -361,7 +383,7 @@ def activite(joueur, requete):
     """Vie du site pour l'accueil : derniers exploits et chiffres du jour."""
     minuit = heure_paris().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     recents = db.execute(
-        """SELECT j.pseudo, p.jeu, p.score, p.pieces FROM parties p JOIN joueurs j ON j.id = p.joueur_id
+        """SELECT j.pseudo, j.avatar, p.jeu, p.score, p.pieces FROM parties p JOIN joueurs j ON j.id = p.joueur_id
            WHERE p.statut = 'terminee' AND p.score > 0 AND p.jeu NOT LIKE 'duel_%' ORDER BY p.fin DESC LIMIT 8"""
     ).fetchall()
     jour = db.execute(

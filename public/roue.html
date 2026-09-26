@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Roue de la fortune — Moka Arcade</title>
-  <meta name="description" content="Un tour de roue gratuit par jour pour multiplier tes gains de pièces d'or jusqu'à x10.">
+  <meta name="description" content="Un tour de roue gratuit par jour pour multiplier tes gains de bananes jusqu'à x10.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎡</text></svg>">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -17,13 +17,13 @@
     <div class="roue-cadre">
       <div class="fleche"></div>
       <canvas id="roue" width="880" height="880"></canvas>
-      <div class="moyeu">🪙</div>
+      <div class="moyeu">🍌</div>
     </div>
     <div class="roue-infos">
       <h2>Multiplie tes gains !</h2>
       <ul>
         <li>La roue se lance <b>toute seule à la fin de ta première partie gagnante de la journée</b>.</li>
-        <li>Elle multiplie les pièces d'or de cette partie : jusqu'à <b>x10</b> !</li>
+        <li>Elle multiplie les bananes de cette partie : jusqu'à <b>x10</b> !</li>
         <li>Un tour par jour, remis à zéro à minuit.</li>
       </ul>
       <table class="tableau" id="chances"></table>
@@ -34,6 +34,7 @@
 </main>
 <script src="/assets/sons.js"></script>
 <script src="/assets/icones.js"></script>
+<script src="/assets/singes.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
   chargerRoue().then((c) => {

@@ -1,9 +1,13 @@
 // Memory contre la montre : le serveur connaît l'ordre des cartes et tient le vrai chrono.
 
-const SYMBOLES = [
-  "🦊", "🐼", "🐸", "🦁", "🐙", "🦄", "🐧", "🐢", "🦋", "🐝", "🐬", "🦉",
-  "🍉", "🍓", "🍍", "🥑", "🍩", "🍒", "🌈", "⭐", "🚀", "🎸", "⚽", "👑",
-];
+// Les cartes sont les 24 têtes de Moka de la boutique d'avatars, chacune sur un fond de couleur différent.
+const VISAGES = Object.keys(LOOKS_AVATARS);
+const FONDS = ["#ffd43b", "#74c0fc", "#ff8787", "#8ce99a", "#b197fc", "#ffa94d", "#63e6be", "#f783ac",
+  "#a5d8ff", "#ffe066", "#d0bfff", "#96f2d7", "#ffc9c9", "#c0eb75", "#99e9f2", "#fcc2d7",
+  "#e599f7", "#ffd8a8", "#91a7ff", "#b2f2bb", "#ffec99", "#eebefa", "#66d9e8", "#fab005"];
+const PHRASES_PAIRE = ["Abracadabra !", "Une paire ! Magique !", "Bien vu, apprenti sorcier !", "Hop, disparues !", "Quelle mémoire !"];
+let serie = 0;
+let ratees = 0;
 
 const plateau = document.getElementById("plateau");
 const texteTemps = document.getElementById("temps");
@@ -45,6 +49,8 @@ async function lancer(m) {
   majJoueur(r.joueur);
   partie = r.partie;
   paires = 0;
+  serie = 0;
+  ratees = 0;
   aCacher = null;
   fini = false;
   document.getElementById("coups").textContent = "0";
@@ -82,6 +88,7 @@ function majTemps() {
   if (reste <= 5 && Math.ceil(reste) !== dernierTic && reste > 0) {
     dernierTic = Math.ceil(reste);
     Sons.jouer("alerte");
+    if (dernierTic === 5) mokaDit("Vite, vite, le sablier se vide !", "choc", 1800);
   }
   if (reste <= 0) tempsEcoule();
 }
@@ -131,7 +138,7 @@ async function retourner(carte) {
   if (r.fin && r.symbole === undefined) return terminer(r.fin); // temps écoulé côté serveur
 
   Sons.jouer("carte");
-  carte.querySelector(".recto").textContent = SYMBOLES[r.symbole];
+  carte.querySelector(".recto").innerHTML = `<span class="visage" style="background:${FONDS[r.symbole]}">${avatarSVG(VISAGES[r.symbole], "avatar-carte")}</span>`;
   carte.classList.add("retournee");
   document.getElementById("coups").textContent = r.coups;
   limite = Date.now() + r.temps_restant * 1000; // on se recale sur le chrono du serveur
@@ -140,12 +147,17 @@ async function retourner(carte) {
     const autre = plateau.children[r.autre];
     if (r.paire) {
       paires++;
+      serie++;
       Sons.jouer("paire");
+      if (serie >= 3) mokaDit(`${serie} paires d'affilée ! Tu es un vrai magicien !`, "etoiles", 2000);
+      else if (Math.random() < .45) mokaDit(PHRASES_PAIRE[Math.floor(Math.random() * PHRASES_PAIRE.length)], "content", 1600);
       bonusTemps(carte);
       document.getElementById("paires").textContent = `${paires} / ${plateau.children.length / 2}`;
       setTimeout(() => [carte, autre].forEach((c) => c.classList.add("trouvee")), 300);
     } else {
       aCacher = [carte, autre];
+      serie = 0;
+      if (++ratees % 4 === 0) mokaDit("Concentre-toi… regarde bien où elles étaient !", "malin", 1800);
       setTimeout(() => { if (aCacher) { aCacher.forEach((c) => c.classList.add("rate")); Sons.jouer("rate"); } }, 350);
       const ceux = aCacher;
       setTimeout(() => { if (aCacher === ceux) cacherRatees(); }, 1100);
