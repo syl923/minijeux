@@ -93,6 +93,7 @@ async function lancer() {
   nouvelleBille();
   majAfficheur();
   surcouche.classList.add("cache");
+  document.querySelector(".cadre-flipper").scrollIntoView({ block: "center", behavior: "smooth" });
   Sons.musique.jouer("synthwave");
   flash("LANCE LA BILLE !");
   requestAnimationFrame(boucle);
@@ -421,7 +422,7 @@ function boucle(t) {
 
 function ajusterToile() {
   const ratio = window.devicePixelRatio || 1;
-  const hauteur = Math.min(window.innerHeight - 150, 820);
+  const hauteur = Math.max(480, Math.min(window.innerHeight - 110, 820));
   const largeur = Math.min(hauteur * W / H, window.innerWidth - 32);
   toile.style.width = largeur + "px";
   toile.style.height = largeur * H / W + "px";

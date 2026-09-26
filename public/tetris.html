@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blocomania — MiniJeux</title>
+  <meta name="description" content="Empile les blocs qui tombent, complète des lignes et gagne des pièces d'or.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧱</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="tetris">
+<main>
+  <div class="titre-page">
+    <h1>🧱 Blocomania</h1>
+    <span class="doux">Complète des lignes pour les faire disparaître. 4 lignes d'un coup = BLOCOMANIA !</span>
+  </div>
+  <div class="scene scene-blocs">
+    <div class="panneau-lateral colonne-gauche">
+      <div class="grand-compteur"><span>Réserve (C)</span><canvas id="reserve" width="120" height="80"></canvas></div>
+      <div class="grand-compteur"><span>Score</span><b id="score">0</b></div>
+      <div class="grand-compteur"><span>Lignes</span><b id="lignes">0</b></div>
+      <div class="grand-compteur"><span>Niveau</span><b id="niveau">1</b></div>
+    </div>
+    <div class="toile-cadre">
+      <canvas id="blocs" width="300" height="600"></canvas>
+      <div class="surcouche" id="surcouche">
+        <h2>Blocomania</h2>
+        <p class="doux">Les blocs tombent de plus en plus vite…</p>
+        <button class="bouton gros-bouton" id="btn-jouer">▶ Jouer (10 <i class="piece"></i>)</button>
+      </div>
+    </div>
+    <div class="panneau-lateral">
+      <div class="grand-compteur"><span>Suivantes</span><canvas id="suivantes" width="120" height="230"></canvas></div>
+      <p class="touches">
+        <kbd>←</kbd> <kbd>→</kbd> déplacer · <kbd>↓</kbd> descendre<br>
+        <kbd>↑</kbd> ou <kbd>X</kbd> tourner · <kbd>W</kbd> tourner à gauche<br>
+        <kbd>Espace</kbd> lâcher · <kbd>C</kbd> réserve · <kbd>P</kbd> pause
+      </p>
+    </div>
+  </div>
+  <div class="commandes-tactiles commandes-blocs">
+    <button data-t="gauche">◀</button><button data-t="tourner">⟳</button><button data-t="droite">▶</button>
+    <button data-t="bas">▼</button><button data-t="lacher">⤓</button><button data-t="reserve">C</button>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/commun.js"></script>
+<script src="/assets/tetris.js"></script>
+</body>
+</html>

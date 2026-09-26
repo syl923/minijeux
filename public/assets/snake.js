@@ -47,6 +47,7 @@ async function lancer() {
   };
   majCompteurs();
   surcouche.classList.add("cache");
+  toile.scrollIntoView({ block: "center", behavior: "smooth" });
   for (const n of [3, 2, 1]) {
     compteARebours = n;
     Sons.jouer("tic");
