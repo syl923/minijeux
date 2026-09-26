@@ -4,49 +4,111 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MiniJeux — petits jeux gratuits et pièces d'or</title>
-  <meta name="description" content="Petits jeux gratuits : memory, bataille navale… Gagne des pièces d'or, tourne la roue et grimpe au classement.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <meta name="description" content="Petits jeux gratuits : Rail Rush, Bonbons Folies, Blocomania, flipper, snake, memory, démineur, échecs et bataille navale en ligne. Gagne des pièces d'or et grimpe au classement.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐵</text></svg>">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body data-page="accueil">
-<main>
+<main class="accueil">
   <section class="banniere">
+    <div id="mascotte-banniere"></div>
     <div>
-      <h1>Joue, gagne des pièces d'or,<br>deviens le roi du classement !</h1>
-      <p>Une partie coûte 10 pièces, une bonne partie en rapporte bien plus. Et une fois par jour, la roue de la fortune multiplie tes gains jusqu'à x10 !</p>
-      <a class="bouton" href="#grille-jeux">🎮 Choisir un jeu</a>
+      <span class="bulle" id="bulle">Salut, moi c'est Moka ! Prêt à jouer ?</span>
+      <h1 class="titre-flash">Joue, gagne des pièces d'or<br>et deviens le roi du classement !</h1>
+      <p>Une partie coûte 10 pièces, une bonne partie en rapporte bien plus. Et chaque jour, la roue de la fortune peut multiplier tes gains jusqu'à x10 !</p>
+      <a class="bouton" href="#salle">🎮 Choisir un jeu</a>
+      <a class="bouton secondaire" href="/duels.html">⚔️ Défier un joueur</a>
     </div>
-    <div class="deco">🪙🎲<br>🏆</div>
   </section>
 
-  <h2>Les jeux <span class="doux" style="font-size:16px;font-weight:normal">· une partie = 10 <i class="piece"></i></span></h2>
-  <div class="grille-jeux" id="grille-jeux"></div>
+  <div class="defilant-infos"><span id="infos">Bienvenue sur MiniJeux ! ★ Nouveaux jeux : Rail Rush, Bonbons Folies et Blocomania ★ Défie tes amis aux échecs et à la bataille navale en ligne ★</span></div>
 
-  <section class="section">
-    <h2>🏆 Les plus riches de la semaine</h2>
-    <div class="panneau" id="top-semaine"><p class="vide">Chargement…</p></div>
-  </section>
+  <div class="accueil-grille">
+    <aside class="colonne">
+      <div class="boite carte-compte">
+        <h2 class="boite-titre bleu">Mon compte</h2>
+        <div class="boite-corps" id="mon-compte"></div>
+      </div>
+      <div class="boite">
+        <h2 class="boite-titre">🏆 Top de la semaine</h2>
+        <div class="boite-corps"><ol class="top-mini" id="top-semaine"><li>Chargement…</li></ol>
+          <p style="margin:10px 0 0;text-align:center"><a href="/classement.html">Tous les classements →</a></p></div>
+      </div>
+      <div class="boite">
+        <h2 class="boite-titre violet">⚔️ Duels en ligne</h2>
+        <div class="boite-corps" id="duels-ouverts"><p class="doux" style="margin:0">Échecs et bataille navale contre de vrais joueurs.</p></div>
+      </div>
+    </aside>
+
+    <section class="boite" id="salle">
+      <h2 class="boite-titre vert">🎮 La salle de jeux</h2>
+      <div class="boite-corps">
+        <div class="categories" id="categories"></div>
+        <div class="grille-jeux" id="grille-jeux"></div>
+      </div>
+    </section>
+  </div>
 </main>
 <script src="/assets/sons.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
-  document.getElementById("grille-jeux").innerHTML = JEUX.map((j) => `
-    <a class="carte-jeu" href="/${j.id}.html">
-      <div class="vignette ${j.classe}">${j.emoji}</div>
-      <div class="infos"><h3>${j.nom}</h3><p>${j.desc}</p></div>
-    </a>`).join("");
-  api("/api/classement?jeu=fortune&periode=semaine").then((r) => {
-    const zone = document.getElementById("top-semaine");
-    if (!r.lignes.length) {
-      zone.innerHTML = `<p class="vide">Personne n'a encore joué cette semaine. La première place est à prendre !</p>`;
-      return;
+  document.getElementById("mascotte-banniere").innerHTML = MASCOTTE;
+  let categorie = "tous";
+  let records = {};
+
+  function afficherJeux() {
+    document.getElementById("categories").innerHTML = Object.entries(CATEGORIES).map(([id, nom]) =>
+      `<button data-cat="${id}" class="${id === categorie ? "actif" : ""}">${nom}</button>`).join("");
+    document.querySelectorAll("#categories button").forEach((b) => (b.onclick = () => { categorie = b.dataset.cat; afficherJeux(); Sons.jouer("clic"); }));
+    document.getElementById("grille-jeux").innerHTML = JEUX.filter((j) => categorie === "tous" || j.cat === categorie).map((j) => `
+      <a class="carte-jeu" href="/${j.id}.html">
+        ${j.badge ? `<span class="ruban ${j.badge.split(" ")[0]}">${j.badge}</span>` : ""}
+        <div class="vignette ${j.id}">${j.emoji}</div>
+        <div class="infos">
+          <h3>${j.nom}</h3>
+          <p>${j.desc}</p>
+          ${records[j.id] ? `<span class="record-perso">🏅 Ton record : ${records[j.id].score}</span>` : ""}
+          <span class="bouton petit jouer">▶ Jouer</span>
+        </div>
+      </a>`).join("");
+  }
+  afficherJeux();
+
+  MJ.surChangement.push(async (j) => {
+    const zone = document.getElementById("mon-compte");
+    if (!j) {
+      zone.innerHTML = `${MASCOTTE}<p>Choisis un pseudo pour jouer, gagner des pièces et apparaître dans les classements.</p>
+        <button class="bouton" onclick="ouvrirConnexion()">✨ Je m'inscris</button><p class="doux" style="font-size:12px">+20 pièces offertes</p>`;
+      records = {};
+      return afficherJeux();
     }
-    const medailles = ["🥇", "🥈", "🥉"];
-    zone.innerHTML = `<table class="tableau"><tbody>${r.lignes.slice(0, 5).map((l, i) => `
-      <tr><td>${medailles[i] || i + 1}</td><td>${echapper(l.pseudo)}</td>
-      <td class="valeur">${l.valeur} <i class="piece"></i></td></tr>`).join("")}</tbody></table>
-      <p style="text-align:center;margin:10px 0 0"><a href="/classement.html">Voir tous les classements →</a></p>`;
+    records = (await api("/api/mes_records")).records;
+    const parties = Object.values(records).reduce((a, r) => a + r.parties, 0);
+    zone.innerHTML = `${MASCOTTE}
+      <p style="margin:4px 0 10px;font:900 18px var(--police)">${echapper(j.pseudo)}</p>
+      <div class="stat-ligne"><span>Pièces d'or</span><b>${j.pieces} <i class="piece"></i></b></div>
+      <div class="stat-ligne"><span>Parties jouées</span><b>${parties}</b></div>
+      <div class="stat-ligne"><span>Roue du jour</span><b>${j.tour_gratuit ? "✨ disponible" : "✔ utilisée"}</b></div>`;
+    document.getElementById("bulle").textContent = j.tour_gratuit
+      ? `Salut ${j.pseudo} ! Ta roue du jour t'attend à la fin de ta première partie gagnée !`
+      : `Re-salut ${j.pseudo} ! On se refait une partie ?`;
+    afficherJeux();
   });
+
+  api("/api/classement?jeu=fortune&periode=semaine").then((r) => {
+    const medailles = ["🥇", "🥈", "🥉"];
+    document.getElementById("top-semaine").innerHTML = r.lignes.length
+      ? r.lignes.slice(0, 5).map((l, i) => `<li>${medailles[i] || i + 1 + "."} ${echapper(l.pseudo)}<b>${l.valeur} <i class="piece"></i></b></li>`).join("")
+      : "<li>Personne n'a encore joué cette semaine !</li>";
+    if (r.lignes.length) {
+      document.getElementById("infos").textContent += ` Le plus riche de la semaine : ${r.lignes[0].pseudo} avec ${r.lignes[0].valeur} pièces ! ★`;
+    }
+  });
+  api("/api/duels/salon").then((r) => {
+    const n = r.defis.length;
+    document.getElementById("duels-ouverts").innerHTML = `<p style="margin:0 0 10px">${n ? `<b>${n}</b> défi${n > 1 ? "s" : ""} en attente d'un adversaire !` : "Aucun défi en attente : lance le tien !"}</p>
+      <a class="bouton secondaire petit" href="/duels.html">Aller au salon</a>`;
+  }).catch(() => {});
 </script>
 </body>
 </html>

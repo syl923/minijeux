@@ -333,3 +333,13 @@ def classement(joueur, requete):
     else:
         raise ErreurApi("Classement inconnu.")
     return {"jeu": jeu, "periode": periode, "lignes": [dict(l) for l in lignes]}
+
+
+def mes_records(joueur, requete):
+    if not joueur:
+        return {"records": {}}
+    lignes = db.execute(
+        "SELECT jeu, MAX(score) AS s, COUNT(*) AS n FROM parties WHERE joueur_id = ? AND statut = 'terminee' GROUP BY jeu",
+        (joueur["id"],),
+    ).fetchall()
+    return {"records": {l["jeu"]: {"score": l["s"], "parties": l["n"]} for l in lignes}}

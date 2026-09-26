@@ -26,7 +26,7 @@ ROUTES_POST = {
 }
 for jeu in (memory, bataille, snake, demineur, echecs, flipper):
     ROUTES_POST.update(jeu.ROUTES)
-ROUTES_GET = {"/api/classement": noyau.classement, "/api/roue": noyau.roue_config}
+ROUTES_GET = {"/api/classement": noyau.classement, "/api/roue": noyau.roue_config, "/api/mes_records": noyau.mes_records}
 
 verrou = noyau.verrou
 

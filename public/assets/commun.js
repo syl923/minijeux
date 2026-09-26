@@ -1,13 +1,45 @@
 // Éléments communs à toutes les pages : en-tête, compte joueur, bourse de pièces d'or, fenêtres, roue.
 
+// Catalogue des jeux : catégorie pour le menu, thème graphique de la page, badge éventuel.
 const JEUX = [
-  { id: "memory", nom: "Memory", emoji: "🃏", desc: "Retrouve les paires avant la fin du chrono : chaque paire rapporte 5 secondes.", classe: "memory" },
-  { id: "bataille", nom: "Bataille navale", emoji: "🚢", desc: "Place ta flotte et coule celle de l'amiral ordinateur avant qu'il ne coule la tienne.", classe: "bataille" },
-  { id: "snake", nom: "Snake", emoji: "🐍", desc: "Mange les fruits, grandis, et surtout ne te mords pas la queue !", classe: "snake" },
-  { id: "demineur", nom: "Démineur", emoji: "💣", desc: "Déniche toutes les cases sûres sans réveiller les bombes farceuses.", classe: "demineur" },
-  { id: "echecs", nom: "Échecs", emoji: "♞", desc: "Affronte l'ordinateur en 3 niveaux. Un mat rapide rapporte gros.", classe: "echecs" },
-  { id: "flipper", nom: "Flipper", emoji: "🪩", desc: "Bumpers, cibles, multiplicateur… et une bonne musique rétro.", classe: "flipper" },
+  { id: "runner", nom: "Rail Rush", emoji: "🛹", cat: "action", theme: "ville", badge: "NOUVEAU", desc: "Cours sur les rails, saute par-dessus les trains et ramasse les pièces et les bonus !" },
+  { id: "candy", nom: "Bonbons Folies", emoji: "🍬", cat: "reflexion", theme: "bonbons", badge: "NOUVEAU", desc: "Aligne 3 bonbons ou plus. Rayés, emballés, arc-en-ciel : déclenche des combos sucrés !" },
+  { id: "tetris", nom: "Blocomania", emoji: "🧱", cat: "arcade", theme: "arcade", badge: "NOUVEAU", desc: "Empile les blocs qui tombent et complète des lignes. Ça accélère !" },
+  { id: "flipper", nom: "Flipper Néon", emoji: "🪩", cat: "arcade", theme: "futur", badge: "HOT", desc: "Bumpers, flammes, multibille et jackpot sur fond de rock !" },
+  { id: "snake", nom: "Snake", emoji: "🐍", cat: "arcade", theme: "savane", desc: "Mange les fruits, grandis, et surtout ne te mords pas la queue !" },
+  { id: "memory", nom: "Memory", emoji: "🃏", cat: "reflexion", theme: "magie", desc: "Retrouve les paires avant la fin du chrono : chaque paire rapporte 5 secondes." },
+  { id: "demineur", nom: "Démineur", emoji: "💣", cat: "reflexion", theme: "chantier", desc: "Déniche toutes les cases sûres sans réveiller les bombes farceuses." },
+  { id: "echecs", nom: "Échecs", emoji: "♞", cat: "duel", theme: "bois", badge: "EN LIGNE", desc: "Contre l'ordinateur (3 niveaux) ou contre un autre joueur en ligne." },
+  { id: "bataille", nom: "Bataille navale", emoji: "🚢", cat: "duel", theme: "ocean", badge: "EN LIGNE", desc: "Coule la flotte de l'ordinateur… ou celle d'un autre joueur en ligne." },
 ];
+const CATEGORIES = { tous: "⭐ Tous", action: "🏃 Action", arcade: "👾 Arcade", reflexion: "🧠 Réflexion", duel: "⚔️ Duels" };
+const THEMES_PAGES = { roue: "ciel", classement: "ciel", accueil: "ciel", duels: "ciel" };
+
+// Moka, la mascotte (dessin original)
+const MASCOTTE = `<svg class="mascotte" viewBox="0 0 120 140" aria-hidden="true">
+  <path d="M84 118 q30 6 26 -22 q-3 -14 -14 -8" fill="none" stroke="#7a4a1f" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="60" cy="112" rx="27" ry="24" fill="#8b5a2b"/>
+  <ellipse cx="60" cy="116" rx="16" ry="15" fill="#f3d3a6"/>
+  <g class="bras-salut"><path d="M36 104 q-20 -8 -22 -30" fill="none" stroke="#8b5a2b" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="14" cy="72" r="8" fill="#f3d3a6"/></g>
+  <path d="M84 104 q14 -2 16 -12" fill="none" stroke="#8b5a2b" stroke-width="10" stroke-linecap="round"/>
+  <g class="piece-mascotte"><circle cx="102" cy="88" r="12" fill="#ffd43b" stroke="#e8a200" stroke-width="3"/>
+    <text x="102" y="93" text-anchor="middle" font-size="14" font-weight="900" fill="#c98a00">★</text></g>
+  <circle cx="24" cy="54" r="14" fill="#8b5a2b"/><circle cx="24" cy="54" r="8" fill="#f3b894"/>
+  <circle cx="96" cy="54" r="14" fill="#8b5a2b"/><circle cx="96" cy="54" r="8" fill="#f3b894"/>
+  <circle cx="60" cy="56" r="35" fill="#9c6433"/>
+  <ellipse cx="48" cy="54" rx="15" ry="16" fill="#f3d3a6"/><ellipse cx="72" cy="54" rx="15" ry="16" fill="#f3d3a6"/>
+  <ellipse cx="60" cy="73" rx="21" ry="14" fill="#f3d3a6"/>
+  <g class="yeux"><ellipse cx="49" cy="53" rx="6.5" ry="8" fill="#fff"/><ellipse cx="71" cy="53" rx="6.5" ry="8" fill="#fff"/>
+    <circle cx="50" cy="55" r="3.8" fill="#2b1a0e"/><circle cx="70" cy="55" r="3.8" fill="#2b1a0e"/>
+    <circle cx="51.5" cy="53" r="1.3" fill="#fff"/><circle cx="71.5" cy="53" r="1.3" fill="#fff"/></g>
+  <ellipse cx="56" cy="67" rx="2" ry="1.5" fill="#6b3d17"/><ellipse cx="64" cy="67" rx="2" ry="1.5" fill="#6b3d17"/>
+  <path d="M47 75 q13 13 26 0 z" fill="#c92a2a"/><path d="M53 80 q7 5 14 0" fill="#ff8787"/>
+  <path d="M26 40 q34 -38 68 0 q-34 -9 -68 0z" fill="#e03131"/>
+  <path d="M26 40 q-12 2 -16 8 q14 2 28 -6z" fill="#c92a2a"/>
+  <circle cx="60" cy="17" r="4" fill="#fff"/>
+  <text x="60" y="36" text-anchor="middle" font-size="12" font-weight="900" fill="#fff" font-family="Arial Black, sans-serif">MJ</text>
+</svg>`;
 
 const MJ = { joueur: null, surChangement: [] };
 
@@ -49,21 +81,34 @@ function majJoueur(joueur) {
 // ------------------------------------------------------------ en-tête
 function construireEntete() {
   const page = document.body.dataset.page;
-  const lien = (href, id, texte) => `<a href="${href}" class="${page === id ? "actif" : ""}">${texte}</a>`;
+  const jeu = JEUX.find((j) => j.id === page);
+  document.body.classList.add("theme-" + (jeu ? jeu.theme : THEMES_PAGES[page] || "ciel"));
+  const lien = (href, id, texte) => `<a href="${href}" class="onglet-nav ${page === id ? "actif" : ""}">${texte}</a>`;
   const entete = document.createElement("header");
   entete.className = "entete";
   entete.innerHTML = `
-    <a class="logo" href="/"><span class="manette">🎮</span>Mini<span>Jeux</span></a>
+    <div class="entete-haut">
+      <a class="logo" href="/" title="Accueil">${MASCOTTE}<span class="logo-texte">Mini<b>Jeux</b></span></a>
+      <span class="slogan">Les petits jeux qui rapportent gros !</span>
+      <div class="compte">
+        <button class="bouton-son" id="btn-son" title="Couper / remettre le son"></button>
+        <span id="compte"></span>
+      </div>
+    </div>
     <nav class="nav">
-      ${lien("/", "accueil", "Jeux")}
-      ${lien("/roue.html", "roue", "Roue de la fortune")}
-      ${lien("/classement.html", "classement", "Classements")}
-    </nav>
-    <div class="compte">
-      <button class="bouton-son" id="btn-son" title="Couper / remettre le son"></button>
-      <span id="compte"></span>
-    </div>`;
+      ${lien("/", "accueil", "🏠 Accueil")}
+      <span class="menu-jeux ${jeu ? "actif" : ""}">
+        <button class="onglet-nav" type="button">🎮 Les jeux ▾</button>
+        <span class="deroulant">${JEUX.map((j) => `<a href="/${j.id}.html" class="${page === j.id ? "actif" : ""}"><i>${j.emoji}</i>${j.nom}${j.badge ? `<em>${j.badge}</em>` : ""}</a>`).join("")}</span>
+      </span>
+      ${lien("/duels.html", "duels", "⚔️ Duels en ligne")}
+      ${lien("/roue.html", "roue", "🎡 Roue")}
+      ${lien("/classement.html", "classement", "🏆 Classements")}
+    </nav>`;
   document.body.prepend(entete);
+  const menu = entete.querySelector(".menu-jeux");
+  menu.querySelector("button").onclick = () => menu.classList.toggle("ouvert");
+  document.addEventListener("click", (e) => { if (!menu.contains(e.target)) menu.classList.remove("ouvert"); });
   const son = entete.querySelector("#btn-son");
   const majSon = () => (son.textContent = Sons.coupe ? "🔇" : "🔊");
   son.onclick = () => { Sons.basculer(); majSon(); };
@@ -71,7 +116,8 @@ function construireEntete() {
 
   const pied = document.createElement("footer");
   pied.className = "pied";
-  pied.textContent = "MiniJeux — jeux gratuits, sans publicité. Les pièces d'or n'ont aucune valeur monétaire.";
+  pied.innerHTML = `<b>MiniJeux</b> — jeux gratuits, sans publicité · Les pièces d'or n'ont aucune valeur monétaire<br>
+    ${JEUX.map((j) => `<a href="/${j.id}.html">${j.nom}</a>`).join(" · ")}`;
   document.body.append(pied);
 }
 
