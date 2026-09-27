@@ -157,7 +157,7 @@ async function retourner(carte) {
     } else {
       aCacher = [carte, autre];
       serie = 0;
-      if (++ratees % 4 === 0) mokaDit("Concentre-toi… regarde bien où elles étaient !", "malin", 1800);
+      if (++ratees % 3 === 0) mokaDit(["Hi hi hi ! Mémoire de poisson rouge ?", "Raté ! Abracada… bra-raté !", "Hou hou ha ha ! Elles se sont cachées !"][Math.floor(Math.random() * 3)], "taquin", 1900);
       setTimeout(() => { if (aCacher) { aCacher.forEach((c) => c.classList.add("rate")); Sons.jouer("rate"); } }, 350);
       const ceux = aCacher;
       setTimeout(() => { if (aCacher === ceux) cacherRatees(); }, 1100);

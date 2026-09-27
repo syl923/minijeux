@@ -142,7 +142,7 @@ async function mourir() {
   jeu.fini = true;
   jeu.secousse = 14;
   Sons.jouer("crash");
-  mokaDit("Ouille ! Le serpent s'est cogné…", "ko", 2200);
+  mokaDit("Hou hou ha ha ! Le serpent s'est fait un nœud !", "rire", 2200);
   exploser(jeu.corps[0], "#5be37d", 40);
   const animer = () => { dessiner(1); if (jeu.secousse > 0 || jeu.particules.length) requestAnimationFrame(animer); };
   animer();

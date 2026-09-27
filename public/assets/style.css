@@ -983,17 +983,29 @@ main.accueil { background: none; border: 0; box-shadow: none; padding: 0 14px 30
 .pseudo { text-decoration: none; }
 
 /* ------------------------------------------------------------ Moka coach (tenue du jeu + bulle) */
-.coach { position: fixed; left: 14px; bottom: 14px; z-index: 52; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; }
-.coach-singe { pointer-events: auto; width: 104px; height: 104px; padding: 0; border: 4px solid #fff; border-radius: 50%; cursor: pointer;
-  background: radial-gradient(circle at 50% 35%, #fff8d6, #ffd166 70%, #f59f00); box-shadow: 0 6px 18px rgba(0,0,0,.35); overflow: hidden; order: 1; }
+.coach { position: fixed; left: 14px; top: 30vh; z-index: 52; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
+.coach-singe { pointer-events: auto; width: 120px; height: 120px; padding: 0; border: 5px solid #fff; border-radius: 50%; cursor: pointer;
+  background: radial-gradient(circle at 50% 35%, #fff8d6, #ffd166 70%, #f59f00); box-shadow: 0 8px 22px rgba(0,0,0,.4), 0 0 0 4px rgba(255,201,60,.5); overflow: hidden;
+  animation: coach-respire 3s ease-in-out infinite; }
 .coach-singe svg { width: 100%; height: 100%; display: block; transform: translateY(6px) scale(1.08); }
-.coach-singe.saute { animation: coach-saut .5s cubic-bezier(.3, 1.6, .5, 1); }
-@keyframes coach-saut { 30% { transform: translateY(-14px) rotate(-6deg); } 60% { transform: translateY(0) rotate(4deg); } }
-.coach-bulle { order: 2; max-width: 250px; margin-bottom: 64px; padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: #fff; color: #3b2a14;
-  font: 800 14px/1.3 var(--police); box-shadow: 0 6px 16px rgba(0,0,0,.3); border: 3px solid #ffc93c;
-  opacity: 0; transform: translateY(10px) scale(.9); transform-origin: bottom left; transition: opacity .25s, transform .25s; }
+@keyframes coach-respire { 50% { transform: translateY(-4px) rotate(-2deg); } }
+.coach-singe.saute { animation: coach-saut .55s cubic-bezier(.3, 1.6, .5, 1); }
+.coach-singe.rigole { animation: coach-rigole .18s ease-in-out 6; }
+.coach-singe.sanglote { animation: coach-sanglote .5s ease-in-out 4; background: radial-gradient(circle at 50% 35%, #e7f5ff, #74c0fc 70%, #1c7ed6); }
+@keyframes coach-saut { 30% { transform: translateY(-18px) rotate(-8deg) scale(1.08); } 60% { transform: translateY(0) rotate(5deg); } }
+@keyframes coach-rigole { 50% { transform: rotate(-9deg) scale(1.06); } }
+@keyframes coach-sanglote { 25% { transform: translateX(-4px) rotate(-3deg); } 75% { transform: translateX(4px) rotate(3deg) translateY(3px); } }
+.coach-bulle { position: relative; max-width: 240px; padding: 12px 16px; border-radius: 18px; background: #fff; color: #3b2a14;
+  font: 900 16px/1.3 var(--police); box-shadow: 0 8px 20px rgba(0,0,0,.35); border: 4px solid #ffc93c;
+  opacity: 0; transform: translateY(12px) scale(.6); transform-origin: 30px 100%; transition: opacity .2s, transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+.coach-bulle::after { content: ""; position: absolute; left: 34px; bottom: -14px; border: 10px solid transparent; border-top-color: inherit; border-bottom: 0; }
+.coach-bulle { order: -1; }
 .coach-bulle.visible { opacity: 1; transform: none; }
-@media (max-width: 800px) { .coach-singe { width: 64px; height: 64px; border-width: 3px; } .coach-bulle { max-width: 190px; font-size: 12px; margin-bottom: 40px; } }
+.coach-bulle.humeur-rire, .coach-bulle.humeur-taquin { border-color: #ff922b; background: #fff4e6; }
+.coach-bulle.humeur-pleure, .coach-bulle.humeur-triste { border-color: #4dabf7; background: #e7f5ff; }
+.coach-bulle.humeur-etoiles { border-color: #fcc419; background: #fff9db; box-shadow: 0 0 22px #ffd43b; }
+.coach-bulle.humeur-choc, .coach-bulle.humeur-colere, .coach-bulle.humeur-ko { border-color: #fa5252; background: #fff5f5; }
+@media (max-width: 800px) { .coach { top: auto; bottom: 12px; } .coach-singe { width: 68px; height: 68px; border-width: 3px; } .coach-bulle { max-width: 200px; font-size: 13px; } }
 
 /* ------------------------------------------------------------ avatars */
 .avatar-entete { display: inline-block; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; border: 3px solid #fff;
@@ -1030,3 +1042,107 @@ main.accueil { background: none; border: 0; box-shadow: none; padding: 0 14px 30
 .avatar-carte { width: 100%; height: 100%; display: block; }
 .carte-memory .dos::after { content: "🐒"; font-size: 34px; text-shadow: none; filter: drop-shadow(0 2px 0 #4b1fa0); }
 .vitrine-avatar .doux { color: #7a6448; }
+
+/* ------------------------------------------------------------ fenêtre de fin de partie funky */
+.fenetre-resultat { position: relative; overflow: hidden; max-height: calc(100vh - 32px); overflow-y: auto;
+  animation: resultat-entree .6s cubic-bezier(.2, 1.7, .4, 1); border: 4px solid transparent;
+  background: linear-gradient(180deg, #4a3693, var(--fond-2)) padding-box,
+              conic-gradient(from var(--angle-bord, 0deg), #ff5fa2, #ffd43b, #51cf66, #3ee0e8, #b197fc, #ff5fa2) border-box; }
+.fenetre-resultat.gagne { animation: resultat-entree .6s cubic-bezier(.2, 1.7, .4, 1), bord-tourne 3s linear infinite; }
+.fenetre-resultat.perd { background: linear-gradient(180deg, #2c3e6b, #1b1f3b) padding-box, linear-gradient(180deg, #74c0fc, #364fc7) border-box; }
+@property --angle-bord { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes bord-tourne { to { --angle-bord: 360deg; } }
+@keyframes resultat-entree { 0% { transform: scale(.2) rotate(-12deg); opacity: 0; } 70% { transform: scale(1.06) rotate(2deg); opacity: 1; } }
+.res-moka { position: relative; width: 132px; height: 132px; margin: -6px auto 4px; border-radius: 50%; border: 5px solid #fff;
+  background: radial-gradient(circle at 50% 35%, #fff8d6, #ffd166 70%, #f59f00); box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+.res-moka svg { width: 100%; height: 100%; display: block; border-radius: 50%; transform: translateY(6px) scale(1.06); }
+.res-moka.danse { animation: moka-danse .7s ease-in-out infinite; }
+.res-moka.pleure { background: radial-gradient(circle at 50% 35%, #e7f5ff, #74c0fc 70%, #1c7ed6); animation: moka-sanglot 1.2s ease-in-out infinite; }
+@keyframes moka-danse { 0%, 100% { transform: rotate(-8deg) translateY(0); } 25% { transform: rotate(0) translateY(-10px) scale(1.05); } 50% { transform: rotate(8deg); } 75% { transform: rotate(0) translateY(-6px); } }
+@keyframes moka-sanglot { 0%, 100% { transform: translateY(0); } 20% { transform: translateY(3px) scaleY(.96); } 40% { transform: translateY(0); } 60% { transform: translateY(3px) scaleY(.96); } }
+.res-moka .larme { position: absolute; width: 10px; height: 14px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #74c0fc;
+  box-shadow: inset -2px -2px 0 rgba(0,0,0,.1); animation: goutte 1.1s ease-in infinite; opacity: 0; }
+.res-moka .l1 { left: 34px; top: 74px; } .res-moka .l2 { right: 34px; top: 74px; animation-delay: .4s; } .res-moka .l3 { left: 40px; top: 80px; animation-delay: .75s; }
+@keyframes goutte { 0% { opacity: 1; transform: translateY(0) scale(.6); } 100% { opacity: 0; transform: translateY(80px) scale(1); } }
+.res-emoji { position: absolute; right: -14px; top: -8px; font-size: 40px; animation: emoji-tourne 2s ease-in-out infinite; }
+@keyframes emoji-tourne { 50% { transform: rotate(18deg) scale(1.2); } }
+.titre-vague { margin: 8px 0 6px; font-size: 26px; }
+.titre-vague span { display: inline-block; animation: lettre 1.4s ease-in-out infinite; }
+.fenetre-resultat.gagne .titre-vague span { color: #ffe066; text-shadow: 0 3px 0 #c2255c; }
+@keyframes lettre { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px) rotate(-4deg); } }
+.res-score { font-size: 22px; margin: 10px 0 0; }
+.res-score b { display: inline-block; animation: pulse 1s ease 2; }
+.tampon-record { display: inline-block; margin: 8px 0 2px; padding: 4px 18px; border: 4px solid #ff6b6b; border-radius: 10px; color: #ff6b6b;
+  font: 900 26px var(--police-titre); letter-spacing: 3px; transform: rotate(-8deg); animation: tampon .5s .3s cubic-bezier(.2, 2, .4, 1) both;
+  background: rgba(255, 107, 107, .12); }
+@keyframes tampon { from { transform: rotate(-8deg) scale(3); opacity: 0; } }
+.fenetre .gain-total { animation: gain-rebond .8s .2s cubic-bezier(.2, 2, .4, 1) both; }
+@keyframes gain-rebond { from { transform: scale(0); } }
+.roue-bonus { margin: 12px auto 4px; padding: 10px; border-radius: 16px; background: rgba(0,0,0,.25); }
+.roue-bonus-cadre { position: relative; width: 176px; height: 176px; margin: 0 auto; }
+.roue-bonus-cadre canvas { width: 100%; height: 100%; display: block; }
+.roue-bonus .petite-fleche { position: absolute; top: -8px; left: 50%; width: 24px; height: 28px; transform: translateX(-50%); z-index: 2;
+  background: linear-gradient(180deg, #fff, #ffd84d); clip-path: polygon(0 0, 100% 0, 50% 100%); filter: drop-shadow(0 3px 3px rgba(0,0,0,.5)); }
+.resultat-bonus { margin: 8px 0 0; font-weight: 900; }
+.roue-bonus.jackpot { background: radial-gradient(circle, rgba(255,212,59,.5), rgba(0,0,0,.2)); animation: pulse .6s ease 4; }
+
+/* ------------------------------------------------------------ box mystère */
+.zone-box { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; margin: 0 0 22px; padding: 18px 22px; border-radius: 22px;
+  background: linear-gradient(135deg, #5f3dc4, #c2255c); box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 3px rgba(255,255,255,.25); }
+.zone-box h2 { margin: 0 0 6px; color: #ffe066; }
+.box-texte { flex: 1; min-width: 240px; }
+.box-mystere { font-size: 90px; animation: box-flotte 2.4s ease-in-out infinite; filter: drop-shadow(0 10px 18px rgba(0,0,0,.4)); }
+@keyframes box-flotte { 50% { transform: translateY(-10px) rotate(6deg); } }
+.chances { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.chances .rarete { margin: 0; }
+.fenetre-box { background: radial-gradient(circle at 50% 40%, #3b2a8f, #120b33); overflow: hidden; }
+.ouverture-box { position: relative; min-height: 300px; display: grid; place-items: center; }
+.box-3d { font-size: 130px; position: relative; z-index: 2; }
+.box-3d.tremble { animation: box-tremble .12s linear infinite; }
+.box-3d.explose { animation: box-explose .35s ease-in forwards; }
+@keyframes box-tremble { 25% { transform: rotate(-9deg) translateX(-4px); } 75% { transform: rotate(9deg) translateX(4px); } }
+@keyframes box-explose { to { transform: scale(2.6) rotate(20deg); opacity: 0; } }
+.rayons { position: absolute; inset: -60%; opacity: 0; transition: opacity .4s;
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.18) 0 10deg, transparent 10deg 20deg); animation: rayons 8s linear infinite; }
+.rayons.visibles { opacity: 1; }
+.rayons.legendaire { background: repeating-conic-gradient(rgba(255,212,59,.35) 0 10deg, transparent 10deg 20deg); }
+.rayons.epique { background: repeating-conic-gradient(rgba(218,119,242,.3) 0 10deg, transparent 10deg 20deg); }
+@keyframes rayons { to { transform: rotate(360deg); } }
+.revelation { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: resultat-entree .6s cubic-bezier(.2, 1.7, .4, 1); }
+.revelation h2 { margin: 8px 0 2px; }
+.grand-avatar.legendaire { border-color: #fcc419; box-shadow: 0 0 30px #ffd43b, 0 10px 24px rgba(0,0,0,.3); }
+.grand-avatar.epique { border-color: #da77f2; box-shadow: 0 0 24px #da77f2; }
+.grand-avatar.rare { border-color: #74c0fc; }
+
+/* accueil : derniers exploits et classement */
+.avatar-exploit { width: 36px; height: 36px; flex: none; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 30%, #fff, #a5d8ff);
+  border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,.25); }
+.avatar-exploit .mini-avatar { width: 100%; height: 100%; display: block; }
+.exploits li { animation: exploit-arrive .5s ease both; }
+.exploits li:nth-child(2) { animation-delay: .08s; } .exploits li:nth-child(3) { animation-delay: .16s; } .exploits li:nth-child(4) { animation-delay: .24s; }
+.exploits li:nth-child(5) { animation-delay: .32s; } .exploits li:nth-child(6) { animation-delay: .4s; }
+@keyframes exploit-arrive { from { opacity: 0; transform: translateX(-20px); } }
+.exploits li > span:last-child { min-width: 0; line-height: 1.3; }
+.badge-toi { font-style: normal; font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 99px; background: var(--or, #ffc93c); color: #4a2500; margin-left: 4px; }
+.tableau .avec-avatar { vertical-align: middle; }
+.jauge-fievre.en-nova b { background: linear-gradient(90deg, #ff6b6b, #ffd43b, #51cf66, #339af0, #cc5de8, #ff6b6b); background-size: 300% 100%; animation: flamme .5s linear infinite; }
+.jauge-fievre.en-nova span { color: #fff; animation: pulse .3s ease infinite; }
+
+/* ------------------------------------------------------------ petites animations partout */
+main { animation: page-arrive .5s ease both; }
+@keyframes page-arrive { from { opacity: 0; transform: translateY(18px); } }
+.titre-page h1 .icone-titre { animation: icone-bouge 3s ease-in-out infinite; transform-origin: 50% 80%; }
+@keyframes icone-bouge { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-12deg) scale(1.1); } 86% { transform: rotate(10deg); } 94% { transform: rotate(-4deg); } }
+.onglet-nav:hover { animation: gigote .35s ease; }
+@keyframes gigote { 30% { transform: rotate(-4deg) scale(1.06); } 70% { transform: rotate(3deg) scale(1.06); } }
+.bouton:not(:disabled):hover { transform: translateY(-2px) scale(1.03); }
+.bouton:not(:disabled):active { transform: translateY(2px) scale(.97); }
+.carte-avatar { animation: carte-pop .45s cubic-bezier(.2, 1.6, .4, 1) both; }
+.boutique .carte-avatar:nth-child(3n) { animation-delay: .05s; } .boutique .carte-avatar:nth-child(3n+1) { animation-delay: .1s; }
+@keyframes carte-pop { from { transform: scale(.6); opacity: 0; } }
+.bourse.gagne .piece { animation: banane-danse .5s ease 3; }
+@keyframes banane-danse { 50% { transform: rotate(-25deg) scale(1.3); } }
+.avatar-entete { animation: avatar-coucou 6s ease-in-out infinite; }
+@keyframes avatar-coucou { 0%, 90%, 100% { transform: rotate(0); } 93% { transform: rotate(-10deg); } 96% { transform: rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+.rarete { display: inline-block; font-size: 12px; font-weight: 900; padding: 3px 10px; border-radius: 99px; color: #fff; margin: 6px 0 2px; }

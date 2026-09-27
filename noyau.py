@@ -38,6 +38,18 @@ ROUE = [
     {"mult": 10, "poids": 3},
 ]
 
+# Petite roue bonus, gratuite à la fin de chaque partie : quelques bananes… ou, très rarement, une box mystère.
+ROUE_BONUS = [
+    {"gain": 1, "poids": 14, "texte": "+1"},
+    {"gain": 0, "poids": 15, "texte": "Rien"},
+    {"gain": 2, "poids": 18, "texte": "+2"},
+    {"gain": 5, "poids": 10, "texte": "+5"},
+    {"gain": 1, "poids": 13, "texte": "+1"},
+    {"gain": 0, "poids": 15, "texte": "Rien"},
+    {"gain": 10, "poids": 3, "texte": "+10"},
+    {"gain": "box", "poids": 2, "texte": "BOX"},
+]
+
 
 # Un seul verrou protège la base : chaque requête est courte (quelques millisecondes).
 # Les calculs longs (réflexion de l'ordinateur aux échecs) se font hors verrou, voir sans_verrou().
@@ -140,7 +152,8 @@ def connexion_base():
     )
     # Colonnes ajoutées après la première version : on complète les bases existantes.
     for table, colonne in (("joueurs", "dernier_secours TEXT"), ("joueurs", "vu_le REAL"), ("parties", "mult REAL"),
-                           ("parties", "pieces_base INTEGER"), ("joueurs", "avatar TEXT")):
+                           ("parties", "pieces_base INTEGER"), ("joueurs", "avatar TEXT"),
+                           ("joueurs", "boxes INTEGER NOT NULL DEFAULT 0"), ("parties", "bonus TEXT")):
         try:
             base.execute(f"ALTER TABLE {table} ADD COLUMN {colonne}")
         except sqlite3.OperationalError:
@@ -161,6 +174,7 @@ def joueur_public(j):
     return {
         "pseudo": j["pseudo"],
         "avatar": j["avatar"] or "moka",
+        "boxes": j["boxes"],
         "pieces": j["pieces"],
         "mise": MISE,
         "tour_gratuit": j["dernier_tour_gratuit"] != aujourd_hui(),
@@ -328,7 +342,28 @@ def roue_tourner(joueur, donnees):
 
 
 def roue_config(joueur, requete):
-    return {"secteurs": [s["mult"] for s in ROUE], "probas": [s["poids"] for s in ROUE]}
+    return {"secteurs": [s["mult"] for s in ROUE], "probas": [s["poids"] for s in ROUE],
+            "bonus": [s["texte"] for s in ROUE_BONUS], "probas_bonus": [s["poids"] for s in ROUE_BONUS]}
+
+
+def roue_bonus(joueur, donnees):
+    """Petite roue gratuite après chaque partie terminée (une seule fois par partie)."""
+    p = db.execute("SELECT * FROM parties WHERE id = ? AND joueur_id = ?", (donnees.get("partie"), joueur["id"])).fetchone()
+    if not p or p["statut"] != "terminee":
+        raise ErreurApi("La roue bonus se lance à la fin d'une partie.")
+    if p["bonus"] is not None:
+        raise ErreurApi("Tu as déjà tourné la roue bonus pour cette partie.")
+    if maintenant() - p["fin"] > DELAI_ROUE:
+        raise ErreurApi("Trop tard pour la roue bonus de cette partie.")
+    secteur = random.choices(range(len(ROUE_BONUS)), weights=[s["poids"] for s in ROUE_BONUS])[0]
+    gain = ROUE_BONUS[secteur]["gain"]
+    db.execute("UPDATE parties SET bonus = ? WHERE id = ?", (str(gain), p["id"]))
+    if gain == "box":
+        db.execute("UPDATE joueurs SET boxes = boxes + 1 WHERE id = ?", (joueur["id"],))
+    elif gain:
+        db.execute("UPDATE joueurs SET pieces = pieces + ?, pieces_gagnees = pieces_gagnees + ? WHERE id = ?",
+                   (gain, gain, joueur["id"]))
+    return {"secteur": secteur, "gain": gain, "joueur": joueur_public(lire_joueur(joueur["id"]))}
 
 
 # --------------------------------------------------------------------------- classements

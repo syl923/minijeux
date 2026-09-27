@@ -456,5 +456,42 @@ class TestApi(unittest.TestCase):
         self.assertEqual(c.appel("/api/moi")[1]["joueur"]["pieces"], 1000)
 
 
+    def test_box_mystere(self):
+        import avatars
+        c, _ = nouveau_joueur("BoxeurFou", pieces=avatars.PRIX_BOX - 1)
+        self.assertEqual(c.appel("/api/avatars/box", {})[0], 400)                    # pas assez de bananes
+        self.assertEqual(c.appel("/api/avatars/box", {"gratuite": True})[0], 400)    # aucune box gratuite
+        self.assertEqual(c.appel("/api/avatars/acheter", {"avatar": "cosmique"})[0], 400)  # exclusif à la box
+        with noyau.db:
+            noyau.db.execute("UPDATE joueurs SET pieces = 10000, boxes = 1 WHERE pseudo = 'BoxeurFou'")
+        code, r = c.appel("/api/avatars/box", {"gratuite": True})
+        self.assertEqual((code, r["joueur"]["pieces"], r["joueur"]["boxes"]), (200, 10000, 0))
+        self.assertIn(r["avatar"], r["possedes"])
+        self.assertEqual(r["joueur"]["avatar"], r["avatar"])
+        vus = set()
+        for _ in range(12):
+            code, r = c.appel("/api/avatars/box", {})
+            self.assertEqual(code, 200)
+            if r["avatar"]:
+                self.assertNotIn(r["avatar"], vus)   # jamais deux fois le même avatar
+                vus.add(r["avatar"])
+
+    def test_roue_bonus(self):
+        c, _ = nouveau_joueur("Roulette", pieces=100)
+        _, r = c.appel("/api/memory/debut", {"mode": "facile"})
+        self.assertEqual(c.appel("/api/roue/bonus", {"partie": r["partie"]})[0], 400)   # partie pas finie
+        f = jouer_memory(c)["fin"]
+        avant = c.appel("/api/moi")[1]["joueur"]
+        code, b = c.appel("/api/roue/bonus", {"partie": f["partie"]})
+        self.assertEqual(code, 200)
+        gagne = b["gain"] if isinstance(b["gain"], int) else 0
+        self.assertEqual(b["joueur"]["pieces"], avant["pieces"] + gagne)
+        self.assertEqual(b["joueur"]["boxes"], avant["boxes"] + (b["gain"] == "box"))
+        self.assertEqual(c.appel("/api/roue/bonus", {"partie": f["partie"]})[0], 400)    # une seule fois
+        autre, _ = nouveau_joueur("VoleurDeRoue")
+        f2 = jouer_memory(c)["fin"]
+        self.assertEqual(autre.appel("/api/roue/bonus", {"partie": f2["partie"]})[0], 400)
+
+
 if __name__ == "__main__":
     unittest.main()

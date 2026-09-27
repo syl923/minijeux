@@ -17,6 +17,16 @@
 
   <div class="vitrine-avatar" id="vitrine"></div>
 
+  <div class="zone-box" id="box">
+    <div class="box-mystere" id="box-image">🎁</div>
+    <div class="box-texte">
+      <h2>La box mystère</h2>
+      <p>Un avatar au hasard, jamais un que tu as déjà ! Certains avatars <b>légendaires</b> ne se trouvent <b>que</b> dans la box.</p>
+      <div class="chances" id="chances"></div>
+      <div class="actions" style="justify-content:flex-start" id="box-actions"></div>
+    </div>
+  </div>
+
   <div class="categories" id="filtres" style="margin-bottom:18px">
     <button data-f="tous" class="actif">⭐ Tous</button>
     <button data-f="miens">✔ Les miens</button>
@@ -34,7 +44,6 @@
 <script>
   let cat = null;
   let filtre = "tous";
-  const rarete = (prix) => prix >= 500 ? "legendaire" : prix >= 200 ? "epique" : prix >= 100 ? "rare" : "commun";
   const NOMS_RARETE = { commun: "Commun", rare: "Rare", epique: "Épique", legendaire: "Légendaire" };
 
   async function charger() {
@@ -54,16 +63,18 @@
         ${j ? `<p style="margin:0">Collection : <b>${cat.possedes.length} / ${cat.avatars.length}</b> · Tu as <b>${j.pieces}</b> <i class="piece"></i></p>`
             : `<button class="bouton" onclick="ouvrirConnexion()">Choisir mon pseudo</button>`}
       </div>`;
-    const liste = cat.avatars.filter((a) => filtre === "tous" || (filtre === "miens" ? cat.possedes.includes(a.id) : rarete(a.prix) === filtre));
+    afficherBox();
+    const liste = cat.avatars.filter((a) => filtre === "tous" || (filtre === "miens" ? cat.possedes.includes(a.id) : a.rarete === filtre));
     const zone = document.getElementById("boutique");
     zone.innerHTML = liste.map((a) => {
-      const r = rarete(a.prix);
+      const r = a.rarete;
       const possede = cat.possedes.includes(a.id) || a.prix === 0;
       const porte = j && a.id === actuel;
       let bouton;
       if (porte) bouton = `<button class="bouton secondaire" disabled>Porté</button>`;
       else if (possede && j) bouton = `<button class="bouton secondaire" data-choisir="${a.id}">Porter</button>`;
       else if (a.prix === 0) bouton = `<button class="bouton secondaire" data-choisir="${a.id}">Gratuit</button>`;
+      else if (a.prix === null) bouton = `<button class="bouton secondaire" disabled>🎁 Box uniquement</button>`;
       else bouton = `<button class="bouton" data-acheter="${a.id}" ${j && j.pieces < a.prix ? "disabled" : ""}>${a.prix} <i class="piece"></i></button>`;
       return `<div class="carte-avatar ${r} ${porte ? "porte" : ""} ${possede ? "" : "verrouille"}">
         <div class="portrait">${avatarSVG(a.id)}</div>
@@ -74,6 +85,55 @@
     }).join("") || `<p class="doux">Aucun avatar ici pour l'instant.</p>`;
     zone.querySelectorAll("[data-acheter]").forEach((b) => (b.onclick = () => exigerConnexion(() => acheter(b.dataset.acheter))));
     zone.querySelectorAll("[data-choisir]").forEach((b) => (b.onclick = () => exigerConnexion(() => choisir(b.dataset.choisir))));
+  }
+
+  function afficherBox() {
+    const j = MJ.joueur;
+    document.getElementById("chances").innerHTML = Object.entries(cat.box.chances)
+      .map(([r, p]) => `<span class="rarete ${r}">${NOMS_RARETE[r]} ${p} %</span>`).join(" ");
+    const gratuites = cat.box.gratuites || 0;
+    document.getElementById("box-actions").innerHTML = `
+      ${gratuites ? `<button class="bouton" id="box-gratuite">🎁 Ouvrir ma box gratuite (${gratuites})</button>` : ""}
+      <button class="bouton ${gratuites ? "secondaire" : ""}" id="box-payer" ${j && j.pieces < cat.box.prix ? "disabled" : ""}>Acheter une box : ${cat.box.prix} <i class="piece"></i></button>`;
+    document.getElementById("box-payer").onclick = () => exigerConnexion(() => ouvrirBox(false));
+    const g = document.getElementById("box-gratuite");
+    if (g) g.onclick = () => exigerConnexion(() => ouvrirBox(true));
+  }
+
+  // Ouverture : la box tremble, s'ouvre dans un éclair, puis l'avatar apparaît avec la couleur de sa rareté.
+  async function ouvrirBox(gratuite) {
+    let r;
+    try {
+      r = await api("/api/avatars/box", { gratuite });
+    } catch (e) {
+      return alert(e.message);
+    }
+    const f = ouvrirFenetre(`
+      <div class="ouverture-box">
+        <div class="rayons ${r.rarete}"></div>
+        <div class="box-3d" id="box-3d">🎁</div>
+        <div class="revelation cache" id="revelation">
+          <div class="grand-avatar ${r.rarete}">${r.avatar ? avatarSVG(r.avatar) : avatarSVG("mdr")}</div>
+          <span class="rarete ${r.rarete}">${NOMS_RARETE[r.rarete]}</span>
+          <h2>${r.avatar ? echapper(r.nom) : "Collection complète !"}</h2>
+          <p class="doux">${r.avatar ? "Il est à toi, et tu le portes déjà !" : `Tu avais déjà tous les avatars de cette rareté : +${r.bananes} bananes pour toi.`}</p>
+          <div class="actions"><button class="bouton" onclick="fermerFenetre()">Super !</button></div>
+        </div>
+      </div>`, { bloquee: true, classe: "fenetre-box" });
+    Sons.jouer("tic");
+    const box = f.querySelector("#box-3d");
+    box.classList.add("tremble");
+    for (let i = 0; i < 6; i++) setTimeout(() => Sons.jouer("roue_tic"), i * 180);
+    await new Promise((ok) => setTimeout(ok, 1400));
+    box.classList.add("explose");
+    Sons.jouer(r.rarete === "legendaire" ? "extra" : "bonus");
+    if (r.rarete === "legendaire" || r.rarete === "epique") { Sons.jouer("cri"); confettis(); }
+    await new Promise((ok) => setTimeout(ok, 350));
+    f.querySelector("#revelation").classList.remove("cache");
+    f.querySelector(".rayons").classList.add("visibles");
+    cat.possedes = r.possedes;
+    cat.box.gratuites = r.joueur.boxes;
+    majJoueur(r.joueur);
   }
 
   function acheter(id) {
@@ -112,6 +172,7 @@
     };
   });
   MJ.surChangement.push(() => charger());
+  if (location.hash === "#box") setTimeout(() => document.getElementById("box").scrollIntoView({ behavior: "smooth", block: "center" }), 600);
 </script>
 </body>
 </html>

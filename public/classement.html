@@ -36,7 +36,7 @@
     bataille: "Meilleur score de chaque joueur sur une victoire. Moins il faut de tirs pour couler la flotte ennemie, plus le score est haut.",
     snake: "Meilleur score de chaque joueur : 10 points par fruit, 50 pour un fruit doré.",
     demineur: "Meilleur score sur une victoire : plus le terrain est grand et plus on est rapide, plus le score est haut.",
-    echecs: "Meilleur score sur une victoire (ou une nulle) : dépend du niveau de l'ordinateur et de la rapidité du mat.",
+    echecs: "Meilleur score sur une victoire (ou une nulle) : dépend du niveau de Professeur Moka et de la rapidité du mat.",
     flipper: "Meilleur score de chaque joueur au flipper.",
     runner: "Meilleur score à Safari Rush : distance parcourue + 10 points par banane ramassée (x2 avec le bonus).",
     candy: "Meilleur score à Bonbons Folies en 20 coups.",
@@ -72,7 +72,7 @@
       <tbody>${r.lignes.map((l, i) => `
         <tr class="${rangs[i] || ""} ${l.pseudo === moi ? "moi" : ""}">
           <td>${medailles[i] || i + 1}</td>
-          <td>${pseudoAvecAvatar(l.pseudo, l.avatar)}${l.pseudo === moi ? " (toi)" : ""}</td>
+          <td><span class="avec-avatar">${avatarSVG(l.avatar || "moka", "mini-avatar")}${echapper(l.pseudo)}${l.pseudo === moi ? ` <em class="badge-toi">toi</em>` : ""}</span></td>
           <td class="doux">${l.parties}</td>
           <td class="valeur">${l.valeur}${etat.jeu === "fortune" ? ' <i class="piece"></i>' : ""}</td>
         </tr>`).join("")}</tbody></table>`;

@@ -6,7 +6,14 @@ const FOURRURES = {
   brun: ["#9c6433", "#7a4a1f"], dore: ["#f2b632", "#c98a0c"], gris: ["#8a8f98", "#5f6570"],
   noir: ["#3b3232", "#1f1a1a"], rose: ["#f09ac0", "#c96d96"], blanc: ["#efe9df", "#c4baa9"],
   zombie: ["#7fa36b", "#557a45"], bleu: ["#5b8fd6", "#3d6bb0"], violet: ["#8e6bd1", "#6446a8"],
+  metal: ["#b8c1cc", "#6c757d"], fantome: ["#f8f9fa", "#dee2e6"], rouge: ["#e8590c", "#a8380a"], vert_alien: ["#8ce99a", "#40c057"],
+  arcenciel: ["url(#fourrure-arc)", "#c2255c"], cosmos: ["url(#fourrure-cosmos)", "#241a5c"],
 };
+const DEFS_FOURRURES = {
+  arcenciel: `<linearGradient id="fourrure-arc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b6b"/><stop offset=".25" stop-color="#ffd43b"/><stop offset=".5" stop-color="#51cf66"/><stop offset=".75" stop-color="#339af0"/><stop offset="1" stop-color="#cc5de8"/></linearGradient>`,
+  cosmos: `<radialGradient id="fourrure-cosmos" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#7048e8"/><stop offset=".6" stop-color="#3b2a8f"/><stop offset="1" stop-color="#140f3a"/></radialGradient>`,
+};
+const TRAIT = "#3d2208";   // contour des dessins
 const PEAU = "#f3d3a6";
 const ENCRE = "#2b1a0e";
 
@@ -14,7 +21,7 @@ const ENCRE = "#2b1a0e";
 function oeil(type, x, y, cote) {
   const pupille = (dx = 1, dy = 2, r = 3.8, c = ENCRE) =>
     `<circle cx="${x + dx}" cy="${y + dy}" r="${r}" fill="${c}"/><circle cx="${x + dx + 1.4}" cy="${y + dy - 1.8}" r="1.3" fill="#fff"/>`;
-  const blanc = (rx = 6.5, ry = 8) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff"/>`;
+  const blanc = (rx = 6.5, ry = 8) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff" stroke="${TRAIT}" stroke-width="1.3"/>`;
   const trait = (d, w = 3) => `<path d="${d}" fill="none" stroke="${ENCRE}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
   switch (type) {
     case "content": return trait(`M${x - 6} ${y + 2} q6 -8 12 0`);
@@ -30,6 +37,10 @@ function oeil(type, x, y, cote) {
     case "rouge": return blanc() + pupille(1, 2, 3.8, "#d6182b");
     case "zombie": return blanc(6.5, 8) + (cote < 0 ? `<circle cx="${x - 1}" cy="${y + 1}" r="1.8" fill="${ENCRE}"/>` : pupille(1, 3, 3));
     case "clin": return cote < 0 ? blanc() + pupille() : trait(`M${x - 6} ${y + 2} q6 -7 12 0`);
+    case "pleure": return trait(`M${x - 6} ${y + 2} q6 -7 12 0`) + `<path d="M${x - 4} ${y - 5} l3 2 M${x + 4} ${y - 5} l-3 2" stroke="${TRAIT}" stroke-width="1.5"/>`;
+    case "vide": return `<ellipse cx="${x}" cy="${y}" rx="6" ry="8.5" fill="#212529"/><ellipse cx="${x - 1.5}" cy="${y - 3}" rx="1.6" ry="2.2" fill="#fff" opacity=".7"/>`;
+    case "robot": return `<rect x="${x - 7}" y="${y - 4}" width="14" height="8" rx="2" fill="#0b7285" stroke="#343a40" stroke-width="1.5"/><rect x="${x - 5}" y="${y - 2}" width="10" height="3" fill="#66f5ff"/>`;
+    case "alien": return `<ellipse cx="${x}" cy="${y}" rx="8" ry="10" transform="rotate(${cote * -20} ${x} ${y})" fill="#111"/><ellipse cx="${x - 2}" cy="${y - 4}" rx="2" ry="3" fill="#fff" opacity=".8"/>`;
     case "malin": return blanc(6.5, 6) + pupille(2, 1.5, 3.4) + `<path d="M${x - 8} ${y - 8} h16 v5 h-16z" fill="${PEAU}"/>`;
     default: return blanc() + pupille();
   }
@@ -65,6 +76,9 @@ function bouche(type) {
     case "grogne": return trait("M49 86 q11 -6 22 0") + `<path d="M53 84 l2 -3 2 3z M63 84 l2 -3 2 3z" fill="#fff"/>`;
     case "sourire_en_coin": return trait("M49 82 q12 6 22 -4");
     case "tetine": return `<circle cx="60" cy="84" r="9" fill="#74c0fc" stroke="#1c7ed6" stroke-width="2"/><circle cx="60" cy="84" r="4" fill="#e7f5ff"/><path d="M60 93 a5 5 0 1 0 0.1 0" fill="none" stroke="#1c7ed6" stroke-width="2"/>`;
+    case "pleure": return `<path d="M47 88 q13 -14 26 0 q-13 7 -26 0z" fill="#8f1d1d"/><path d="M52 88 q8 3 16 0" stroke="#ff8787" stroke-width="2" fill="none"/>`;
+    case "clown": return `<path d="M40 76 q20 24 40 0 q-20 10 -40 0z" fill="#e03131"/><path d="M44 78 q16 16 32 0z" fill="#8f1d1d"/><path d="M48 79 h24 l-2 3 h-20z" fill="#fff"/>`;
+    case "robot": return `<rect x="46" y="78" width="28" height="9" rx="2" fill="#343a40"/><path d="M50 78 v9 M54 78 v9 M58 78 v9 M62 78 v9 M66 78 v9 M70 78 v9" stroke="#66f5ff" stroke-width="1.5"/>`;
     case "moustache": return `<path d="M60 80 q-8 -6 -18 2 q8 -2 10 3 q4 -1 8 -5 q4 4 8 5 q2 -5 10 -3 q-10 -8 -18 -2z" fill="#4a2a10"/>` + trait("M53 88 q7 4 14 0", 2.5);
     default: return `<path d="M47 78 q13 13 26 0 z" fill="#c92a2a"/><path d="M53 83 q7 5 14 0" fill="#ff8787"/>`;
   }
@@ -107,6 +121,23 @@ function chapeau(type) {
     case "meche": return `<path d="M58 28 q-10 -12 2 -16 q8 -2 6 6 q-2 4 -6 2" fill="none" stroke="#7a4a1f" stroke-width="3.5" stroke-linecap="round"/>`;
     case "ebouriffe": return `<path d="M34 36 l-6 -14 12 6 2 -14 8 12 6 -16 6 16 8 -12 2 14 12 -6 -6 14z" fill="#7a4a1f"/>`;
     case "pointe": return `<path d="M36 36 q24 -6 48 0 l-24 12z" fill="#1f1a1a"/>`;
+    case "perruque_clown": return `<circle cx="24" cy="44" r="13" fill="#ff922b"/><circle cx="18" cy="56" r="11" fill="#fcc419"/><circle cx="96" cy="44" r="13" fill="#51cf66"/><circle cx="102" cy="56" r="11" fill="#339af0"/>
+      <path d="M44 30 l6 -18 6 14 6 -16 6 16 6 -14 4 18z" fill="#f06595"/><circle cx="60" cy="10" r="4" fill="#ffd43b"/>`;
+    case "antennes": return `<path d="M46 30 q-6 -14 -14 -20 M74 30 q6 -14 14 -20" stroke="#40c057" stroke-width="3.5" fill="none" stroke-linecap="round"/><circle cx="32" cy="10" r="5" fill="#ffd43b"/><circle cx="88" cy="10" r="5" fill="#ffd43b"/>`;
+    case "casque_robot": return `<path d="M28 44 q32 -40 64 0z" fill="#868e96" stroke="#343a40" stroke-width="2"/><path d="M60 8 v16" stroke="#343a40" stroke-width="3"/><circle cx="60" cy="8" r="4.5" fill="#fa5252"/>
+      <circle cx="38" cy="38" r="2" fill="#343a40"/><circle cx="82" cy="38" r="2" fill="#343a40"/><path d="M40 30 h40" stroke="#adb5bd" stroke-width="2"/>`;
+    case "cornes": return `<path d="M36 36 q-10 -14 -4 -30 q6 16 14 22z M84 36 q10 -14 4 -30 q-6 16 -14 22z" fill="#c92a2a" stroke="#7a1414" stroke-width="1.5"/>`;
+    case "bandeau_fleurs": return `<path d="M26 44 q34 -12 68 0" stroke="#be4bdb" stroke-width="5" fill="none"/>` + [[32, 41, "#ff8787"], [48, 36, "#ffd43b"], [64, 35, "#74c0fc"], [80, 38, "#8ce99a"], [92, 42, "#f783ac"]].map(([x, y, c]) =>
+      `<circle cx="${x}" cy="${y}" r="5.5" fill="${c}"/><circle cx="${x}" cy="${y}" r="2" fill="#fff3bf"/>`).join("");
+    case "afro": return `<g fill="#2b1a0e">${[[30, 34, 15], [44, 22, 16], [60, 16, 17], [76, 22, 16], [90, 34, 15], [22, 50, 11], [98, 50, 11]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join("")}</g>
+      <path d="M86 26 l14 -4" stroke="#e64980" stroke-width="3"/>`;
+    case "casque_audio": return `<path d="M24 58 q0 -44 36 -44 q36 0 36 44" stroke="#212529" stroke-width="6" fill="none"/><rect x="12" y="50" width="16" height="22" rx="7" fill="#e64980" stroke="#212529" stroke-width="2"/>
+      <rect x="92" y="50" width="16" height="22" rx="7" fill="#e64980" stroke="#212529" stroke-width="2"/>`;
+    case "capuche_banane": return `<path d="M60 2 c-40 4 -52 40 -40 78 c-8 -34 10 -64 40 -64 c30 0 48 30 40 64 c12 -38 0 -74 -40 -78z" fill="#ffd43b" stroke="#c98a00" stroke-width="2"/>
+      <path d="M58 2 l2 -2 4 2 -2 6z" fill="#6b4a00"/><path d="M34 22 q-6 16 -6 34" stroke="#fff3bf" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    case "heaume": return `<path d="M24 60 q0 -38 36 -38 q36 0 36 38 v4 h-10 v-10 q-26 -8 -52 0 v10 h-10z" fill="#ced4da" stroke="#495057" stroke-width="2"/>
+      <path d="M60 22 v-8" stroke="#495057" stroke-width="3"/><path d="M60 14 q-14 -14 -4 -14 q10 -2 18 10 q-6 -4 -14 4z" fill="#e03131"/><path d="M40 32 h40" stroke="#868e96" stroke-width="2"/>`;
+    case "cheveux_fous": return `<path d="M30 40 l-16 -10 14 0 -10 -16 16 8 2 -18 10 14 8 -18 6 18 10 -16 2 18 14 -10 -6 16 16 0 -14 12z" fill="#f1f3f5" stroke="#ced4da" stroke-width="1.5"/>`;
     case "aureole": return `<ellipse cx="60" cy="14" rx="22" ry="6" fill="none" stroke="#ffe066" stroke-width="4"/>`;
     default: return "";
   }
@@ -125,6 +156,14 @@ function lunettes(type) {
       <path d="M42 50 l5 -2 M68 50 l5 -2" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>`;
     case "cache_oeil": return `<path d="M30 42 L92 62" stroke="#111" stroke-width="2.5"/><ellipse cx="71" cy="57" rx="9" ry="9.5" fill="#111"/>`;
     case "masque_ninja": return `<path d="M30 66 q30 -10 60 0 q2 24 -30 28 q-32 -4 -30 -28z" fill="#1a1a2e"/>`;
+    case "rondes_roses": return `<circle cx="49" cy="57" r="9.5" fill="rgba(247,131,172,.55)" stroke="#e64980" stroke-width="2"/><circle cx="71" cy="57" r="9.5" fill="rgba(247,131,172,.55)" stroke="#e64980" stroke-width="2"/><path d="M59 56 h2" stroke="#e64980" stroke-width="2"/>`;
+    case "disco": return `<path d="M33 48 h54 l-4 14 h-18 l-5 -6 -5 6 h-18z" fill="#ffd43b" stroke="#c98a00" stroke-width="2"/><path d="M38 52 l4 6 M44 52 l4 6 M70 52 l4 6 M76 52 l4 6" stroke="#fff" stroke-width="1.5"/>`;
+    case "labo": return `<path d="M24 50 q36 -8 72 0" stroke="#343a40" stroke-width="5" fill="none"/><circle cx="47" cy="55" r="11" fill="rgba(130,201,30,.55)" stroke="#495057" stroke-width="4"/><circle cx="73" cy="55" r="11" fill="rgba(130,201,30,.55)" stroke="#495057" stroke-width="4"/>`;
+    case "masque_catch": return `<path d="M26 58 q0 -34 34 -34 q34 0 34 34 q0 8 -4 12 h-60 q-4 -4 -4 -12z" fill="#1c7ed6"/><path d="M34 46 q14 -10 26 4 q12 -14 26 -4 q-6 18 -26 12 q-20 6 -26 -12z" fill="#ffd43b"/>
+      <ellipse cx="49" cy="56" rx="8" ry="6" fill="#fff"/><ellipse cx="71" cy="56" rx="8" ry="6" fill="#fff"/><circle cx="50" cy="57" r="3" fill="#111"/><circle cx="70" cy="57" r="3" fill="#111"/>`;
+    case "bandelettes": return `<g stroke="#e9dcc2" stroke-width="6" stroke-linecap="round" opacity=".95"><path d="M28 40 L92 50"/><path d="M26 66 L94 60"/><path d="M34 30 L86 36"/><path d="M40 86 L82 80"/><path d="M60 26 L96 44"/></g>
+      <g stroke="#c8b99a" stroke-width="1"><path d="M28 40 L92 50"/><path d="M26 66 L94 60"/></g>`;
+    case "masque_heros": return `<path d="M30 52 q10 -8 20 -2 q10 4 20 0 q10 -6 20 2 q-2 12 -12 12 q-8 0 -8 -6 h-16 q0 6 -8 6 q-10 0 -16 -12z" fill="#c92a2a"/><ellipse cx="49" cy="57" rx="5" ry="4" fill="#fff"/><ellipse cx="71" cy="57" rx="5" ry="4" fill="#fff"/>`;
     case "casque_astro": return `<circle cx="60" cy="60" r="50" fill="rgba(165,216,255,.22)" stroke="#e9ecef" stroke-width="5"/>
       <path d="M26 40 q10 -22 34 -26" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".8"/>`;
     default: return "";
@@ -134,7 +173,7 @@ function lunettes(type) {
 // ------------------------------------------------------------ habits (épaules en bas du dessin)
 const EPAULES = "M12 122 C14 100 36 93 60 93 C84 93 106 100 108 122 Z";
 function habit(type, couleur) {
-  const base = (c) => `<path d="${EPAULES}" fill="${c}"/>`;
+  const base = (c) => `<path d="${EPAULES}" fill="${c}" stroke="${TRAIT}" stroke-width="2" stroke-linejoin="round"/>`;
   switch (type) {
     case "capitaine": return base("#1d3557") + `<path d="M60 93 l-10 29 M60 93 l10 29" stroke="#fff" stroke-width="2"/>
       <circle cx="52" cy="108" r="2.4" fill="#f2c230"/><circle cx="68" cy="108" r="2.4" fill="#f2c230"/><circle cx="52" cy="117" r="2.4" fill="#f2c230"/><circle cx="68" cy="117" r="2.4" fill="#f2c230"/>
@@ -164,6 +203,24 @@ function habit(type, couleur) {
     case "maillot": return base(couleur || "#1c7ed6") + `<path d="M44 94 q16 10 32 0" stroke="#fff" stroke-width="3" fill="none"/><text x="60" y="118" text-anchor="middle" font-size="13" font-weight="900" fill="#fff" font-family="Arial Black, sans-serif">7</text>`;
     case "bebe": return base("#ffc9e3") + `<path d="M40 96 q20 14 40 0 q-2 10 -20 12 q-18 -2 -20 -12z" fill="#fff" stroke="#f783ac" stroke-width="1.5"/>`;
     case "dore": return base("#f2b632") + `<path d="M40 96 q20 26 40 0" stroke="#fff3bf" stroke-width="3" fill="none"/>`;
+    case "clown": return base("#fff") + `<g fill="#e03131"><circle cx="30" cy="110" r="4"/><circle cx="50" cy="116" r="4"/><circle cx="72" cy="108" r="4"/><circle cx="92" cy="114" r="4"/></g>
+      <path d="M34 96 q6 8 12 0 q6 8 14 0 q6 8 14 0 q6 8 12 0 v6 q-26 10 -52 0z" fill="#ffd43b" stroke="#f59f00"/>`;
+    case "hippie": return base("#be4bdb") + `<path d="M20 110 q20 -12 40 0 q20 12 40 0" stroke="#ffd43b" stroke-width="5" fill="none"/><path d="M16 120 q22 -10 44 0 q22 10 44 0" stroke="#51cf66" stroke-width="5" fill="none"/>
+      <circle cx="60" cy="104" r="6" fill="none" stroke="#fff" stroke-width="2"/><path d="M60 98 v12 M60 104 l-4 4 M60 104 l4 4" stroke="#fff" stroke-width="2"/>`;
+    case "disco": return base("#f06595") + `<path d="M44 94 l16 22 16 -22" fill="#fff"/><path d="M44 94 l-6 12 12 -4z M76 94 l6 12 -12 -4z" fill="#ffd43b"/>` +
+      [[26, 112], [36, 104], [86, 104], [96, 114], [70, 118]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.8" fill="#fff"/>`).join("");
+    case "hoodie": return base(couleur || "#212529") + `<path d="M36 96 q24 14 48 0" stroke="#495057" stroke-width="5" fill="none"/><path d="M52 104 v12 M68 104 v12" stroke="#ced4da" stroke-width="2"/>`;
+    case "banane": return base("#ffd43b") + `<path d="M40 100 q20 8 40 0" stroke="#f59f00" stroke-width="3" fill="none"/><path d="M60 100 v22" stroke="#f59f00" stroke-width="2"/>`;
+    case "armure": return base("#adb5bd") + `<path d="M22 108 q38 -14 76 0 M18 118 q42 -14 84 0" stroke="#495057" stroke-width="2" fill="none"/><path d="M52 96 h16 v10 l-8 6 -8 -6z" fill="#e03131" stroke="#495057"/>`;
+    case "catch": return base("#f3d3a6") + `<path d="M12 122 C14 100 30 96 40 96 L44 122z M108 122 C106 100 90 96 80 96 L76 122z" fill="#1c7ed6"/><rect x="40" y="112" width="40" height="10" fill="#ffd43b" stroke="#c98a00"/>`;
+    case "momie": return base("#e9dcc2") + `<path d="M16 104 L104 112 M13 116 L107 106 M30 96 L90 100" stroke="#c8b99a" stroke-width="3"/>`;
+    case "heros": return `<path d="M6 122 L24 86 L96 86 L114 122z" fill="#c92a2a"/>` + base("#1c7ed6") +
+      `<path d="M50 102 l10 -6 10 6 -10 14z" fill="#ffd43b" stroke="#c98a00"/><path d="M56 104 c-2 4 0 8 6 8" stroke="#c98a00" stroke-width="1.5" fill="none"/>`;
+    case "robot": return base("#868e96") + `<rect x="42" y="100" width="36" height="16" rx="3" fill="#343a40"/><circle cx="50" cy="108" r="3" fill="#fa5252"/><circle cx="60" cy="108" r="3" fill="#51cf66"/><circle cx="70" cy="108" r="3" fill="#339af0"/>`;
+    case "alien": return base("#ced4da") + `<path d="M30 98 q30 14 60 0" stroke="#40c057" stroke-width="4" fill="none"/><circle cx="60" cy="112" r="6" fill="#40c057"/>`;
+    case "diable": return base("#212529") + `<path d="M84 122 v-20 m-6 0 q6 -10 12 0 m-6 -8 v8" stroke="#ffd43b" stroke-width="3" fill="none"/><path d="M40 96 l20 10 20 -10" stroke="#c92a2a" stroke-width="4" fill="none"/>`;
+    case "drap": return `<path d="M14 122 q4 -24 20 -30 q26 -8 52 0 q16 6 20 30 l-8 -6 -8 6 -8 -6 -8 6 -8 -6 -8 6 -8 -6 -8 6 -8 -6 -8 6 -8 -6z" fill="#f8f9fa" opacity=".9"/>`;
+    case "cosmos": return base("#241a5c") + `<circle cx="36" cy="108" r="1.5" fill="#fff"/><circle cx="80" cy="104" r="1.2" fill="#fff"/><circle cx="64" cy="116" r="1.8" fill="#ffd43b"/><circle cx="92" cy="116" r="1" fill="#fff"/>`;
     case "aucun": return "";
     default: return base(couleur || "#5c7cfa") + `<path d="M46 94 q14 8 28 0" stroke="rgba(255,255,255,.5)" stroke-width="3" fill="none"/>`;
   }
@@ -186,6 +243,11 @@ function extras(liste) {
     paillettes: `<circle cx="18" cy="40" r="2.5" fill="#fff3bf"/><circle cx="104" cy="44" r="3" fill="#fff3bf"/><circle cx="98" cy="84" r="2" fill="#fff3bf"/><circle cx="20" cy="86" r="2" fill="#fff3bf"/>`,
     noeud: `<path d="M50 96 l10 6 10 -6 v10 l-10 -6 -10 6z" fill="#e03131"/><circle cx="60" cy="101" r="2.5" fill="#a61e1e"/>`,
     banane: `<path d="M92 92 c-4 14 3 24 16 24 c-9 -4 -13 -13 -11 -24 z" fill="#ffd43b" stroke="#8a6400" stroke-width="2" stroke-linejoin="round"/>`,
+    nez_clown: `<circle cx="60" cy="71" r="6.5" fill="#fa5252" stroke="#c92a2a" stroke-width="1.5"/><circle cx="58" cy="69" r="2" fill="#fff" opacity=".7"/>`,
+    torrent: `<path d="M42 62 q-4 14 -2 26 q3 3 5 0 q-2 -12 1 -26z M78 62 q4 14 2 26 q-3 3 -5 0 q2 -12 -1 -26z" fill="#74c0fc" opacity=".9"/>`,
+    boulons: `<circle cx="22" cy="60" r="3" fill="#495057"/><circle cx="98" cy="60" r="3" fill="#495057"/>`,
+    feu_yeux: `<path d="M38 50 q2 -8 6 -10 q-1 5 3 7z M82 50 q-2 -8 -6 -10 q1 5 -3 7z" fill="#ff922b"/>`,
+    etoiles_cosmos: `<circle cx="44" cy="36" r="1.3" fill="#fff"/><circle cx="76" cy="40" r="1" fill="#fff"/><circle cx="60" cy="30" r="1.6" fill="#ffd43b"/><circle cx="84" cy="72" r="1" fill="#fff"/><circle cx="34" cy="74" r="1.1" fill="#fff"/>`,
     echarpe: `<path d="M34 92 q26 10 52 0 v8 q-26 10 -52 0z" fill="#339af0"/><path d="M76 98 l4 18 h-8z" fill="#339af0"/>`,
   };
   return (liste || []).map((e) => d[e] || "").join("");
@@ -201,16 +263,20 @@ function aura(type) {
 // Dessin complet. o = { fourrure, yeux, bouche, sourcils, chapeau, lunettes, habit, couleur, extras, aura, fond }
 function singe(o = {}, classe = "singe") {
   const [f, f2] = FOURRURES[o.fourrure || "brun"] || FOURRURES.brun;
-  return `<svg class="${classe}" viewBox="0 0 120 120" aria-hidden="true">
+  return `<svg class="${classe}" viewBox="0 0 120 120" aria-hidden="true">${DEFS_FOURRURES[o.fourrure] ? `<defs>${DEFS_FOURRURES[o.fourrure]}</defs>` : ""}
     ${o.fond ? `<circle cx="60" cy="60" r="60" fill="${o.fond}"/>` : ""}${aura(o.aura)}
     ${habit(o.habit || "tshirt", o.couleur)}
-    <circle cx="24" cy="60" r="13" fill="${f}"/><circle cx="24" cy="60" r="7" fill="#f3b894"/>
-    <circle cx="96" cy="60" r="13" fill="${f}"/><circle cx="96" cy="60" r="7" fill="#f3b894"/>
-    <circle cx="60" cy="60" r="34" fill="${f}"/><path d="M52 27 q6 -8 10 0 q4 -6 8 1" fill="${f2}"/>
-    <ellipse cx="48" cy="58" rx="14" ry="15" fill="${PEAU}"/><ellipse cx="72" cy="58" rx="14" ry="15" fill="${PEAU}"/>
-    <ellipse cx="60" cy="76" rx="20" ry="13" fill="${PEAU}"/>
+    <circle cx="24" cy="60" r="13" fill="${f}" stroke="${TRAIT}" stroke-width="2"/><circle cx="24" cy="60" r="7" fill="${o.fourrure === "fantome" ? "#e9ecef" : "#f3b894"}"/><path d="M19 56 q4 -2 7 1" stroke="${f2}" stroke-width="1.5" fill="none"/>
+    <circle cx="96" cy="60" r="13" fill="${f}" stroke="${TRAIT}" stroke-width="2"/><circle cx="96" cy="60" r="7" fill="${o.fourrure === "fantome" ? "#e9ecef" : "#f3b894"}"/><path d="M101 56 q-4 -2 -7 1" stroke="${f2}" stroke-width="1.5" fill="none"/>
+    <path d="M60 25 C80 25 94 40 94 58 C94 65 96 69 99 73 C95 73 93 75 92 79 C87 88 76 95 60 95 C44 95 33 88 28 79 C27 75 25 73 21 73 C24 69 26 65 26 58 C26 40 40 25 60 25 Z" fill="${f}" stroke="${TRAIT}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M49 31 L53 15 L57 27 L62 11 L66 27 L72 17 L71 31 Z" fill="${f}" stroke="${TRAIT}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M92 60 C92 80 78 93 60 93 C73 88 85 76 87 60 Z" fill="${f2}" opacity=".45"/>
+    <ellipse cx="44" cy="37" rx="9" ry="4" transform="rotate(-25 44 37)" fill="#fff" opacity=".18"/>
+    <path d="M40 34 l3 5 M46 30 l2 5 M78 33 l-3 5 M74 30 l-2 5" stroke="${f2}" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M36 50 C36 40 60 40 60 48 C60 40 84 40 84 50 C88 66 84 72 80 74 C86 80 82 90 60 90 C38 90 34 80 40 74 C36 72 32 66 36 50 Z" fill="${o.fourrure === "fantome" ? "#fff" : PEAU}" stroke="#c99b6a" stroke-width="1.3"/>
+    <path d="M44 84 q16 6 32 0" stroke="#e0b584" stroke-width="1.5" fill="none" opacity=".8"/>
     ${yeux(o.yeux)}${sourcils(o.sourcils)}
-    <ellipse cx="56" cy="71" rx="2" ry="1.5" fill="#6b3d17"/><ellipse cx="64" cy="71" rx="2" ry="1.5" fill="#6b3d17"/>
+    <path d="M55 69 q5 -4 10 0 q-1 4 -5 4 q-4 0 -5 -4z" fill="#6b3d17"/><ellipse cx="57.5" cy="70" rx="1.2" ry=".9" fill="#2b1a0e"/><ellipse cx="62.5" cy="70" rx="1.2" ry=".9" fill="#2b1a0e"/>
     ${bouche(o.bouche)}${lunettes(o.lunettes)}${chapeau(o.chapeau)}${extras(o.extras)}
   </svg>`;
 }
@@ -240,6 +306,22 @@ const LOOKS_AVATARS = {
   astronaute: { yeux: "content", bouche: "grand", lunettes: "casque_astro", habit: "astronaute", aura: "cosmos" },
   licorne: { yeux: "coeur", bouche: "grand", chapeau: "corne", extras: ["etoiles", "joues"], habit: "tshirt", couleur: "#b197fc", fourrure: "blanc" },
   roi: { chapeau: "couronne", yeux: "malin", bouche: "sourire_en_coin", habit: "roi" },
+  clown: { chapeau: "perruque_clown", yeux: "content", bouche: "clown", extras: ["nez_clown", "joues"], habit: "clown" },
+  hippie: { chapeau: "bandeau_fleurs", lunettes: "rondes_roses", bouche: "ferme", habit: "hippie" },
+  momie: { lunettes: "bandelettes", yeux: "zombie", bouche: "o", habit: "momie", fourrure: "gris" },
+  costume_banane: { chapeau: "capuche_banane", yeux: "content", bouche: "grand", habit: "banane", extras: ["joues"] },
+  disco: { chapeau: "afro", lunettes: "disco", bouche: "dents", habit: "disco" },
+  catcheur: { lunettes: "masque_catch", bouche: "dents", habit: "catch", sourcils: "colere" },
+  dj: { chapeau: "casque_audio", lunettes: "soleil", bouche: "sourire_en_coin", habit: "hoodie", couleur: "#7048e8" },
+  diable: { chapeau: "cornes", yeux: "malin", sourcils: "malin", bouche: "crocs", habit: "diable", fourrure: "rouge", extras: ["feu_yeux"] },
+  savant_fou: { chapeau: "cheveux_fous", lunettes: "labo", bouche: "dents", habit: "blouse", extras: ["etoiles"] },
+  robot: { chapeau: "casque_robot", yeux: "robot", bouche: "robot", habit: "robot", fourrure: "metal", extras: ["boulons"] },
+  alien: { chapeau: "antennes", yeux: "alien", bouche: "o", habit: "alien", fourrure: "vert_alien" },
+  chevalier: { chapeau: "heaume", yeux: "malin", sourcils: "colere", bouche: "ferme", habit: "armure" },
+  super_heros: { lunettes: "masque_heros", bouche: "sourire_en_coin", habit: "heros", aura: "or" },
+  arc_en_ciel: { yeux: "etoile", bouche: "grand", extras: ["paillettes", "joues"], habit: "tshirt", couleur: "#fff", fourrure: "arcenciel", aura: "or" },
+  cosmique: { yeux: "etoile", bouche: "sourire_en_coin", extras: ["etoiles_cosmos"], habit: "cosmos", fourrure: "cosmos", aura: "cosmos" },
+  fantome: { yeux: "vide", bouche: "o", habit: "drap", fourrure: "fantome", extras: ["etoiles"] },
   dore: { chapeau: "aureole", yeux: "etoile", bouche: "grand", extras: ["paillettes"], habit: "dore", fourrure: "dore", aura: "or" },
 };
 
@@ -272,6 +354,8 @@ const HUMEURS = {
   malin: { yeux: "malin", sourcils: "malin", bouche: "sourire_en_coin" },
   ko: { yeux: "croix", bouche: "zigzag" },
   etoiles: { yeux: "etoile", bouche: "grand", extras: ["etoiles"] },
+  taquin: { yeux: "clin", sourcils: "malin", bouche: "langue" },
+  pleure: { yeux: "pleure", sourcils: "triste", bouche: "pleure", extras: ["torrent"] },
 };
 
 function tenueSVG(jeu, humeur, classe = "singe") {

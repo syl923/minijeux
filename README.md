@@ -21,8 +21,9 @@ multiplie les gains une fois par jour, chaque jeu a son **classement**, et on pe
 
 Moka est la mascotte de tous les jeux : dans chaque page il porte la tenue du jeu (capitaine, professeur, pilote, chef
 pâtissier…) et commente la partie dans une bulle (`singes.js` dessine toutes ses variantes en SVG).
-**Boutique d'avatars** (`avatars.html`, `avatars.py`) : 24 têtes de singe à acheter avec les bananes, affichées
-dans l'en-tête, les classements, les duels et sur les cartes du Memory.
+**Boutique d'avatars** (`avatars.html`, `avatars.py`) : 40 têtes de singe (dont 3 exclusives à la box mystère),
+affichées dans l'en-tête, les classements, les duels et sur les cartes du Memory. **Box mystère** : 250 bananes,
+un avatar au hasard jamais en double (commun 45 %, rare 30 %, épique 18 %, légendaire 7 %).
 
 Sons et musiques sont synthétisés dans le navigateur (aucun fichier audio). Bouton 🔊 en haut pour couper le son.
 Les noms des jeux sont volontairement originaux (les noms Tetris, Candy Crush, Subway Surfers sont des marques déposées).
@@ -55,7 +56,8 @@ MINIJEUX_BASE=/tmp/test.db python tests/visuel.py captures [jeu ...]   # un robo
 | Inscription | 20 bananes offertes |
 | Partie solo | 10 bananes |
 | Secours | 20 bananes une fois par jour si on n'a plus de quoi jouer |
-| Avatars | de 0 à 1000 bananes selon la rareté (achat vérifié côté serveur) |
+| Avatars | de 0 à 1000 bananes selon la rareté (achat vérifié côté serveur) ; box mystère 250 bananes |
+| Roue bonus | gratuite après chaque partie : +1 à +10 bananes, ou (2 %) une box mystère gratuite |
 | Roue | à la fin de la 1re partie gagnante du jour : multiplie les gains de cette partie (x1 à x10) |
 | Duel en ligne | chacun mise 10, le gagnant reçoit 25 ; nulle = mises rendues ; temps limite par coup |
 

@@ -69,12 +69,30 @@ const particules = [];
 const textes = [];
 const eclairs = [];
 
-function creerBille(p = DEPART_BILLE.slice(), v = [0, 0]) {
-  return { p, v, trace: [], immobile: 0, horsCouloir: p[0] < 412 };
+// Types de billes : chaque nouvelle bille est tirée au hasard.
+const TYPES_BILLES = {
+  acier: { nom: "Bille d'acier", couleurs: ["#ffffff", "#d7dce4", "#6b7280"], trace: "#b99cff", poids: 1, rebond: 1, points: 1, poidsTirage: 40 },
+  banane: { nom: "🍌 BILLE BANANE : +150 par bumper", couleurs: ["#fffbe6", "#ffd43b", "#c98a00"], trace: "#ffe066", poids: 1, rebond: 1, points: 1, poidsTirage: 20 },
+  plomb: { nom: "⚫ BILLE DE PLOMB : POINTS x2", couleurs: ["#adb5bd", "#495057", "#141517"], trace: "#868e96", poids: 1.25, rebond: .8, points: 2, poidsTirage: 20 },
+  rebond: { nom: "💗 SUPER-BALLE : ÇA REBONDIT !", couleurs: ["#fff0f6", "#f783ac", "#c2255c"], trace: "#faa2c1", poids: .9, rebond: 1.3, points: 1, poidsTirage: 20 },
+};
+function tirerType() {
+  const total = Object.values(TYPES_BILLES).reduce((a, t) => a + t.poidsTirage, 0);
+  let r = Math.random() * total;
+  for (const [id, t] of Object.entries(TYPES_BILLES)) { r -= t.poidsTirage; if (r < 0) return id; }
+  return "acier";
+}
+let billeActive = null;   // bille en train d'être calculée (pour le bonus de son type)
+
+function creerBille(p = DEPART_BILLE.slice(), v = [0, 0], type = tirerType()) {
+  return { p, v, trace: [], immobile: 0, horsCouloir: p[0] < 412, type };
 }
 
 function billeAuLanceur() {
-  jeu.billes.push(creerBille());
+  const b = creerBille();
+  jeu.billes.push(b);
+  jeu.saveDonne = false;
+  if (b.type !== "acier") setTimeout(() => jeu && !jeu.fini && flash(TYPES_BILLES[b.type].nom, 1.8), 700);
   jeu.lanceurOccupe = true;
   jeu.puissance = 0;
   jeu.porteActive = false;
@@ -94,7 +112,7 @@ async function lancer() {
   jeu = {
     partie: r.partie, score: 0, reserve: 3, numeroBille: 1, mult: 1, fini: false, charge: false, cumul: 0,
     dernier: performance.now(), billes: [], sauvetage: 0, combo: 0, dernierCoup: 0, fievre: 0, feu: 0,
-    jackpots: 0, multibille: false, secousse: 0, eclat: 0, temps: 0,
+    jackpots: 0, multibille: false, secousse: 0, eclat: 0, temps: 0, dernierFlip: 0, nova: 0, fievreNova: 0, saveDonne: false,
   };
   couloirs.forEach((c) => (c.allume = false));
   cibles.forEach((c) => (c.debout = true));
@@ -114,19 +132,39 @@ async function lancer() {
 function majAfficheur() {
   document.getElementById("score").textContent = jeu.score.toLocaleString("fr-FR");
   document.getElementById("billes").textContent = `${jeu.numeroBille}/${jeu.numeroBille + jeu.reserve - 1}`;
-  document.getElementById("multi").textContent = "x" + jeu.mult * (jeu.feu > 0 ? 2 : 1);
-  document.getElementById("fievre").style.width = (jeu.feu > 0 ? 100 : 100 * jeu.fievre / FIEVRE_MAX) + "%";
-  document.getElementById("fievre").parentElement.classList.toggle("en-feu", jeu.feu > 0);
+  document.getElementById("multi").textContent = "x" + jeu.mult * bonusFeu();
+  document.getElementById("fievre").style.width = (jeu.nova > 0 ? 100 : jeu.feu > 0 ? 100 * jeu.fievreNova / NOVA_MAX : 100 * jeu.fievre / FIEVRE_MAX) + "%";
+  document.getElementById("fievre").parentElement.classList.toggle("en-feu", jeu.feu > 0 && jeu.nova <= 0);
+  document.getElementById("fievre").parentElement.classList.toggle("en-nova", jeu.nova > 0);
 }
 
-// Tous les points passent par ici : multiplicateur, feu, combos.
+const NOVA_MAX = 10;        // coups de bumper en feu pour déclencher la MOKA MANIA
+const SIESTE = 6;          // secondes sans toucher aux flippers : la bille est « en roue libre »
+const bonusFeu = () => (jeu.nova > 0 ? 4 : jeu.feu > 0 ? 2 : 1);
+const endormi = () => jeu.temps - jeu.dernierFlip > SIESTE;
+
+// Tous les points passent par ici : multiplicateur, feu, MOKA MANIA, type de bille, combos.
+// Si le joueur ne touche plus aux flippers, la bille « en roue libre » ne rapporte presque rien.
 function marquer(points, x, y, couleur = "#fff") {
   const maintenant = jeu.temps;
+  if (endormi()) {
+    const p = Math.max(1, Math.round(points * .1));
+    jeu.score += p;
+    textes.push({ x, y, t: "+" + p + " 😴", vie: .8, couleur: "#adb5bd" });
+    if (!jeu.alerteSieste) {
+      jeu.alerteSieste = true;
+      flash("😴 ROUE LIBRE : POINTS ÷10", 1.6);
+      mokaDit("Hé ! On fait la sieste ? Touche les flippers, hi hi !", "taquin", 2400);
+    }
+    return;
+  }
+  jeu.alerteSieste = false;
   jeu.combo = maintenant - jeu.dernierCoup < 1.4 ? jeu.combo + 1 : 1;
   jeu.dernierCoup = maintenant;
-  const p = points * jeu.mult * (jeu.feu > 0 ? 2 : 1);
+  const typeBille = billeActive ? TYPES_BILLES[billeActive.type] : null;
+  const p = points * jeu.mult * bonusFeu() * (typeBille ? typeBille.points : 1);
   jeu.score += p;
-  textes.push({ x, y, t: "+" + p, vie: 1, couleur: jeu.feu > 0 ? "#ffa94d" : couleur });
+  textes.push({ x, y, t: "+" + p, vie: 1, couleur: jeu.nova > 0 ? `hsl(${(jeu.temps * 400) % 360},100%,70%)` : jeu.feu > 0 ? "#ffa94d" : couleur });
   if (jeu.combo > 0 && jeu.combo % 8 === 0) {
     const bonus = 250 * jeu.combo;
     jeu.score += bonus;
@@ -153,7 +191,7 @@ function eclair() { // éclair qui traverse la table pour les grands moments
 
 function grandMoment(texte, son = "riff") {
   flash(texte, 2);
-  const repliques = { feu: ["ÇA BRÛLE ! Rock'n'roll !", "etoiles"], extra: ["Une bille en plus, yeah !", "rire"], sirene: ["MULTIBILLE ! Faites du bruit !", "etoiles"] };
+  const repliques = { cri: ["OU OU AAAAAH ! MOKA MANIA !!!", "etoiles"], feu: ["ÇA BRÛLE ! Rock'n'roll !", "etoiles"], extra: ["Une bille en plus, yeah !", "rire"], sirene: ["MULTIBILLE ! Faites du bruit !", "etoiles"] };
   const [dit, humeur] = repliques[son] || ["JACKPOT ! Encore, encore !", "etoiles"];
   mokaDit(dit, humeur, 2000);
   Sons.jouer(son);
@@ -177,6 +215,7 @@ document.addEventListener("keydown", (e) => { if (!e.repeat) touche(e, true); el
 document.addEventListener("keyup", (e) => touche(e, false));
 
 function actionner(f, appui) {
+  if (appui) jeu.dernierFlip = jeu.temps;
   if (appui && !f.actif) Sons.jouer("flip");
   f.actif = appui;
 }
@@ -191,6 +230,7 @@ function lanceur(appui) {
     const b = billeDuLanceur();
     if (b) b.v = [0, -(1000 + 1300 * jeu.puissance)];
     jeu.lanceurOccupe = false;
+    jeu.dernierFlip = jeu.temps;
     jeu.adresse.jusqua = jeu.temps + 3;
     Sons.jouer("lancement");
   }
@@ -235,6 +275,7 @@ function contact(p, a, b, r) {
 }
 
 function rebond(bille, n, e, vitesseSurface = [0, 0]) {
+  e = Math.min(1.05, e * (TYPES_BILLES[bille.type] ? TYPES_BILLES[bille.type].rebond : 1));
   const vr = [bille.v[0] - vitesseSurface[0], bille.v[1] - vitesseSurface[1]];
   const vn = vr[0] * n[0] + vr[1] * n[1];
   if (vn >= 0) return 0;
@@ -264,9 +305,14 @@ function etape(dt) {
   bougerFlipper(flipD, dt);
   if (jeu.charge) jeu.puissance = Math.min(1, jeu.puissance + dt);
   if (jeu.sauvetage > 0) jeu.sauvetage -= dt;
+  if (jeu.nova > 0) {
+    jeu.nova -= dt;
+    if (jeu.nova <= 0) { jeu.fievreNova = 0; flash("Fin de la MOKA MANIA…", 1.4); mokaDit("Ouf… j'ai plus de voix !", "rire", 2000); majAfficheur(); }
+    else if (Math.floor(jeu.nova * 10) % 40 === 0) mokaDit(["OU OU AAAH !", "MOKA MANIA !!!", "Plus fort ! PLUS FORT !"][Math.floor(Math.random() * 3)], "etoiles", 1500);
+  }
   if (jeu.feu > 0) {
     jeu.feu -= dt;
-    if (jeu.feu <= 0) { jeu.fievre = 0; flash("La bille refroidit…", 1.2); majAfficheur(); }
+    if (jeu.feu <= 0) { jeu.fievre = 0; jeu.fievreNova = 0; flash("La bille refroidit…", 1.2); majAfficheur(); }
   }
   // trou mystère : garde la bille un instant puis la recrache
   if (trou.occupe && jeu.temps > trou.occupe.jusqua) {
@@ -294,6 +340,7 @@ function etape(dt) {
 }
 
 function etapeBille(b, dt) {
+  billeActive = b;
   if (trou.occupe && trou.occupe.bille === b) return;
   if (jeu.lanceurOccupe && b === billeDuLanceur() && b.p[1] > 760) { // posée sur le lanceur
     b.p = [DEPART_BILLE[0], DEPART_BILLE[1] + (jeu.charge ? jeu.puissance * 14 : 0)];
@@ -301,7 +348,7 @@ function etapeBille(b, dt) {
     return;
   }
 
-  b.v[1] += GRAVITE * dt;
+  b.v[1] += GRAVITE * dt * TYPES_BILLES[b.type].poids;
   const vit = Math.hypot(b.v[0], b.v[1]);
   if (vit > VITESSE_MAX) { b.v[0] *= VITESSE_MAX / vit; b.v[1] *= VITESSE_MAX / vit; }
   b.p[0] += b.v[0] * dt;
@@ -316,7 +363,7 @@ function etapeBille(b, dt) {
   if (!b.horsCouloir && b.p[0] < 412) {
     b.horsCouloir = true;
     jeu.porteActive = true;
-    if (!jeu.multibille) jeu.sauvetage = Math.max(jeu.sauvetage, 7); // « ball save » au début de chaque bille
+    if (!jeu.multibille && !jeu.saveDonne) { jeu.sauvetage = Math.max(jeu.sauvetage, 7); jeu.saveDonne = true; } // « ball save » une fois par bille
   }
 
   // murs, slingshots, portillon
@@ -348,10 +395,16 @@ function etapeBille(b, dt) {
       pousser(b, n, 540);
       bu.flash = 1;
       marquer(100, bu.c[0], bu.c[1] - 30, bu.couleur);
+      if (b.type === "banane" && !endormi()) { jeu.score += 150 * jeu.mult; textes.push({ x: bu.c[0] + 20, y: bu.c[1] - 50, t: "🍌+150", vie: 1, couleur: "#ffe066" }); }
       Sons.jouer("bumper");
       etincelles(b.p[0], b.p[1], bu.couleur);
       jeu.secousse = Math.max(jeu.secousse, 3);
-      if (jeu.feu <= 0) {
+      if (jeu.feu > 0 && jeu.nova <= 0 && !endormi()) { // en feu : on remplit la jauge de MOKA MANIA
+        jeu.fievreNova++;
+        if (jeu.fievreNova >= NOVA_MAX) lancerNova();
+        majAfficheur();
+      }
+      if (jeu.feu <= 0 && !endormi()) {
         jeu.fievre++;
         if (jeu.fievre >= FIEVRE_MAX) {
           jeu.feu = 15;
@@ -488,6 +541,18 @@ function mystere() {
   grandMoment(texte, "bonus_pris");
 }
 
+// MOKA MANIA : le niveau au-dessus de la bille en feu (points x4, table arc-en-ciel, Moka géant qui hurle)
+function lancerNova() {
+  jeu.nova = 12;
+  jeu.feu = Math.max(jeu.feu, 12);
+  grandMoment("🐒 MOKA MANIA ! POINTS x4 🐒", "cri");
+  Sons.jouer("sirene");
+  Sons.jouer("riff");
+  jeu.secousse = 22;
+  for (let i = 0; i < 6; i++) setTimeout(() => jeu && eclair(), i * 150);
+  majAfficheur();
+}
+
 function lancerMultibille() {
   jeu.multibille = true;
   jeu.sauvetage = 10;
@@ -506,7 +571,7 @@ function lancerMultibille() {
 
 function perdreBille(b) {
   jeu.billes = jeu.billes.filter((x) => x !== b);
-  if (jeu.sauvetage > 0 && !jeu.multibille) {
+  if (jeu.sauvetage > 0 && !jeu.multibille && !endormi()) {
     flash("BILLE SAUVÉE !");
     Sons.jouer("boing");
     if (!jeu.lanceurOccupe) billeAuLanceur(); else jeu.billes.push(creerBille([230, 60], [0, 200]));
@@ -527,6 +592,8 @@ function perdreBille(b) {
   jeu.reserve--;
   jeu.fievre = 0;
   jeu.feu = 0;
+  jeu.nova = 0;
+  jeu.fievreNova = 0;
   jeu.combo = 0;
   Sons.jouer("perte_bille");
   if (jeu.reserve > 0) mokaDit(["Nooon, la bille ! Allez, on se reprend !", "Le public attend un rappel !"][Math.floor(Math.random() * 2)], "triste", 1800);
@@ -618,6 +685,7 @@ function dessiner(dt) {
   }
   const t = performance.now() / 1000;
   const feu = jeu && jeu.feu > 0;
+  const nova = jeu && jeu.nova > 0;
 
   // fond : dégradé (rougeoyant quand la bille est en feu), grille rétro, étoiles
   const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -650,9 +718,22 @@ function dessiner(dt) {
   ctx.fillStyle = feu ? "rgba(255, 146, 43, .18)" : "rgba(255, 201, 60, .12)";
   ctx.fillText(feu ? "EN FEU !" : "MOKA ROCK", 222, 470);
   ctx.restore();
-  // Moka la rockstar peinte sur la table
-  const moka = imageTenue("flipper", feu ? "etoiles" : "");
-  if (moka.complete) { ctx.globalAlpha = feu ? .35 : .22; ctx.drawImage(moka, 157, 300, 130, 130); ctx.globalAlpha = 1; }
+  // Moka la rockstar peinte sur la table (géant et hurlant pendant la MOKA MANIA)
+  if (nova) {
+    ctx.fillStyle = `hsla(${(t * 120) % 360},90%,55%,.18)`; ctx.fillRect(0, 0, W, H);
+    const moka = imageTenue("flipper", "etoiles");
+    const taille = 220 + Math.sin(t * 9) * 18;
+    if (moka.complete) {
+      ctx.save(); ctx.translate(222, 380); ctx.rotate(Math.sin(t * 6) * .15);
+      ctx.globalAlpha = .55; ctx.drawImage(moka, -taille / 2, -taille / 2, taille, taille); ctx.restore(); ctx.globalAlpha = 1;
+    }
+    ctx.save(); ctx.font = "900 34px Trebuchet MS, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = `hsl(${(t * 300) % 360},100%,65%)`; ctx.globalAlpha = .75;
+    ctx.fillText("MOKA MANIA", 222, 520 + Math.sin(t * 8) * 6); ctx.restore(); ctx.globalAlpha = 1;
+  } else {
+    const moka = imageTenue("flipper", feu ? "etoiles" : "");
+    if (moka.complete) { ctx.globalAlpha = feu ? .35 : .22; ctx.drawImage(moka, 157, 300, 130, 130); ctx.globalAlpha = 1; }
+  }
 
   // murs néon
   ctx.lineCap = "round";
@@ -777,21 +858,23 @@ function dessiner(dt) {
   // billes (avec traînée, en feu si fièvre)
   if (jeu) {
     for (const b of jeu.billes) {
+      const ty = TYPES_BILLES[b.type];
       b.trace.forEach((pt, i) => {
-        ctx.globalAlpha = i / b.trace.length * (feu ? .7 : .35);
-        ctx.fillStyle = feu ? (i % 2 ? "#ff6b00" : "#ffd43b") : "#b99cff";
-        ctx.beginPath(); ctx.arc(pt[0], pt[1], R_BILLE * (i / b.trace.length) * (feu ? 1.3 : 1), 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = i / b.trace.length * (nova ? .9 : feu ? .7 : .4);
+        ctx.fillStyle = nova ? `hsl(${(i * 30 + t * 500) % 360},100%,60%)` : feu ? (i % 2 ? "#ff6b00" : "#ffd43b") : ty.trace;
+        ctx.beginPath(); ctx.arc(pt[0], pt[1], R_BILLE * (i / b.trace.length) * (nova ? 1.6 : feu ? 1.3 : 1), 0, Math.PI * 2); ctx.fill();
       });
       ctx.globalAlpha = 1;
       const gb = ctx.createRadialGradient(b.p[0] - 3, b.p[1] - 4, 1, b.p[0], b.p[1], R_BILLE);
       gb.addColorStop(0, "#ffffff");
-      gb.addColorStop(.4, feu ? "#ffd43b" : "#d7dce4");
-      gb.addColorStop(1, feu ? "#e8590c" : "#6b7280");
-      ctx.shadowColor = feu ? "#ff6b00" : "#fff";
-      ctx.shadowBlur = feu ? 26 : 10;
+      gb.addColorStop(.4, nova ? `hsl(${(t * 500) % 360},100%,65%)` : feu ? "#ffd43b" : ty.couleurs[1]);
+      gb.addColorStop(1, nova ? `hsl(${(t * 500 + 120) % 360},100%,45%)` : feu ? "#e8590c" : ty.couleurs[2]);
+      ctx.shadowColor = nova ? "#fff" : feu ? "#ff6b00" : ty.couleurs[1];
+      ctx.shadowBlur = nova ? 36 : feu ? 26 : 10;
       ctx.fillStyle = gb;
       ctx.beginPath(); ctx.arc(b.p[0], b.p[1], R_BILLE, 0, Math.PI * 2); ctx.fill();
       ctx.shadowBlur = 0;
+      if (b.type === "banane") { ctx.fillStyle = "#6b4a00"; ctx.font = "9px sans-serif"; ctx.fillText("🍌", b.p[0] - 6, b.p[1] + 3); }
     }
     if (jeu.lanceurOccupe && jeu.charge) {
       ctx.fillStyle = jeu.puissance > .85 ? "#ff5b5b" : "#ffc93c";

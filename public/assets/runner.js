@@ -205,6 +205,14 @@ function avancer(dt) {
   jeu.scoreDistance += dz * mult;
   jeu.score = Math.floor(jeu.scoreDistance) + jeu.pointsPieces;
   jeu.pas += dz;
+  const palier = Math.floor(jeu.distance / 500);
+  if (palier > (jeu.palier || 0)) {
+    jeu.palier = palier;
+    jeu.textes.push({ t: `${palier * 500} m ! PLUS VITE !`, vie: 1.6 });
+    jeu.flash = .25;
+    Sons.jouer("extra");
+    mokaDit(["Hou hou ha ha ! Il ne m'aura jamais !", "Plus vite, plus vite !", "Adieu le zoo !"][palier % 3], palier % 2 ? "rire" : "etoiles", 1800);
+  }
 
   // le gardien : sur les talons au départ et après un choc, puis semé
   if (jeu.trebuche > 0) {
@@ -317,6 +325,7 @@ function choc(o) {
   Sons.jouer("alerte");
   if (estLong(o)) { jeu.y = o.h + 0.05; jeu.vy = 6; } // rebond sur le capot, Moka finit sur le toit
   for (let i = 0; i < 16; i++) jeu.particules.push({ x: jeu.x, y: jeu.y + 1.2, z: 0.3, vx: hasard(-4, 4), vy: hasard(2, 6), vz: hasard(-1, 2), vie: .7, couleur: choix(["#ffd43b", "#fff", "#8ce99a"]) });
+  jeu.textes = jeu.textes.filter((x) => x.petit);
   jeu.textes.push({ t: "OUILLE !", vie: 1.3 });
   mokaDit("Aïe ! Le gardien me rattrape… plus le droit à l'erreur !", "choc", 3000);
 }
@@ -332,6 +341,7 @@ async function attrape(o) {
   Sons.jouer("crash");
   Sons.jouer("perte_bille");
   for (let i = 0; i < 40; i++) jeu.particules.push({ x: jeu.x, y: jeu.y + 1, z: 0.3, vx: hasard(-6, 6), vy: hasard(1, 9), vz: hasard(-2, 3), vie: 1, couleur: choix(["#fff", "#ffd43b", "#ff6b6b", "#8ce99a"]) });
+  jeu.textes = jeu.textes.filter((x) => x.petit);
   jeu.textes.push({ t: "ATTRAPÉ !", vie: 2.2 });
   mokaDit("Nooon ! Retour au zoo…", "ko", 3500);
   requestAnimationFrame(boucle);
@@ -422,12 +432,17 @@ function dessinerCamion(o, amb) {
   ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.font = `900 ${Math.max(6, Math.abs(B[1] - C[1]) * .28)}px Arial Black, sans-serif`; ctx.textAlign = "center";
   ctx.fillText("ZOO", cx, cy); ctx.textAlign = "start";
   rectSurFace(A, B, C, D, 0, 1, .86, 1, "#212529"); // châssis
-  // roues
-  for (const u of [.12, .88]) {
-    const [rx, ry] = surFace(A, B, C, D, sens(u), 1);
-    const r = Math.abs(B[1] - C[1]) * .2;
-    ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(rx, ry, r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#868e96"; ctx.beginPath(); ctx.arc(rx, ry, r * .45, 0, Math.PI * 2); ctx.fill();
+  // roues : placées à leur vraie position 3D (et cachées dès qu'elles passent derrière la caméra)
+  const cote = P.coteGauche ? x - 1.05 : x + 1.05;
+  for (const zr of [o.z + 1.4, o.z + o.long - 1.6]) {
+    if (zr < -CAM_D + 2.2 || zr > 90) continue;
+    const [rx, ry, k] = projeter(cote, .42, zr);
+    const r = k * .42;
+    ctx.fillStyle = "#111"; ctx.beginPath(); ctx.ellipse(rx, ry, r * .55, r, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#868e96"; ctx.beginPath(); ctx.ellipse(rx, ry, r * .25, r * .45, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#495057"; ctx.lineWidth = Math.max(1, r * .08);
+    const rot = performance.now() / 60 * (o.v ? 2 : 1);
+    ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx + Math.cos(rot) * r * .25, ry + Math.sin(rot) * r * .45); ctx.stroke();
   }
   // face avant : pare-brise, calandre, phares, plaque
   const F = [P.agh, P.adh, P.ad0, P.ag0];
@@ -850,59 +865,103 @@ function dessinerMoka(t) {
 
 // ------------------------------------------------------------ dessin : le gardien du zoo (vu de dos, en bas de l'écran)
 let gardienX = W / 2 + 120;
+const CRIS_GARDIEN = ["Reviens ici, Moka !", "Arrête-toi !", "Mes bananes !", "Je vais t'attraper !", "Au voleur de bananes !"];
 function dessinerGardien(t, cibleMoka) {
   const p = jeu.gardien;
   if (p < 0.02) return;
-  const vise = Math.min(W - 70, Math.max(70, cibleMoka[0] + 115));
-  gardienX += (vise - gardienX) * .12;
+  const vise = Math.min(W - 70, Math.max(70, cibleMoka[0] + 115 + Math.sin(t * 1.7) * 25));
+  gardienX += (vise - gardienX) * .1;
   const attrape = jeu.fini ? jeu.attrape : 0;
   const s = .88;
+  const enChasse = !jeu.fini;
+  const rythme = t * (jeu.trebuche > 0 ? 15 : 12);
+  const course = enChasse ? Math.sin(rythme) : 0;
+  const rebond = enChasse ? Math.abs(Math.sin(rythme)) * 14 : 0;
   const pieds = H + 290 - 300 * Math.min(1, p) - attrape * 40;
-  const course = jeu.fini ? 0 : Math.sin(t * 13);
   ctx.save();
-  ctx.translate(gardienX, pieds + Math.abs(course) * -8);
+  ctx.translate(gardienX, pieds - rebond);
   ctx.scale(s, s);
-  // jambes (short + chaussettes + bottes)
-  for (const [lx, a] of [[-18, course * .5], [18, -course * .5]]) {
-    ctx.save(); ctx.translate(lx, -120); ctx.rotate(a);
-    ctx.fillStyle = "#f3c89a"; ctx.fillRect(-10, 0, 20, 70);
-    ctx.fillStyle = "#fff"; ctx.fillRect(-11, 60, 22, 22);
-    ctx.fillStyle = "#4a2e18"; ctx.beginPath(); ctx.roundRect(-13, 80, 26, 34, 6); ctx.fill();
+  ctx.rotate(enChasse ? -.07 + course * .03 : 0); // penché en avant, épaules qui roulent
+  // poussière sous les bottes
+  if (enChasse && Math.random() < .5) jeu.particules.push({ x: jeu.x + 1.4, y: .05, z: -1.8, vx: (Math.random() - .5) * 2, vy: 1 + Math.random(), vz: -3, vie: .4, couleur: "rgba(214,160,100,.7)" });
+  // jambes en deux morceaux (cuisse + mollet), genoux qui plient
+  for (const [lx, phase] of [[-18, 0], [18, Math.PI]]) {
+    const a = enChasse ? Math.sin(rythme + phase) : 0;
+    ctx.save(); ctx.translate(lx, -120); ctx.rotate(a * .55);
+    ctx.fillStyle = "#8d6e3a"; ctx.beginPath(); ctx.roundRect(-12, -6, 24, 34, 8); ctx.fill();
+    ctx.fillStyle = "#f3c89a"; ctx.fillRect(-9, 26, 18, 16);
+    ctx.translate(0, 40); ctx.rotate(Math.max(0, -a) * .9);
+    ctx.fillStyle = "#f3c89a"; ctx.fillRect(-9, 0, 18, 30);
+    ctx.fillStyle = "#fff"; ctx.fillRect(-10, 24, 20, 16);
+    ctx.fillStyle = "#4a2e18"; ctx.beginPath(); ctx.roundRect(-13, 38, 26, 30, 6); ctx.fill();
+    ctx.fillStyle = "#2b1a0e"; ctx.fillRect(-13, 62, 26, 6);
     ctx.restore();
   }
-  ctx.fillStyle = "#8d6e3a"; ctx.beginPath(); ctx.roundRect(-40, -150, 80, 50, 10); ctx.fill(); // short
-  // chemise kaki
-  ctx.fillStyle = "#c2a878"; ctx.beginPath(); ctx.roundRect(-46, -270, 92, 128, 22); ctx.fill();
-  ctx.fillStyle = "#6b4226"; ctx.fillRect(-46, -158, 92, 10); // ceinture
-  ctx.fillStyle = "#a88f5c"; ctx.fillRect(-4, -262, 8, 104);
-  ctx.fillStyle = "#1c7ed6"; ctx.font = "900 15px Arial Black, sans-serif"; ctx.textAlign = "center"; ctx.fillText("ZOO", 0, -225); ctx.textAlign = "start";
-  // bras gauche qui balance, bras droit qui tient l'épuisette
-  ctx.save(); ctx.translate(-44, -258); ctx.rotate(.3 + course * .4);
-  ctx.fillStyle = "#c2a878"; ctx.fillRect(-11, 0, 22, 40); ctx.fillStyle = "#f3c89a"; ctx.fillRect(-9, 40, 18, 44);
+  ctx.fillStyle = "#8d6e3a"; ctx.beginPath(); ctx.roundRect(-40, -154, 80, 48, 10); ctx.fill(); // short
+  // chemise kaki avec plis et tache de sueur
+  ctx.fillStyle = "#c2a878"; ctx.strokeStyle = "#8a7448"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(-46, -272, 92, 128, 22); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "rgba(120,95,50,.35)"; ctx.beginPath(); ctx.ellipse(0, -230, 22, 18 + Math.abs(course) * 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#a88f5c"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-30, -250); ctx.quadraticCurveTo(-20, -220, -28, -190); ctx.moveTo(30, -250); ctx.quadraticCurveTo(20, -220, 28, -190); ctx.stroke();
+  ctx.fillStyle = "#6b4226"; ctx.fillRect(-46, -160, 92, 10); // ceinture
+  ctx.fillStyle = "#ffd43b"; ctx.fillRect(-8, -161, 16, 12);
+  ctx.fillStyle = "#1c7ed6"; ctx.font = "900 15px Arial Black, sans-serif"; ctx.textAlign = "center"; ctx.fillText("ZOO", 0, -205);
+  // bras gauche qui pompe
+  ctx.save(); ctx.translate(-44, -258); ctx.rotate(.2 + course * .9);
+  ctx.fillStyle = "#c2a878"; ctx.fillRect(-11, 0, 22, 36); ctx.fillStyle = "#f3c89a"; ctx.fillRect(-9, 36, 18, 42);
+  ctx.beginPath(); ctx.arc(0, 80, 11, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
-  // épuisette : cerceau au-dessus de Moka (et sur lui quand il est attrapé)
+  // épuisette : il essaie d'attraper Moka en balayant l'air, et la rabat sur lui à la capture
   const [mx, my] = cibleMoka;
-  const hx0 = -140, hy0 = -420 + course * 10;
+  const coup = jeu.trebuche > 0 ? Math.sin(t * 7) : Math.sin(t * 3.2) * .6;
+  const hx0 = -150 + coup * 40, hy0 = -410 + coup * 30 + course * 8;
   const hx = hx0 + ((mx - gardienX) / s - hx0) * attrape;
   const hy = hy0 + ((my - pieds) / s + 10 - hy0) * attrape;
   ctx.strokeStyle = "#8d5a2b"; ctx.lineWidth = 8; ctx.lineCap = "round";
   ctx.beginPath(); ctx.moveTo(40, -240); ctx.lineTo(hx + 30, hy + 30); ctx.stroke();
-  ctx.fillStyle = "#c2a878"; ctx.beginPath(); ctx.arc(40, -245, 13, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f3c89a"; ctx.beginPath(); ctx.arc(40, -245, 13, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,.28)"; ctx.strokeStyle = "#e9ecef"; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.ellipse(hx, hy, 58, 40, -.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(hx, hy, 58, 40, -.4 + coup * .3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1.5;
   for (let i = -3; i <= 3; i++) {
     ctx.beginPath(); ctx.moveTo(hx + i * 15 - 20, hy - 30); ctx.lineTo(hx + i * 15 + 20, hy + 30); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(hx + i * 15 + 20, hy - 30); ctx.lineTo(hx + i * 15 - 20, hy + 30); ctx.stroke();
   }
-  // tête vue de dos : nuque, cheveux, chapeau de brousse
+  if (enChasse && jeu.trebuche > 0) { // traits de mouvement de l'épuisette
+    ctx.strokeStyle = "rgba(255,255,255,.6)"; ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(hx, hy, 70 + i * 10, -1.2 - coup, -.6 - coup); ctx.stroke(); }
+  }
+  // tête qui dodeline, chapeau qui saute un peu en retard, gouttes de sueur
+  const tete = enChasse ? Math.sin(rythme * 2) * 3 : 0;
+  ctx.translate(tete, -Math.abs(course) * 4);
   ctx.fillStyle = "#f3c89a"; ctx.fillRect(-12, -292, 24, 26);
   ctx.fillStyle = "#6b4226"; ctx.beginPath(); ctx.arc(0, -308, 30, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "#f3c89a"; ctx.beginPath(); ctx.ellipse(-30, -304, 7, 11, 0, 0, Math.PI * 2); ctx.ellipse(30, -304, 7, 11, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#d8c08a"; ctx.beginPath(); ctx.ellipse(0, -322, 62, 14, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(0, -326, 32, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = "#8d6e3a"; ctx.fillRect(-32, -334, 64, 8);
+  const saut = enChasse ? Math.max(0, Math.sin(rythme - .6)) * 10 : 0;
+  ctx.fillStyle = "#d8c08a"; ctx.strokeStyle = "#a88f5c"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, -322 - saut, 62, 14, Math.sin(rythme) * .06, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, -326 - saut, 32, Math.PI, 0); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#8d6e3a"; ctx.fillRect(-32, -334 - saut, 64, 8);
+  if (enChasse) {
+    for (let i = 0; i < 2; i++) {
+      const g = (t * 1.6 + i * .5) % 1;
+      ctx.fillStyle = `rgba(116,192,252,${1 - g})`;
+      ctx.beginPath(); ctx.ellipse((i ? 36 : -38) + (i ? 8 : -8) * g, -318 + g * 40, 4, 6, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
   ctx.restore();
+  // il crie quand il est tout près
+  if (enChasse && p > .6) {
+    const cri = CRIS_GARDIEN[Math.floor(t / 2.2) % CRIS_GARDIEN.length];
+    const bx = Math.min(W - 90, gardienX + 30), by = pieds - 330 * s - 30;
+    ctx.font = "900 15px Arial Black, sans-serif";
+    const lw = ctx.measureText(cri).width + 20;
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = "#3b2308"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(bx - lw / 2, by - 22, lw, 30, 12); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx - 10, by + 8); ctx.lineTo(bx - 18, by + 20); ctx.lineTo(bx, by + 8); ctx.fill();
+    ctx.fillStyle = "#c92a2a"; ctx.textAlign = "center"; ctx.fillText(cri, bx, by - 1); ctx.textAlign = "start";
+  }
 }
 
 // ------------------------------------------------------------ dessin : scène complète

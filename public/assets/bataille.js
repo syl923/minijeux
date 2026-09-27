@@ -272,6 +272,8 @@ async function lancer() {
   effacerApercu();
   document.getElementById("bloc-placement").classList.add("cache");
   document.getElementById("bloc-ennemi").classList.remove("cache");
+  document.querySelector("#bloc-ennemi h2").textContent = "🐒 Flotte de Capitaine Moka";
+  mokaDit("À l'abordage ! Tu ne trouveras jamais mes bateaux, hi hi !", "taquin", 2600);
   grilleEnnemi = creerGrille(document.getElementById("grille-ennemi"), true);
   grilleEnnemi.addEventListener("click", (e) => {
     const c = e.target.closest(".case-mer");
@@ -283,13 +285,18 @@ async function lancer() {
 
 const attendre = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-// Les répliques du capitaine Moka
+// Les répliques de Capitaine Moka : en solo c'est lui l'adversaire, et il adore te taquiner.
 const REPLIQUES = {
-  touche: [["Touché ! Feu à volonté, moussaillon !", "content"], ["Dans le mille ! Vise juste à côté maintenant.", "malin"], ["Bien visé, mille bananes !", "content"]],
-  coule: [["COULÉ ! À l'abordage !", "etoiles"], ["Un de moins ! Hissez les voiles !", "rire"], ["Par ma barbe de banane, il a sombré !", "etoiles"]],
-  eau: [["Plouf… Rien que des poissons.", "malin"], ["À l'eau, matelot ! On retente.", "malin"]],
-  subi: [["Aïe, notre coque ! Réplique vite !", "choc"], ["Ils nous ont touchés ! Aux canons !", "colere"]],
-  perdu: [["Nooon, notre navire coule !", "triste"], ["Un bateau perdu… on se venge !", "colere"]],
+  touche: [["Aïe ! Tu as touché mon navire !", "choc"], ["Ouille, ma coque ! Coup de chance…", "colere"], ["Hé ! Doucement avec mes bateaux !", "choc"]],
+  coule: [["Nooon, mon bateau ! Tu vas me le payer !", "pleure"], ["Mon beau navire… *snif*", "pleure"], ["Grrr ! Coulé… mais la guerre n'est pas finie !", "colere"]],
+  eau: [["Hi hi hi ! Raté, moussaillon !", "taquin"], ["Plouf ! Tu arroses les poissons ?", "taquin"], ["Ha ha, même pas proche !", "rire"]],
+  subi: [["Ha ha ! Dans le mille !", "taquin"], ["Bam ! Je t'ai eu !", "rire"], ["Hou hou ha ha ! Touché !", "rire"]],
+  perdu: [["HOU HOU HA HA ! Coulé, ton bateau !", "rire"], ["Un de moins ! Tu fais moins le malin, hein ?", "taquin"]],
+  // en duel contre un vrai joueur, Moka est ton second
+  duel_coule: [["Coulé ! Bravo moussaillon !", "etoiles"]],
+  duel_touche: [["Touché ! Continue !", "content"]],
+  duel_perdu: [["Aïe, ils ont coulé notre navire !", "pleure"]],
+  duel_subi: [["Ouille, notre coque !", "choc"]],
 };
 function capitaine(cle, proba = 1) {
   if (Math.random() > proba) return;
@@ -321,7 +328,7 @@ async function tirer(x, y) {
     message.textContent = `💥 Tu as coulé le ${nom} ennemi !`;
     capitaine("coule");
   } else {
-    capitaine(j.resultat === "touche" ? "touche" : "eau", j.resultat === "touche" ? .6 : .25);
+    capitaine(j.resultat === "touche" ? "touche" : "eau", j.resultat === "touche" ? .6 : .35);
     message.textContent = j.resultat === "touche" ? `🔥 Touché en ${LETTRES[y]}${x + 1} !` : `💧 Plouf… ${LETTRES[y]}${x + 1} dans l'eau.`;
     Sons.jouer(j.resultat === "touche" ? "explosion" : "plouf");
   }
@@ -329,7 +336,7 @@ async function tirer(x, y) {
 
   if (r.ia) {
     await attendre(700);
-    message.textContent = "L'amiral ennemi vise…";
+    message.textContent = "Capitaine Moka vise… 🐒";
     await attendre(500);
     const ia = r.ia;
     marquer(grilleJoueur, ia.x, ia.y, ia.resultat);
@@ -338,13 +345,13 @@ async function tirer(x, y) {
       const nom = nomNavire(coulesJoueur, ia.coule.taille);
       coulesJoueur.add(nom);
       grilleJoueur.querySelector(`.bateau[data-cle="${ia.coule.x},${ia.coule.y}"]`)?.classList.add("coule");
-      message.textContent = `😱 L'ennemi a coulé ton ${nom} !`;
+      message.textContent = `😱 Capitaine Moka a coulé ton ${nom} !`;
       capitaine("perdu");
     } else {
       if (ia.resultat === "touche") capitaine("subi", .5);
       message.textContent = ia.resultat === "touche"
-        ? `🔥 L'ennemi t'a touché en ${LETTRES[ia.y]}${ia.x + 1} ! À toi.`
-        : `💧 L'ennemi rate en ${LETTRES[ia.y]}${ia.x + 1}. À toi !`;
+        ? `🔥 Capitaine Moka t'a touché en ${LETTRES[ia.y]}${ia.x + 1} ! À toi.`
+        : `💧 Capitaine Moka rate en ${LETTRES[ia.y]}${ia.x + 1}. À toi !`;
     }
     majEtats();
   }
@@ -361,7 +368,7 @@ async function tirer(x, y) {
         dessinerBateau(grilleEnnemi, b, "ennemi fantome", typeDeNom(nom));
       });
     }
-    message.textContent = f.victoire ? "🏆 Victoire ! La flotte ennemie est au fond de l'eau." : "💀 Défaite… ta flotte a sombré.";
+    message.textContent = f.victoire ? "🏆 Victoire ! La flotte de Capitaine Moka est au fond de l'eau." : "💀 Défaite… ta flotte a sombré.";
     await attendre(900);
     afficherResultat({
       titre: f.victoire ? "Victoire !" : "Défaite…",
@@ -461,8 +468,8 @@ function appliquerVueDuel(v) {
     const coule = v.coules_adverses.length > (ancien.coules_adverses || []).length || coulesJoueur.size > (ancien.nbCoulesMiens || 0);
     Sons.jouer(coule ? "kaboom" : v.dernier.resultat === "eau" ? "plouf" : "explosion");
     const parMoi = v.dernier.tireur === v.moi;
-    if (coule) capitaine(parMoi ? "coule" : "perdu");
-    else if (v.dernier.resultat !== "eau") capitaine(parMoi ? "touche" : "subi", .5);
+    if (coule) capitaine(parMoi ? "duel_coule" : "duel_perdu");
+    else if (v.dernier.resultat !== "eau") capitaine(parMoi ? "duel_touche" : "duel_subi", .5);
   }
   v.nbCoulesMiens = coulesJoueur.size;
 

@@ -44,6 +44,7 @@ def trop_d_essais(ip, chemin):
 ROUTES_POST = {
     "/api/roue/tourner": noyau.roue_tourner,
     "/api/secours": noyau.secours,
+    "/api/roue/bonus": noyau.roue_bonus,
 }
 for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin, compte, avatars):
     ROUTES_POST.update(jeu.ROUTES)

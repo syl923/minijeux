@@ -4,7 +4,7 @@ Il vérifie au moins que le score est plausible pour la durée réellement joué
 
 from noyau import ErreurApi, lire_partie, maintenant, nouvelle_partie, terminer_partie
 
-POINTS_MAX_PAR_SECONDE = 20000  # bonus, feu et multibille compris : largement au-dessus d'un très bon joueur
+POINTS_MAX_PAR_SECONDE = 30000  # bonus, feu, MOKA MANIA et multibille compris : largement au-dessus d'un très bon joueur
 SCORE_MAX = 20_000_000
 POINTS_PAR_PIECE = 25000
 PIECES_MAX = 40

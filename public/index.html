@@ -91,7 +91,7 @@
     "Au Memory, chaque paire trouvée ajoute 5 secondes au chrono : enchaîne vite !",
     "À la bataille navale, les navires ne se touchent jamais : inutile de tirer autour d'un navire coulé.",
     "Plus de bananes ? Le bouton 🆘 t'en offre 20 une fois par jour.",
-    "Aux échecs, un mat rapide contre l'ordinateur difficile rapporte jusqu'à 65 bananes.",
+    "Aux échecs, un mat rapide contre Professeur Moka en difficile rapporte jusqu'à 65 bananes.",
     "À Moka Jet, de petites tapes régulières valent mieux qu'une grosse poussée.",
   ];
   let numeroAstuce = jour % ASTUCES.length;
@@ -150,7 +150,7 @@
       <div class="stat-ligne"><span>🎮 Parties du jour</span><b>${a.parties_jour}</b></div>
       <div class="stat-ligne"><span>🍌 Bananes gagnées</span><b>${a.pieces_jour}</b></div>`;
     document.getElementById("exploits").innerHTML = a.recents.length ? a.recents.map((r) => `
-      <li>${avatarSVG(r.avatar || "moka", "icone-mini mini-avatar")}<span><b>${echapper(r.pseudo)}</b> · ${NOMS[r.jeu] || r.jeu}<br><small>${r.score} points · +${r.pieces} <i class="piece"></i></small></span></li>`).join("")
+      <li>${`<span class="avatar-exploit">${avatarSVG(r.avatar || "moka", "mini-avatar")}</span>`}<span><b>${echapper(r.pseudo)}</b> · ${NOMS[r.jeu] || r.jeu}<br><small>${r.score} points · +${r.pieces} <i class="piece"></i></small></span></li>`).join("")
       : `<li class="doux">Aucun exploit pour l'instant : sois le premier !</li>`;
     const infos = [`Bienvenue sur Moka Arcade ! ★ Jeu du jour : ${duJour.nom} ★ ${a.parties_jour} parties jouées aujourd'hui`];
     a.recents.slice(0, 4).forEach((r) => infos.push(`${r.pseudo} vient de faire ${r.score} points à ${NOMS[r.jeu] || r.jeu}`));

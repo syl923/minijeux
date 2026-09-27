@@ -1,4 +1,4 @@
-// Échecs : les règles et l'ordinateur tournent sur le serveur ; la page affiche et propose les coups légaux.
+// Échecs : les règles et Professeur Moka (l'ordinateur) tournent sur le serveur ; la page affiche et propose les coups légaux.
 // Plateau = chaîne de 64 caractères, case 0 = a8, case 63 = h1 ; majuscules = blancs.
 
 const GLYPHES = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
@@ -103,20 +103,22 @@ function appliquer(b, de, vers) {
   return t.join("");
 }
 
-// Les commentaires du professeur Moka
+// Professeur Moka est ton adversaire : il commente (et te taquine) après chaque coup.
 const NOMS_PIECES = { p: "pion", n: "cavalier", b: "fou", r: "tour", q: "dame" };
+const TA_PIECE = { dame: "ta dame", tour: "ta tour", fou: "ton fou", cavalier: "ton cavalier" };
+const MA_PIECE = { dame: "Ma dame", tour: "Ma tour", fou: "Mon fou", cavalier: "Mon cavalier" };
 function professeur(prisParMoi, prisParIa, echec) {
-  if (echec) return mokaDit("Échec ! Protège ton roi, jeune élève !", "choc", 2200);
+  if (echec) return mokaDit(["Échec, hi hi ! Où vas-tu te cacher ?", "Échec au roi ! Tu transpires, hein ?"][Math.floor(Math.random() * 2)], "taquin", 2400);
   if (prisParIa && prisParIa !== ".") {
     const nom = NOMS_PIECES[prisParIa.toLowerCase()];
-    if (nom && nom !== "pion") return mokaDit(`Aïe, ${{ dame: "ta dame est tombée", tour: "ta tour est tombée", fou: "ton fou est tombé", cavalier: "ton cavalier est tombé" }[nom]}… Réfléchis avant de jouer !`, "triste", 2400);
+    if (nom && nom !== "pion") return mokaDit(`Hou hou ha ha ! Merci pour ${TA_PIECE[nom]} !`, "rire", 2400);
   }
   if (prisParMoi && prisParMoi !== ".") {
     const nom = NOMS_PIECES[prisParMoi.toLowerCase()];
-    if (nom === "dame") return mokaDit("LA DAME ! Coup de maître !", "etoiles", 2200);
-    if (nom === "tour" || nom === "cavalier" || nom === "fou") return mokaDit(`Belle prise, ce ${nom} !`, "content", 1800);
+    if (nom === "dame") return mokaDit("MA DAME ?! Nooon… *snif*", "pleure", 2400);
+    if (MA_PIECE[nom]) return mokaDit(`${MA_PIECE[nom]} ! Pas mal… pour un élève.`, "choc", 1900);
   }
-  if (Math.random() < .12) mokaDit(["Hmm… intéressant.", "Pense à développer tes pièces.", "Le centre, toujours le centre !"][Math.floor(Math.random() * 3)], "malin", 1800);
+  if (Math.random() < .12) mokaDit(["Hmm… tu es sûr de ton coup ?", "Intéressant… très intéressant, hi hi.", "J'ai déjà prévu ta réponse !"][Math.floor(Math.random() * 3)], "malin", 1800);
 }
 
 async function clic(sq) {
@@ -135,7 +137,7 @@ async function clic(sq) {
     Sons.jouer(prise ? "prise" : "deplacement");
     dessiner([de, sq]);
     enAttente = true;
-    statut("L'ordinateur réfléchit… 🤔");
+    statut("Professeur Moka réfléchit… 🤔");
     echiquier.classList.add("reflechit");
     let r;
     try {

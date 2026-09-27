@@ -66,6 +66,34 @@ const Sons = (() => {
     s.start(t);
   }
 
+  // Voix de singe : un « o » ou un « a » (filtre qui imite la bouche) sur une note qui glisse, avec vibrato.
+  function voix(f0, f1, debut, duree, { formant = 1200, volume = 0.22, vibrato = 0 } = {}) {
+    const a = audio();
+    if (!a) return;
+    const t = a.currentTime + debut;
+    const o = a.createOscillator();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + duree);
+    if (vibrato) {
+      const lfo = a.createOscillator(), lg = a.createGain();
+      lfo.frequency.value = 9; lg.gain.value = vibrato;
+      lfo.connect(lg).connect(o.frequency); lfo.start(t); lfo.stop(t + duree + .05);
+    }
+    const f = a.createBiquadFilter();
+    f.type = "bandpass"; f.frequency.value = formant; f.Q.value = 4;
+    const f2 = a.createBiquadFilter();
+    f2.type = "bandpass"; f2.frequency.value = formant * 2.3; f2.Q.value = 6;
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(volume, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+    o.connect(f).connect(g);
+    o.connect(f2).connect(g);
+    g.connect(maitre);
+    o.start(t); o.stop(t + duree + 0.05);
+  }
+
   // Guitare saturée (accord de puissance : fondamentale + quinte + octave, passé dans une distorsion)
   let courbe = null;
   function guitare(fondamentale, debut, duree, { volume = 0.12, dest = null, etouffe = false } = {}) {
@@ -126,6 +154,14 @@ const Sons = (() => {
     }),
     victoire: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) =>
       note(f, i * 0.11, i === 5 ? 0.6 : 0.16, { type: "square", volume: 0.09 })),
+    // Moka : rire, taquinerie, pleurs, cri de joie
+    rire: () => {
+      voix(380, 470, 0, .14, { formant: 520 }); voix(400, 500, .17, .14, { formant: 520 });
+      [0, 1, 2, 3].forEach((i) => voix(760 - i * 40, 660 - i * 40, .36 + i * .13, .11, { formant: 1500, volume: .25 }));
+    },
+    taquin: () => [0, 1, 2].forEach((i) => voix(1150 + i * 60, 1250 + i * 60, i * .12, .09, { formant: 2600, volume: .18 })),
+    pleure: () => { voix(560, 360, 0, .5, { formant: 800, vibrato: 25 }); voix(600, 380, .6, .7, { formant: 800, vibrato: 30 }); },
+    cri: () => { voix(500, 620, 0, .12, { formant: 500 }); voix(520, 640, .15, .12, { formant: 500 }); voix(620, 1150, .3, .55, { formant: 1400, volume: .28, vibrato: 18 }); },
     tic: () => note(1400, 0, 0.03, { type: "square", volume: 0.05 }),
     alerte: () => note(880, 0, 0.1, { type: "square", volume: 0.07 }),
     drapeau: () => { note(700, 0, 0.06, { type: "triangle", volume: 0.15 }); note(1050, 0.05, 0.1, { type: "triangle", volume: 0.15 }); },

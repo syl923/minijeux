@@ -150,7 +150,7 @@ function poser() {
   Sons.jouer("pose");
   if (dehors) return perdu();
   const hautPile = jeu.grille.findIndex((l) => l.some(Boolean));
-  if (hautPile >= 0 && hautPile < 5 && !jeu.alerteHaut) { jeu.alerteHaut = true; mokaDit("Attention, ça monte trop haut !", "choc", 1800); }
+  if (hautPile >= 0 && hautPile < 5 && !jeu.alerteHaut) { jeu.alerteHaut = true; mokaDit("Hi hi ! Ta tour penche, chef de chantier !", "taquin", 1900); }
   if (hautPile > 9) jeu.alerteHaut = false;
   const pleines = [];
   for (let y = 0; y < H; y++) if (jeu.grille[y].every(Boolean)) pleines.push(y);

@@ -18,7 +18,9 @@ Le propriétaire parle français : réponds en français, simplement.
 - `jeux/duels.py` : duels en ligne (table `duels`), les pages interrogent `/api/duels/etat` toutes les secondes.
 - `public/assets/icones.js` : icônes SVG des jeux (`iconeJeu(id)`), à compléter pour tout nouveau jeu.
 - `public/assets/singes.js` : générateur SVG de Moka (`singe()`), avatars (`LOOKS_AVATARS`, mêmes identifiants que `avatars.py`), tenues par jeu (`TENUES`), humeurs, `imageTenue()` pour les canvas. `commun.js` ajoute le coach Moka sur chaque page de jeu : `mokaDit(texte, humeur)`.
-- `avatars.py` : boutique d'avatars (table `avatars`, colonne `joueurs.avatar`), prix vérifiés côté serveur.
+- `avatars.py` : boutique d'avatars (table `avatars`, colonne `joueurs.avatar`), prix vérifiés côté serveur ; box mystère (`joueurs.boxes` = box gratuites gagnées).
+- Roue bonus après chaque partie : `noyau.roue_bonus` (`ROUE_BONUS`, colonne `parties.bonus`), affichée dans `afficherResultat()`.
+- Voix de Moka synthétisées dans `sons.js` (`rire`, `taquin`, `pleure`, `cri`) ; `mokaDit()` les joue selon l'humeur.
 - Monnaie affichée « bananes » ; dans le code et la base elle s'appelle toujours `pieces`. Les identifiants `runner` (Safari Rush) et `pingouin` (Moka Glisse) sont conservés pour garder les classements.
 - `compte.py` : droits RGPD (export des données, changement de mot de passe, suppression du compte).
 - Production : variables `HOST`, `PORT`, `MINIJEUX_BASE`, `MINIJEUX_HTTPS=1`, `MINIJEUX_PROXY=1` ; hors HTTPS, le serveur crée le compte de test toto/toto (1000 bananes), sauf si `MINIJEUX_COMPTE_TEST=0` ; plan complet dans DEPLOIEMENT.md.

@@ -11,8 +11,8 @@ const JEUX = [
   { id: "snake", nom: "Snake", emoji: "🐍", cat: "arcade", theme: "savane", desc: "Mange les fruits, grandis, et surtout ne te mords pas la queue !" },
   { id: "memory", nom: "Memory", emoji: "🃏", cat: "reflexion", theme: "magie", desc: "Retrouve les paires avant la fin du chrono : chaque paire rapporte 5 secondes." },
   { id: "demineur", nom: "Démineur", emoji: "💣", cat: "reflexion", theme: "chantier", desc: "Déniche toutes les cases sûres sans réveiller les bombes farceuses." },
-  { id: "echecs", nom: "Échecs", emoji: "♞", cat: "duel", theme: "bois", badge: "EN LIGNE", desc: "Contre l'ordinateur (3 niveaux) ou contre un autre joueur en ligne." },
-  { id: "bataille", nom: "Bataille navale", emoji: "🚢", cat: "duel", theme: "ocean", badge: "EN LIGNE", desc: "Coule la flotte de l'ordinateur… ou celle d'un autre joueur en ligne." },
+  { id: "echecs", nom: "Échecs", emoji: "♞", cat: "duel", theme: "bois", badge: "EN LIGNE", desc: "Contre Professeur Moka (3 niveaux) ou contre un autre joueur en ligne." },
+  { id: "bataille", nom: "Bataille navale", emoji: "🚢", cat: "duel", theme: "ocean", badge: "EN LIGNE", desc: "Coule la flotte de Capitaine Moka… ou celle d'un autre joueur en ligne." },
 ];
 const CATEGORIES = { tous: "⭐ Tous", action: "🏃 Action", arcade: "👾 Arcade", reflexion: "🧠 Réflexion", duel: "⚔️ Duels" };
 const THEMES_PAGES = { roue: "ciel", classement: "ciel", accueil: "ciel", duels: "ciel", avatars: "ciel" };
@@ -172,15 +172,20 @@ function mokaDit(texte, humeur = "content", duree = 2600) {
   const singe = document.getElementById("coach-singe");
   if (!bulle || !singe) return;
   bulle.textContent = texte;
-  bulle.classList.add("visible");
+  bulle.className = "coach-bulle visible humeur-" + humeur;
   singe.innerHTML = tenueSVG(COACH.jeu, humeur);
-  singe.classList.remove("saute");
+  singe.className = "coach-singe";
   void singe.offsetWidth;
-  singe.classList.add("saute");
+  singe.classList.add(humeur === "pleure" || humeur === "ko" ? "sanglote" : humeur === "rire" || humeur === "taquin" ? "rigole" : "saute");
+  // la voix de Moka (pas à chaque réplique, sinon c'est lassant)
+  const voix = { rire: "rire", taquin: "taquin", pleure: "pleure", etoiles: "cri" }[humeur];
+  const maintenant = Date.now();
+  if (voix && maintenant - (COACH.derniereVoix || 0) > 2500) { COACH.derniereVoix = maintenant; Sons.jouer(voix); }
   clearTimeout(COACH.minuteur);
   COACH.minuteur = setTimeout(() => {
     bulle.classList.remove("visible");
     singe.innerHTML = tenueSVG(COACH.jeu);
+    singe.className = "coach-singe";
   }, duree);
 }
 
@@ -426,25 +431,95 @@ async function roueDeFin(fin) {
 }
 
 // Affiche le résultat d'une partie (après la roue si elle est disponible) et fait voler les bananes.
+// Petite roue bonus : dessin des secteurs (+1, +2, Rien, BOX…)
+const COULEURS_BONUS = { Rien: "#868e96", "+1": "#4dabf7", "+2": "#51cf66", "+5": "#ff922b", "+10": "#e64980", BOX: "#fcc419" };
+function dessinerRoueBonus(canvas, textes) {
+  const ctx = canvas.getContext("2d");
+  const r = canvas.width / 2, n = textes.length, pas = 2 * Math.PI / n;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#2a1d5e"; ctx.beginPath(); ctx.arc(r, r, r - 2, 0, 2 * Math.PI); ctx.fill();
+  textes.forEach((t, i) => {
+    const debut = -Math.PI / 2 + i * pas;
+    ctx.beginPath(); ctx.moveTo(r, r); ctx.arc(r, r, r - 12, debut, debut + pas); ctx.closePath();
+    ctx.fillStyle = COULEURS_BONUS[t] || "#adb5bd"; ctx.fill();
+    ctx.lineWidth = 4; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.save(); ctx.translate(r, r); ctx.rotate(debut + pas / 2);
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.font = `900 ${t === "BOX" ? r * .2 : r * .18}px Trebuchet MS, sans-serif`;
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = "rgba(40,20,80,.6)"; ctx.lineWidth = 5;
+    const txt = t === "BOX" ? "🎁" : t === "Rien" ? "😜" : t;
+    ctx.strokeText(txt, r - 22, 0); ctx.fillText(txt, r - 22, 0);
+    ctx.restore();
+  });
+  for (let i = 0; i < n * 2; i++) {
+    const a = i / (n * 2) * 2 * Math.PI;
+    ctx.fillStyle = i % 2 ? "#ffe07a" : "#fff";
+    ctx.beginPath(); ctx.arc(r + Math.cos(a) * (r - 6), r + Math.sin(a) * (r - 6), 3.5, 0, 2 * Math.PI); ctx.fill();
+  }
+}
+
+async function tournerRoueBonus(f, fin) {
+  const zone = f.querySelector("#roue-bonus");
+  if (!zone || !fin.partie) return;
+  const conf = await chargerRoue();
+  const canvas = zone.querySelector("canvas");
+  dessinerRoueBonus(canvas, conf.bonus);
+  await new Promise((ok) => setTimeout(ok, 700));
+  let r;
+  try {
+    r = await api("/api/roue/bonus", { partie: fin.partie });
+  } catch (e) {
+    zone.remove();
+    return;
+  }
+  await animerRoue(canvas, conf.bonus.length, r.secteur, 2600);
+  const texte = zone.querySelector(".resultat-bonus");
+  if (r.gain === "box") {
+    Sons.jouer("extra"); Sons.jouer("cri"); confettis();
+    texte.innerHTML = `🎁 <b>BOX MYSTÈRE GAGNÉE !</b><br><a class="bouton petit" href="/avatars.html#box">Ouvrir ma box</a>`;
+    zone.classList.add("jackpot");
+    mokaDit("UNE BOX MYSTÈRE ! Ouvre-la vite !", "etoiles", 4000);
+  } else if (r.gain) {
+    Sons.jouer("piece");
+    texte.innerHTML = `Bonus : <b class="gain">+${r.gain} <i class="piece"></i></b>`;
+  } else {
+    Sons.jouer("taquin");
+    texte.innerHTML = "Rien cette fois… hi hi !";
+  }
+  majJoueur(r.joueur);
+}
+
+// Affiche le résultat d'une partie (après la roue du jour si elle est disponible), avec Moka qui danse ou qui pleure,
+// la pluie de bananes et la petite roue bonus.
 async function afficherResultat({ titre, emoji, lignes = [], fin, rejouer, victoire = fin.score > 0 }) {
   if (fin.roue) fin = await roueDeFin(fin);
   Sons.jouer(victoire ? "victoire" : "perdu");
-  if (fin.record) mokaDit("Nouveau record ! Je suis fier de toi !", "etoiles", 4000);
-  else mokaDit(victoire ? "Bravo ! On en refait une ?" : "Pas grave, la prochaine sera la bonne !", victoire ? "content" : "triste", 3500);
+  const jeu = document.body.dataset.page;
+  const humeur = fin.record ? "etoiles" : victoire ? "rire" : "pleure";
+  if (fin.record) mokaDit("NOUVEAU RECORD ! Je suis fier de toi !", "etoiles", 4000);
+  else if (victoire) mokaDit(["Bravo ! On en refait une ?", "Hou hou ha ha ! Trop fort !"][Math.floor(Math.random() * 2)], "rire", 3500);
+  else mokaDit(["Ouiiin… on a perdu… *snif*", "Snif… la prochaine sera la bonne !"][Math.floor(Math.random() * 2)], "pleure", 3500);
   const net = fin.pieces - fin.mise;
+  const portrait = typeof TENUES !== "undefined" && TENUES[jeu] ? tenueSVG(jeu, humeur) : avatarSVG("moka");
+  const titreAnime = [...titre].map((c, i) => `<span style="animation-delay:${i * 45}ms">${c === " " ? "&nbsp;" : echapper(c)}</span>`).join("");
   const f = ouvrirFenetre(`
-    <p class="gros">${emoji}</p>
-    <h2>${titre}</h2>
+    <div class="res-moka ${victoire ? "danse" : "pleure"}">${portrait}
+      ${victoire ? "" : `<i class="larme l1"></i><i class="larme l2"></i><i class="larme l3"></i>`}
+      <span class="res-emoji">${emoji}</span></div>
+    <h2 class="titre-vague">${titreAnime}</h2>
     ${lignes.map((l) => `<p class="doux" style="margin:4px 0">${l}</p>`).join("")}
-    ${fin.score > 0 ? `<p style="font-size:22px;margin:12px 0 0">Score : <b>${fin.score}</b></p>` : ""}
-    ${fin.record ? `<p class="record">🏆 Nouveau record personnel !</p>` : ""}
+    ${fin.score > 0 ? `<p class="res-score">Score : <b>${fin.score.toLocaleString("fr-FR")}</b></p>` : ""}
+    ${fin.record ? `<div class="tampon-record">RECORD !</div>` : ""}
     <div class="gain-total"><i class="piece"></i>+${fin.pieces}</div>
     ${fin.mult > 1 ? `<p class="doux" style="margin:0">${fin.pieces_base} bananes ${formatMult(fin.mult)} grâce à la roue</p>` : ""}
-    <p class="doux" style="margin:6px 0 0">Mise : ${fin.mise} · bilan de la partie : <b style="color:${net >= 0 ? "var(--vert)" : "var(--rouge)"}">${net >= 0 ? "+" : ""}${net}</b></p>
+    <p class="doux" style="margin:6px 0 0">Mise : ${fin.mise} · bilan : <b style="color:${net >= 0 ? "var(--vert)" : "var(--rouge)"}">${net >= 0 ? "+" : ""}${net}</b></p>
+    ${fin.partie ? `<div class="roue-bonus" id="roue-bonus">
+      <div class="roue-bonus-cadre"><div class="fleche petite-fleche"></div><canvas width="360" height="360"></canvas></div>
+      <p class="resultat-bonus">🎰 Roue bonus : ça tourne…</p></div>` : ""}
     <div class="actions">
       <button class="bouton" id="r-rejouer">Rejouer (${prixPartie()})</button>
-      <a class="bouton secondaire" href="/classement.html?jeu=${document.body.dataset.page}">Classement</a>
-    </div>`);
+      <a class="bouton secondaire" href="/classement.html?jeu=${jeu}">Classement</a>
+    </div>`, { classe: "fenetre-resultat " + (victoire ? "gagne" : "perd") });
   f.querySelector("#r-rejouer").onclick = () => { fermerFenetre(); rejouer(); };
   if (fin.pieces > 0) {
     const depart = f.querySelector(".gain-total").getBoundingClientRect();
@@ -453,6 +528,7 @@ async function afficherResultat({ titre, emoji, lignes = [], fin, rejouer, victo
     majJoueur(fin.joueur);
   }
   if (victoire) confettis();
+  tournerRoueBonus(f, fin);
 }
 
 function pluieDePieces(depart, nombre, fin) {

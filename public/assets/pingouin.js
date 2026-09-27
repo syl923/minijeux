@@ -8,7 +8,7 @@ const ctx = toile.getContext("2d");
 const surcouche = document.getElementById("surcouche");
 
 const G = 14, PAS = 1 / 120;
-const FROTTEMENT = 0.1, FROTTEMENT_GLACE = 0.012, TRAINEE = 0.0035, SAUT = 7.5;
+const FROTTEMENT = 0.1, FROTTEMENT_GLACE = 0.012, TRAINEE = 0.0035, SAUT = 10;
 const V_MIN = 18, V_MAX = 54;     // vitesse au départ selon la puissance (m/s)
 
 let jeu = null;
@@ -72,7 +72,7 @@ async function lancer() {
   jeu = {
     partie: r.partie, phase: "puissance", t: 0, puissance: 0, angle: 0,
     x: 0.6, y: 0, vx: 0, vy: 0, auSol: true, rot: 0, arret: 0, batte: 0,
-    objets: [], bananes: [], xGen: 70, xCiel: 40, nbBananes: 0, sauts: 0, particules: [], textes: [],
+    objets: [], bananes: [], anneaux: [], trace: [], xGen: 70, xCiel: 40, nbBananes: 0, sauts: 0, particules: [], textes: [],
     fini: false, secousse: 0, temps: 0, maxX: 0, dernier: performance.now(), cam: { x: 0, y: 0, zoom: 16 },
   };
   generer(400);
@@ -103,7 +103,10 @@ function appui() {
     jeu.y += 0.05;
     jeu.auSol = false;
     jeu.dernierSaut = jeu.temps;
+    jeu.salto = 0;          // petit salto pendant le saut (affichage seulement)
+    jeu.ecrase = -1;        // étirement au décollage
     Sons.jouer("saut");
+    for (let i = 0; i < 14; i++) jeu.particules.push({ x: jeu.x - .3, y: jeu.y, vx: -Math.random() * 6, vy: Math.random() * 4, vie: .5, c: "#fff", r: .22 });
   }
 }
 const jaugePuissance = () => Math.abs(Math.sin(jeu.t * 2.4));
@@ -204,7 +207,10 @@ function etape(dt) {
       o.passe = true;
       if ((jeu.y - sol(o.x)) > 0.2 && jeu.temps - (jeu.dernierSaut ?? -9) < 1.5) { // sauté (le grand vol ne compte pas)
         jeu.sauts++;
-        jeu.textes.push({ t: "+10 SAUT !", vie: .9, monde: true, x: o.x, y: sol(o.x) + o.h + 2, c: "#b2f2bb" });
+        jeu.combo = (jeu.combo || 0) + 1;
+        jeu.textes.push({ t: jeu.combo > 1 ? `COMBO x${jeu.combo} !` : "+10 SAUT !", vie: 1, monde: true, x: o.x, y: sol(o.x) + o.h + 2, c: jeu.combo > 2 ? "#ffd43b" : "#b2f2bb" });
+        if (jeu.combo === 3) mokaDit("Triple saut ! Je suis un kangourou !", "etoiles", 1800);
+        else if (jeu.combo >= 5 && jeu.combo % 5 === 0) mokaDit(`COMBO x${jeu.combo} ! Personne ne m'arrête !`, "etoiles", 2000);
         majCompteurs();
       }
     }
@@ -228,6 +234,9 @@ function etape(dt) {
 
 function atterrir(vn) {
   const v = Math.hypot(jeu.vx, jeu.vy);
+  jeu.ecrase = Math.min(1, .35 + vn / 20);   // écrasement à l'atterrissage (affichage)
+  jeu.salto = null;
+  jeu.anneaux.push({ x: jeu.x, y: jeu.y, r: .5, vie: 1 });
   if (vn > 16) {
     jeu.vx *= 0.8; jeu.vy *= 0.8;
     jeu.secousse = 12;
@@ -246,6 +255,7 @@ function atterrir(vn) {
 
 function heurter(o) {
   o.touche = true;
+  jeu.combo = 0;
   const perte = { bonhomme: 0.5, rocher: 0.35, sapin: 0.3, pingouin: 0.7 }[o.type];
   jeu.vx *= perte; jeu.vy = Math.max(jeu.vy, 0) + (o.type === "rocher" ? 4 : 1.5);
   jeu.auSol = false; jeu.y += .1;
@@ -413,10 +423,42 @@ function dessiner(dt) {
   ctx.beginPath(); ctx.moveTo(...ecran(x0, cam.y - 400));
   for (let x = x0; x <= x1; x += pasSol) ctx.lineTo(...ecran(x, sol(x)));
   ctx.lineTo(...ecran(x1, cam.y - 400)); ctx.fill();
+  // ombre bleutée dans les descentes, lumière sur les bosses
+  for (let x = Math.floor(x0); x <= x1; x += 1) {
+    const p = pente(x);
+    if (Math.abs(p) < .05) continue;
+    const [ax, ay] = ecran(x, sol(x)), [bx, by] = ecran(x + 1, sol(x + 1));
+    ctx.fillStyle = p < 0 ? `rgba(116,160,230,${Math.min(.28, -p * .5)})` : `rgba(255,255,255,${Math.min(.5, p)})`;
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(bx, by + 60); ctx.lineTo(ax, ay + 60); ctx.fill();
+  }
+  // congères et reflets qui scintillent
+  for (let x = Math.floor(x0 / 7) * 7; x <= x1; x += 7) {
+    const [cx, cy] = ecran(x + 3, sol(x + 3));
+    ctx.fillStyle = "rgba(208,231,255,.8)";
+    ctx.beginPath(); ctx.ellipse(cx, cy + 22, 26, 5, 0, 0, Math.PI * 2); ctx.fill();
+    const scintille = Math.sin(performance.now() / 180 + x) > .7;
+    if (scintille) { ctx.fillStyle = "#fff"; ctx.font = "12px sans-serif"; ctx.fillText("✦", cx - 8, cy + 14); }
+  }
   ctx.strokeStyle = "#a5d8ff"; ctx.lineWidth = 3;
   ctx.beginPath();
   for (let x = x0; x <= x1; x += pasSol) ctx.lineTo(...ecran(x, sol(x)));
   ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x += pasSol) { const [a, b] = ecran(x, sol(x)); ctx.lineTo(a, b - 2); }
+  ctx.stroke();
+  // trace laissée par Moka dans la neige
+  if (jeu && jeu.trace.length > 1) {
+    ctx.strokeStyle = "rgba(120,160,210,.55)"; ctx.lineWidth = 4; ctx.lineCap = "round";
+    ctx.beginPath();
+    let leve = true;
+    for (const [tx, ty, posee] of jeu.trace) {
+      if (!posee) { leve = true; continue; }
+      const [a, b] = ecran(tx, ty);
+      if (leve) { ctx.moveTo(a, b + 1); leve = false; } else ctx.lineTo(a, b + 1);
+    }
+    ctx.stroke();
+  }
   // panneaux de distance tous les 50 m et drapeau du record
   for (let m = Math.ceil(x0 / 50) * 50; m <= x1; m += 50) {
     if (m < 50) continue;
@@ -440,6 +482,18 @@ function dessiner(dt) {
     for (const o of jeu.objets) if (o.x > x0 - 40 && o.x < x1 + 5) dessinerObjet(o, ecran, Z, t);
     for (const b of jeu.bananes) if (!b.pris && b.x > x0 && b.x < x1) dessinerBanane(b, ecran, Z, t);
     dessinerMoka(ecran, Z, t);
+    if (jeu.phase === "vol" && !jeu.fini) {
+      jeu.trace.push([jeu.x, jeu.y, jeu.auSol]);
+      if (jeu.trace.length > 400) jeu.trace.shift();
+    }
+    for (let i = jeu.anneaux.length - 1; i >= 0; i--) { // onde de choc à l'atterrissage
+      const a = jeu.anneaux[i];
+      a.r += dt * 9; a.vie -= dt * 2.5;
+      if (a.vie <= 0) { jeu.anneaux.splice(i, 1); continue; }
+      const [ax, ay] = ecran(a.x, a.y);
+      ctx.strokeStyle = `rgba(255,255,255,${a.vie})`; ctx.lineWidth = 4 * a.vie;
+      ctx.beginPath(); ctx.ellipse(ax, ay, a.r * Z, a.r * Z * .3, 0, 0, Math.PI * 2); ctx.stroke();
+    }
     for (let i = jeu.particules.length - 1; i >= 0; i--) {
       const q = jeu.particules[i];
       q.x += q.vx * dt; q.y += q.vy * dt; q.vy -= 12 * dt; q.vie -= dt;
@@ -596,47 +650,89 @@ function dessinerMokaAccueil(ecran, Z) {
   ctx.restore();
 }
 
-// Moka en doudoune : boule qui tourne en vol, glissade sur le ventre au sol, debout avant le lancer.
+// Doudoune rouge rebondie (segments bombés avec ombre et reflet)
+function doudoune(rx, ry) {
+  const g = ctx.createRadialGradient(-rx * .3, -ry * .5, 1, 0, 0, Math.max(rx, ry));
+  g.addColorStop(0, "#ff8787"); g.addColorStop(.55, "#e03131"); g.addColorStop(1, "#a51111");
+  ctx.fillStyle = g; ctx.strokeStyle = "#5c0f0f"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = "rgba(120,10,10,.55)"; ctx.lineWidth = 1.5;
+  for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.ellipse(i * rx * .45, 0, rx * .12, ry * .92, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.beginPath(); ctx.ellipse(-rx * .35, -ry * .45, rx * .35, ry * .18, -.3, 0, Math.PI * 2); ctx.fill();
+}
+
+// Moka en doudoune : boule qui tourne en vol, glissade sur le ventre, salto quand il saute, debout avant le lancer.
 function dessinerMoka(ecran, Z, t) {
   const [px, py] = ecran(jeu.x, jeu.y);
   const u = Math.max(Z / 12, .8);  // Moka reste bien visible même quand la caméra dézoome
+  const hauteur = jeu.y - sol(jeu.x);
+  const petitSaut = jeu.phase === "vol" && !jeu.auSol && jeu.salto !== null && jeu.salto !== undefined;
   let humeur = "content";
-  if (jeu.phase === "vol" && !jeu.auSol) humeur = jeu.vy > 0 ? "etoiles" : "choc";
+  if (jeu.phase === "vol" && !jeu.auSol) humeur = petitSaut ? "etoiles" : jeu.vy > 0 ? "etoiles" : "choc";
+  if (jeu.phase === "vol" && jeu.auSol && Math.hypot(jeu.vx, jeu.vy) > 25) humeur = "rire";
   if (jeu.phase === "puissance" || jeu.phase === "angle") humeur = "malin";
   if (jeu.phase === "frappe") humeur = "choc";
   if (jeu.fini) humeur = "rire";
   const tete = teteMoka(humeur);
+  // ombre au sol : on voit tout de suite que Moka est en l'air
+  if (jeu.phase === "vol" && hauteur > .15) {
+    const [sx, sy] = ecran(jeu.x, sol(jeu.x));
+    const k = 1 / (1 + hauteur * .25);
+    ctx.fillStyle = `rgba(40,60,110,${.35 * k})`;
+    ctx.beginPath(); ctx.ellipse(sx, sy + 2, 22 * u * k + 4, 5 * u * k + 1, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  // écrasement / étirement (squash & stretch)
+  if (jeu.ecrase) jeu.ecrase *= .85;
+  if (jeu.ecrase && Math.abs(jeu.ecrase) < .02) jeu.ecrase = 0;
+  const e = jeu.ecrase || 0;
   ctx.save();
   ctx.translate(px, py);
   ctx.scale(u, u);
   if (jeu.phase !== "vol" || jeu.fini) {
     mokaDebout(tete, jeu.fini);
-  } else if (jeu.auSol) {
-    // glissade sur le ventre, les bras devant façon super-héros
+  } else if (jeu.auSol || petitSaut) {
+    // glissade sur le ventre (et salto quand il saute par-dessus un obstacle)
     ctx.rotate(-Math.atan(pente(jeu.x)));
-    ctx.fillStyle = "#e03131"; ctx.beginPath(); ctx.ellipse(-4, -8, 17, 9, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#b02525"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-10, -16); ctx.lineTo(-10, 0); ctx.moveTo(0, -17); ctx.lineTo(0, 0); ctx.stroke();
-    ctx.strokeStyle = "#e03131"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(8, -10); ctx.lineTo(26, -9); ctx.stroke();
-    ctx.fillStyle = "#f3d3a6"; ctx.beginPath(); ctx.arc(27, -9, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#9c6433"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-20, -8); ctx.lineTo(-30, -6 + Math.sin(t * 20) * 2); ctx.stroke();
-    ctx.strokeStyle = "#7a4a1f"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-20, -12); ctx.quadraticCurveTo(-28, -26, -20, -26); ctx.stroke(); // queue
-    ctx.strokeStyle = "#339af0"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(6, -14); ctx.quadraticCurveTo(-6, -24 - Math.sin(t * 14) * 3, -18, -22 - Math.sin(t * 14) * 5); ctx.stroke(); // écharpe au vent
-    if (tete.complete) ctx.drawImage(tete, 2, -38, 34, 34);
+    if (petitSaut) {
+      jeu.salto += .016 * 13;
+      ctx.translate(0, -10); ctx.rotate(-Math.min(jeu.salto, Math.PI * 2)); ctx.translate(0, 10);
+    }
+    ctx.scale(1 + e * .3, 1 - e * .3);
+    const vib = jeu.auSol ? Math.sin(t * 40) * .6 : 0;
+    ctx.translate(0, vib);
+    // queue et jambes qui battent
+    ctx.strokeStyle = "#7a4a1f"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-20, -12); ctx.bezierCurveTo(-30, -22, -34 + Math.sin(t * 9) * 3, -30, -24, -32); ctx.stroke();
+    ctx.strokeStyle = "#9c6433"; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(-18, -6); ctx.lineTo(-30, -3 + Math.sin(t * 22) * 3); ctx.moveTo(-18, -10); ctx.lineTo(-31, -10 - Math.sin(t * 22) * 3); ctx.stroke();
+    ctx.save(); ctx.translate(-3, -8); doudoune(17, 9.5); ctx.restore();
+    // bras tendus devant façon super-héros
+    ctx.strokeStyle = "#5c0f0f"; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(8, -11); ctx.lineTo(27, -10); ctx.stroke();
+    ctx.strokeStyle = "#e03131"; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(8, -11); ctx.lineTo(27, -10); ctx.stroke();
+    ctx.fillStyle = "#f3d3a6"; ctx.strokeStyle = "#3d2208"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(29, -10, 3.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // écharpe qui claque au vent
+    const w1 = Math.sin(t * 16), w2 = Math.sin(t * 16 + 1.3);
+    ctx.fillStyle = "#339af0"; ctx.strokeStyle = "#1864ab"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(6, -16); ctx.quadraticCurveTo(-8, -24 + w1 * 3, -24, -22 + w2 * 5); ctx.lineTo(-22, -16 + w2 * 5); ctx.quadraticCurveTo(-8, -18 + w1 * 3, 6, -12); ctx.fill(); ctx.stroke();
+    if (tete.complete) ctx.drawImage(tete, 2, -40, 36, 36);
   } else {
-    // en vol : Moka tourne comme une boule de doudoune
+    // grand vol : Moka tourne comme une boule de doudoune
     ctx.rotate(jeu.rot);
-    ctx.fillStyle = "#e03131"; ctx.beginPath(); ctx.arc(0, -10, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#b02525"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, -10, 9, 0, Math.PI * 2); ctx.stroke();
     ctx.strokeStyle = "#9c6433"; ctx.lineWidth = 5; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(-10, -2); ctx.lineTo(-18, 6); ctx.moveTo(10, -2); ctx.lineTo(18, 6); ctx.stroke();
-    ctx.strokeStyle = "#e03131"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-12, -16); ctx.lineTo(-22, -26); ctx.moveTo(12, -16); ctx.lineTo(22, -26); ctx.stroke();
-    if (tete.complete) ctx.drawImage(tete, -18, -44, 36, 36);
+    ctx.beginPath(); ctx.moveTo(-10, -2); ctx.lineTo(-19, 7); ctx.moveTo(10, -2); ctx.lineTo(19, 7); ctx.stroke();
+    ctx.strokeStyle = "#e03131"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-12, -16); ctx.lineTo(-23, -27); ctx.moveTo(12, -16); ctx.lineTo(23, -27); ctx.stroke();
+    ctx.save(); ctx.translate(0, -10); doudoune(14, 14); ctx.restore();
+    if (tete.complete) ctx.drawImage(tete, -19, -46, 38, 38);
   }
   ctx.restore();
-  // traînée de vitesse en vol
-  if (jeu.phase === "vol" && !jeu.auSol && Math.hypot(jeu.vx, jeu.vy) > 25) {
-    ctx.strokeStyle = "rgba(255,255,255,.6)"; ctx.lineWidth = 2;
-    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(px - 20 - i * 6, py - 8 - i * 6); ctx.lineTo(px - 60 - i * 10, py - 8 - i * 6 + jeu.vy * .5); ctx.stroke(); }
+  // traînée de vitesse
+  const v = Math.hypot(jeu.vx, jeu.vy);
+  if (jeu.phase === "vol" && v > 22 && !jeu.fini) {
+    ctx.strokeStyle = `rgba(255,255,255,${Math.min(.8, (v - 22) / 25)})`; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+    for (let i = 0; i < 5; i++) {
+      const dy = -6 - i * 7 + Math.sin(t * 30 + i) * 2;
+      ctx.beginPath(); ctx.moveTo(px - 24 - i * 3, py + dy); ctx.lineTo(px - 70 - i * 14 - v, py + dy + jeu.vy * .6); ctx.stroke();
+    }
   }
 }
 

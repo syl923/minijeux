@@ -49,6 +49,8 @@ function pas(appui) {
     if (b.x > px + 200) break;
     if (!b.passe && b.x + LARGEUR_BAMBOU < px - RAYON) {
       b.passe = true; s.points++; Sons.jouer("mange");
+      if (jeu.textes) jeu.textes.push({ t: "+10", x: X_JOUEUR + 10, y: s.y - 30, vie: 1, c: "#fff" });
+      if (s.points % 10 === 0 && jeu.textes) { jeu.textes.push({ t: `${s.points} !`, x: W / 2, y: 260, vie: 1.4, c: "#ffe066", gros: true }); jeu.flash = .35; }
       if (s.points % 10 === 0) mokaDit([`${s.points} bambous ! Je suis un as du pilotage !`, "Yaaa ! Plein gaz !", "Même pas peur des bambous !"][Math.floor(Math.random() * 3)], "etoiles", 1600);
     }
     if (toucheRect(px, s.y, b.x, -1000, b.x + LARGEUR_BAMBOU, b.haut) || toucheRect(px, s.y, b.x, b.bas, b.x + LARGEUR_BAMBOU, SOL)) mort = true;
@@ -59,6 +61,7 @@ function pas(appui) {
         s.bananes++;
         Sons.jouer("bonus_pris");
         etincelles(X_JOUEUR, s.y, "#ffe066", 14);
+        if (jeu.textes) { jeu.textes.push({ t: "+5 🍌", x: X_JOUEUR + 20, y: s.y - 40, vie: 1, c: "#ffe066" }); jeu.anneaux.push({ x: X_JOUEUR, y: s.y, r: 10, vie: 1 }); }
       }
     }
   }
@@ -81,7 +84,7 @@ async function lancer() {
   jeu = {
     partie: r.partie, demarre: false, fini: false, tick: 0, appuis: [], appuiEnAttente: false,
     sim: { alea, y: 360, vy: 0, dist: 0, points: 0, bananes: 0, bambous: [] },
-    particules: [], cumul: 0, dernier: performance.now(), secousse: 0, flash: 0, flamme: 0,
+    particules: [], textes: [], anneaux: [], fumee: [], cumul: 0, dernier: performance.now(), secousse: 0, flash: 0, flamme: 0,
   };
   jeu.sim.bambous.push(nouveauBambou(alea, 620, 0));
   majCompteurs();
@@ -128,7 +131,7 @@ function boucle(t) {
     }
   }
   dessiner(dt / 1000);
-  if (!jeu.fini || jeu.particules.length || jeu.secousse > 0) requestAnimationFrame(boucle);
+  if (!jeu.fini || jeu.particules.length || jeu.secousse > 0 || (jeu.chute || 0) < 12) requestAnimationFrame(boucle);
 }
 
 function etincelles(x, y, couleur, n) {
@@ -144,7 +147,8 @@ async function crash() {
   jeu.flash = 1;
   Sons.musique.arreter();
   Sons.jouer("crash");
-  mokaDit("Aïeuh ! Bonjour le bambou…", "ko", 2200);
+  mokaDit(["Aïeuh ! Bonjour le bambou…", "Hou hou… j'ai vu des étoiles !"][Math.floor(Math.random() * 2)], "ko", 2200);
+  jeu.chute = 0;
   etincelles(X_JOUEUR, jeu.sim.y, "#ffffff", 30);
   let r;
   try {
@@ -252,35 +256,84 @@ function dessinerBanane(x, y, t) {
   ctx.restore();
 }
 
+// Moka pilote : tête du dessin officiel (singes.js), corps animé en canvas.
+const tetesPilote = {};
+function tetePilote(humeur) {
+  if (!tetesPilote[humeur]) {
+    const h = HUMEURS[humeur] || {};
+    tetesPilote[humeur] = imageSVG(singe({ lunettes: "aviateur", bouche: "grand", ...h, habit: "aucun" }), "tete-pilote-" + humeur);
+  }
+  return tetesPilote[humeur];
+}
+
 function dessinerMoka(y, vy, t) {
+  const pousse = jeu && jeu.flamme > .3;
+  const mort = jeu && jeu.fini;
   ctx.save();
   ctx.translate(X_JOUEUR, y);
-  ctx.rotate(Math.max(-.5, Math.min(1.1, vy * .07)));
-  // jetpack et flamme
-  ctx.fillStyle = "#adb5bd"; ctx.beginPath(); ctx.roundRect(-26, -10, 12, 26, 4); ctx.fill();
-  const f = jeu && jeu.flamme > 0 ? jeu.flamme : .25 + Math.random() * .15;
-  ctx.fillStyle = "#ff922b";
-  ctx.beginPath(); ctx.moveTo(-26, 16); ctx.lineTo(-20, 16 + 28 * f + Math.random() * 6); ctx.lineTo(-14, 16); ctx.fill();
-  ctx.fillStyle = "#ffe066";
-  ctx.beginPath(); ctx.moveTo(-23, 16); ctx.lineTo(-20, 16 + 16 * f); ctx.lineTo(-17, 16); ctx.fill();
-  // corps
-  ctx.fillStyle = "#8b5a2b"; ctx.beginPath(); ctx.ellipse(0, 10, 14, 13, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#f3d3a6"; ctx.beginPath(); ctx.ellipse(2, 12, 8, 8, 0, 0, Math.PI * 2); ctx.fill();
-  // oreilles, tête
-  ctx.fillStyle = "#8b5a2b";
-  ctx.beginPath(); ctx.arc(-14, -12, 7, 0, Math.PI * 2); ctx.arc(14, -12, 7, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#9c6433"; ctx.beginPath(); ctx.arc(0, -10, 16, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#f3d3a6"; ctx.beginPath(); ctx.ellipse(3, -6, 11, 9, 0, 0, Math.PI * 2); ctx.fill();
-  // lunettes d'aviateur
-  ctx.fillStyle = "#1864ab";
-  ctx.beginPath(); ctx.arc(-1, -13, 6, 0, Math.PI * 2); ctx.arc(10, -13, 6, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#a5d8ff";
-  ctx.beginPath(); ctx.arc(-1, -13, 4, 0, Math.PI * 2); ctx.arc(10, -13, 4, 0, Math.PI * 2); ctx.fill();
-  // casquette
-  ctx.fillStyle = "#e03131"; ctx.beginPath(); ctx.arc(0, -18, 15, Math.PI, 0); ctx.fill(); ctx.fillRect(4, -20, 18, 5);
-  // sourire
-  ctx.strokeStyle = "#6b3d17"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(5, -3, 5, .2, Math.PI - .2); ctx.stroke();
+  const angle = mort ? (jeu.chute = (jeu.chute || 0) + .15) : Math.max(-.45, Math.min(1, vy * .065));
+  ctx.rotate(angle);
+  const f = jeu && jeu.flamme > 0 ? jeu.flamme : .22 + Math.random() * .12;
+  // halo de chaleur
+  if (!mort) {
+    const g = ctx.createRadialGradient(-20, 24, 2, -20, 24, 30 + 26 * f);
+    g.addColorStop(0, `rgba(255,200,80,${.45 * f + .1})`); g.addColorStop(1, "rgba(255,120,0,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(-20, 30, 34 + 26 * f, 0, Math.PI * 2); ctx.fill();
+    // flammes en trois couches qui tremblent
+    for (const [larg, long, coul] of [[9, 44, "#e8590c"], [7, 32, "#ff922b"], [4, 20, "#ffe066"], [2, 10, "#fff"]]) {
+      for (const bx of [-25, -15]) {
+        ctx.fillStyle = coul;
+        ctx.beginPath(); ctx.moveTo(bx - larg / 2, 18);
+        ctx.quadraticCurveTo(bx - larg * .7, 18 + long * f * .6, bx + (Math.random() - .5) * 3, 18 + long * f + Math.random() * 8);
+        ctx.quadraticCurveTo(bx + larg * .7, 18 + long * f * .6, bx + larg / 2, 18); ctx.fill();
+      }
+    }
+  }
+  // queue qui balance et écharpe au vent
+  ctx.strokeStyle = "#7a4a1f"; ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-8, 18); ctx.bezierCurveTo(-22, 30, -34 + Math.sin(t * 6) * 5, 20, -30, 8 + Math.sin(t * 6) * 4); ctx.stroke();
+  ctx.fillStyle = "#e03131";
+  const v = Math.sin(t * 14), v2 = Math.sin(t * 14 + 1.4);
+  ctx.beginPath(); ctx.moveTo(-6, -2); ctx.quadraticCurveTo(-22, -6 + v * 4, -40, -2 + v2 * 6); ctx.lineTo(-38, 6 + v2 * 6); ctx.quadraticCurveTo(-22, 4 + v * 4, -6, 5); ctx.fill();
+  // jetpack : deux réservoirs rivetés
+  for (const bx of [-30, -20]) {
+    const gr = ctx.createLinearGradient(bx, 0, bx + 10, 0);
+    gr.addColorStop(0, "#868e96"); gr.addColorStop(.5, "#e9ecef"); gr.addColorStop(1, "#868e96");
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.roundRect(bx, -10, 10, 28, 5); ctx.fill();
+    ctx.strokeStyle = "#495057"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "#e03131"; ctx.fillRect(bx, -4, 10, 4);
+    ctx.fillStyle = "#343a40"; ctx.fillRect(bx + 2, 16, 6, 4);
+  }
+  // jambes : repliées quand ça pousse, qui pédalent quand ça tombe
+  const pedale = pousse ? 0 : Math.sin(t * 16) * .6;
+  for (const [jx, sens] of [[-4, 1], [6, -1]]) {
+    ctx.save(); ctx.translate(jx, 18); ctx.rotate(pousse ? .9 : .2 + pedale * sens);
+    ctx.fillStyle = "#8b5a2b"; ctx.beginPath(); ctx.roundRect(-3.5, 0, 7, 16, 3); ctx.fill();
+    ctx.fillStyle = "#f3d3a6"; ctx.beginPath(); ctx.ellipse(2, 16, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // corps en combinaison orange
+  ctx.fillStyle = "#ff922b"; ctx.strokeStyle = "#3d2208"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 8, 14, 14, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#fff"; ctx.fillRect(2, 2, 8, 5);
+  // bras : levés quand ça pousse, qui moulinent quand ça tombe
+  const bras = pousse ? -2.4 : vy > 4 ? -1.2 + Math.sin(t * 20) * .8 : -.6;
+  ctx.save(); ctx.translate(8, 2); ctx.rotate(bras);
+  ctx.fillStyle = "#8b5a2b"; ctx.beginPath(); ctx.roundRect(-3, 0, 6, 18, 3); ctx.fill();
+  ctx.fillStyle = "#f3d3a6"; ctx.beginPath(); ctx.arc(0, 18, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // tête (dessin officiel)
+  const humeur = mort ? "ko" : pousse ? "etoiles" : vy > 7 ? "choc" : "content";
+  const tete = tetePilote(humeur);
+  if (tete.complete) ctx.drawImage(tete, -26, -52, 56, 56);
+  // étoiles qui tournent après le crash
+  if (mort) {
+    ctx.rotate(-angle);
+    for (let i = 0; i < 3; i++) {
+      const a = t * 7 + i * 2.1;
+      ctx.fillStyle = "#ffd43b"; ctx.font = "16px sans-serif"; ctx.fillText("★", Math.cos(a) * 26 - 6, -44 + Math.sin(a) * 7);
+    }
+  }
   ctx.restore();
 }
 
@@ -334,8 +387,47 @@ function dessiner(dt) {
   ctx.fillStyle = "#37b24d";
   for (let x = -((s.dist) % 24); x < W; x += 24) { ctx.beginPath(); ctx.moveTo(x, SOL + 14); ctx.lineTo(x + 12, SOL); ctx.lineTo(x + 24, SOL + 14); ctx.fill(); }
 
+  // fumée du jetpack qui reste derrière Moka
+  if (jeu && !jeu.fini) {
+    if (Math.random() < .5 + (jeu.flamme || 0)) jeu.fumee.push({ x: X_JOUEUR - 22, y: yMoka + 30, r: 5 + Math.random() * 4, vie: 1 });
+    const vitesseDecor = jeu.demarre ? vitesse(s.points) : 1.5;
+    for (let i = jeu.fumee.length - 1; i >= 0; i--) {
+      const q = jeu.fumee[i];
+      q.x -= vitesseDecor * 60 * dt; q.y -= 10 * dt; q.r += 16 * dt; q.vie -= dt * 1.1;
+      if (q.vie <= 0) { jeu.fumee.splice(i, 1); continue; }
+      ctx.fillStyle = `rgba(230,230,235,${q.vie * .45})`;
+      ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill();
+    }
+    // lignes de vitesse quand ça va vite
+    if (jeu.demarre && s.points > 8) {
+      ctx.strokeStyle = `rgba(255,255,255,${Math.min(.5, (s.points - 8) / 30)})`; ctx.lineWidth = 2;
+      for (let i = 0; i < 6; i++) { const ly = (i * 131 + t * 900) % H; const lx = W - ((t * 1400 + i * 240) % (W + 200)); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 90, ly); ctx.stroke(); }
+    }
+  }
   dessinerMoka(yMoka, s.vy, t);
   if (jeu) jeu.flamme = Math.max(0, jeu.flamme - dt * 4);
+  // anneaux quand Moka attrape une banane, textes qui s'envolent
+  if (jeu) {
+    for (let i = jeu.anneaux.length - 1; i >= 0; i--) {
+      const a = jeu.anneaux[i];
+      a.r += 140 * dt; a.vie -= dt * 2.2;
+      if (a.vie <= 0) { jeu.anneaux.splice(i, 1); continue; }
+      ctx.strokeStyle = `rgba(255,224,102,${a.vie})`; ctx.lineWidth = 5 * a.vie;
+      ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.textAlign = "center";
+    for (let i = jeu.textes.length - 1; i >= 0; i--) {
+      const x = jeu.textes[i];
+      x.vie -= dt * (x.gros ? .8 : 1.4); x.y -= (x.gros ? 10 : 50) * dt;
+      if (x.vie <= 0) { jeu.textes.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.min(1, x.vie * 2);
+      const taille = x.gros ? 70 * (1 + Math.max(0, x.vie - 1) * 1.5) : 26;
+      ctx.font = `900 ${taille}px Arial Black, sans-serif`; ctx.lineWidth = 6; ctx.strokeStyle = "#1b1340";
+      ctx.strokeText(x.t, x.x, x.y); ctx.fillStyle = x.c; ctx.fillText(x.t, x.x, x.y);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "start";
+  }
 
   // particules
   if (jeu) {

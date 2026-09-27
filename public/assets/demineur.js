@@ -191,7 +191,7 @@ async function terminer(r, x, y) {
     t.className = "tuile explosee";
     t.innerHTML = svgBombe(deBombe(), "boum") + SVG_KABOOM;
     Sons.jouer("kaboom");
-    mokaDit("KABOOOM ! Mes sourcils…", "ko", 3000);
+    mokaDit("KABOOOM ! Hou hou ha ha, t'as vu ta tête ?", "rire", 3000);
     document.querySelector(".zone-demineur").classList.add("secousse");
     setTimeout(() => document.querySelector(".zone-demineur").classList.remove("secousse"), 700);
     const autres = r.bombes.filter(([a, b]) => a !== bx || b !== by);
