@@ -25,23 +25,40 @@ class Client:
             return e.code, json.loads(e.read())
 
 
+def _espace_libre(depart, obstacles):
+    """Nombre de cases atteignables depuis `depart` (remplissage)."""
+    vus, pile = {depart}, [depart]
+    while pile:
+        x, y = pile.pop()
+        for dx, dy in snake.DIRECTIONS:
+            v = (x + dx, y + dy)
+            if 0 <= v[0] < snake.TAILLE and 0 <= v[1] < snake.TAILLE and v not in obstacles and v not in vus:
+                vus.add(v)
+                pile.append(v)
+    return len(vus)
+
+
 def bot_snake(graine):
-    """Joue au snake en allant vers les fruits, puis fonce dans un mur. Renvoie (entrées, ticks)."""
+    """Joue au snake en allant vers les fruits (sans s'enfermer), puis fonce dans un mur. Renvoie (entrées, ticks)."""
     alea = snake.mulberry32(graine)
     corps = list(snake.DEPART)
     direction, fruit = 1, snake.placer_fruit(alea, corps)
     entrees, fruits, tick = [], 0, 0
-    while fruits < 8:
+    while fruits < 8 and tick < 3000:
         tx, ty = fruit
         hx, hy = corps[0]
         voulue = 1 if tx > hx else 3 if tx < hx else 2 if ty > hy else 0
-        choix = [voulue] + [d for d in range(4) if d != voulue]
-        for d in choix:
+        possibles = []
+        for d in [voulue] + [d for d in range(4) if d != voulue]:
             if d == (direction + 2) % 4:
                 continue
-            nx, ny = hx + snake.DIRECTIONS[d][0], hy + snake.DIRECTIONS[d][1]
-            if 0 <= nx < snake.TAILLE and 0 <= ny < snake.TAILLE and (nx, ny) not in corps[:-1]:
-                break
+            n = (hx + snake.DIRECTIONS[d][0], hy + snake.DIRECTIONS[d][1])
+            if 0 <= n[0] < snake.TAILLE and 0 <= n[1] < snake.TAILLE and n not in corps[:-1]:
+                possibles.append((d, _espace_libre(n, set(corps[:-1]))))
+        if not possibles:
+            break  # plus aucune case sûre : on passe au suicide ci-dessous
+        sures = [d for d, place in possibles if place >= len(corps)]
+        d = sures[0] if sures else max(possibles, key=lambda p: p[1])[0]
         if d != direction:
             entrees.append([tick, d])
             direction = d
