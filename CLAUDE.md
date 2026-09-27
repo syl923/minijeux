@@ -26,6 +26,10 @@ Le propriétaire parle français : réponds en français, simplement.
 - Production : variables `HOST`, `PORT`, `MINIJEUX_BASE`, `MINIJEUX_HTTPS=1`, `MINIJEUX_PROXY=1` ; hors HTTPS, le serveur crée le compte de test toto/toto (1000 bananes), sauf si `MINIJEUX_COMPTE_TEST=0` ; plan complet dans DEPLOIEMENT.md.
   Limite anti-force-brute sur connexion/inscription (désactivable en local avec `MINIJEUX_SANS_LIMITE=1`).
 - Moka Jet et Snake : la simulation JS et Python doit rester identique au bit près (le serveur rejoue les parties).
+- Stickman Arena : moteur `public/assets/arene-sim.js` ⇔ `jeux/arene.py`, identiques (test `test_arene_moteurs_identiques`, via node).
+  En duel, le serveur fait tourner le combat en mémoire (`arene.MATCHS`) ; les pages envoient leurs commandes toutes les 50 ms.
+- Intros de Moka : `introMoka()` (commun.js) est jouée par `api()` avant chaque requête `/debut` (avant le chrono du serveur).
+- Publicité : `MINIJEUX_ADSENSE_CLIENT` / `MINIJEUX_ADSENSE_EMPLACEMENT` ; le serveur injecte le code dans les pages HTML et sert `/ads.txt`.
 - Concurrence : un verrou global (`noyau.verrou`) ; un calcul long se fait dans `with sans_verrou():`.
 - HTML/CSS/JS sans framework ni build.
 

@@ -96,6 +96,40 @@ MINIJEUX_BASE=/home/<compte>/donnees/minijeux.db python3 /home/<compte>/minijeux
 ```
 Le script garde les 14 dernières copies.
 
+## 7. Publicité Google AdSense (petit test)
+
+Le site est prêt : rien ne s'affiche tant que tu n'as pas renseigné ton identifiant d'éditeur.
+
+1. **Créer le compte** sur https://adsense.google.com avec ton compte Google (particulier). Il faut le site **déjà en ligne sur ton
+   propre domaine** (pas l'adresse provisoire d'alwaysdata), avec les pages légales complétées.
+2. AdSense te donne un identifiant du type **`pub-1234567890123456`**. Dans alwaysdata, onglet *Sites* → ton site → *Variables
+   d'environnement*, ajoute :
+   ```
+   MINIJEUX_ADSENSE_CLIENT=pub-1234567890123456
+   ```
+   puis *Redémarrer*. Le serveur ajoute alors tout seul le code Google dans chaque page et publie `/ads.txt`.
+3. Dans AdSense : *Sites* → *Ajouter un site* → ton domaine → choisis la vérification **« Extrait de code AdSense »** (il est déjà
+   dans les pages) → *Vérifier*. Coche aussi *ads.txt* (déjà servi par le site). La validation par Google prend de quelques jours
+   à quelques semaines.
+4. **Consentement aux cookies (obligatoire en Europe)** : *Confidentialité et messages* → *RGPD* → *Créer un message* → choisis
+   ton site, la langue française, et coche « Gérer les options » + « Ne pas autoriser ». *Publier*. C'est le bandeau certifié de
+   Google : il s'affiche avant toute publicité, et le lien « Gérer mes cookies » en bas des pages permet de changer d'avis.
+5. **Le petit bloc de pub** : *Annonces* → *Par bloc d'annonces* → *Annonces display* → nomme-le « bas de page », format
+   horizontal → *Créer*. Recopie le numéro `data-ad-slot` (par ex. `9876543210`) dans une deuxième variable :
+   ```
+   MINIJEUX_ADSENSE_EMPLACEMENT=9876543210
+   ```
+   et redémarre. Le bloc apparaît au-dessus du pied de page, jamais par-dessus un jeu. Sans cette variable, ce sont les
+   « annonces automatiques » réglées dans AdSense qui s'affichent (à désactiver si tu veux garder un seul bloc).
+6. Laisse **désactivées** les annonces automatiques de type « ancrage » et « vignette » (plein écran) : elles gênent les jeux.
+
+⚠️ À savoir :
+- **Revenus** : les gains AdSense se déclarent aux impôts (revenus non commerciaux, micro-BNC). Google envoie un paiement à partir
+  de 70 €.
+- **Anonymat** : la loi (LCEN) ne permet l'anonymat qu'à un éditeur *non professionnel*. Pour une petite pub de test, ça passe ;
+  si ça devient une vraie source de revenus, il faudra publier ton nom (ou créer une micro-entreprise) dans les mentions légales.
+- **Règles AdSense** : ne clique jamais sur tes propres annonces et ne demande pas aux joueurs de cliquer (compte fermé sinon).
+
 ## Combien de joueurs ?
 
 Le serveur traite les requêtes une à une, en quelques millisecondes chacune : quelques dizaines de joueurs simultanés
@@ -107,6 +141,5 @@ passer à une installation plus costaude (plusieurs processus, base PostgreSQL) 
 - **Récompenses réelles (cadeaux, lots)** : tant que tout est gratuit et que les bananes n'ont aucune valeur, ce n'est pas un jeu d'argent.
   Si un jour des lots réels sont offerts, il faudra un règlement de jeu-concours (participation gratuite, règles publiées)
   et ne jamais permettre d'acheter des bananes ou des tours de roue. Mieux vaut en parler avant de le faire.
-- **Publicité** : si tu ajoutes des publicités, il faudra un bandeau de consentement aux cookies conforme et mettre à jour la page de confidentialité.
 - **Statistiques de visite** : un outil sans cookie (comme GoatCounter, déjà utilisé sur quiditquoi2027) ne demande pas de bandeau ;
   il faudra juste le mentionner dans la page de confidentialité.

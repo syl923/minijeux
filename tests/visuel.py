@@ -480,6 +480,32 @@ def jouer_jet(page, duree_max=40):
     roue_et_resultat(page, "jet")
 
 
+def jouer_arene(page, duree=20):
+    """Stickman Arena en solo : le robot se déplace, saute et tire au hasard ; la manche dure 60 s."""
+    page.goto(URL + "/arene.html")
+    page.wait_for_timeout(1500)
+    capture(page, "arene-accueil")
+    page.click("#btn-solo", force=True)
+    page.wait_for_function("mode === 'solo' && sim && sim.t > 200", timeout=20000)
+    debut, captures = time.time(), 0
+    page.mouse.move(700, 500)
+    page.mouse.down()
+    while not page.evaluate("sim.fini"):
+        touche = random.choice(["KeyA", "KeyD"])
+        page.keyboard.down(touche)
+        page.wait_for_timeout(250)
+        page.keyboard.up(touche)
+        if random.random() < .3:
+            page.keyboard.press("KeyW")
+        page.mouse.move(350 + random.random() * 700, 250 + random.random() * 400)
+        if captures < 3 and time.time() - debut > 5 + captures * 15:
+            captures += 1
+            capture(page, f"arene-combat-{captures}")
+    page.mouse.up()
+    page.wait_for_timeout(1500)
+    roue_et_resultat(page, "arene")
+
+
 def jouer_pingouin(page, duree_max=45):
     """Moka Glisse : jauge de puissance au maximum, angle proche de 40°, puis sauts devant les obstacles."""
     page.goto(URL + "/pingouin.html")
@@ -640,7 +666,7 @@ def main():
 
         # un contexte (et donc une vidéo) par jeu
         seuls = sys.argv[2:]  # on peut ne lancer que certains jeux
-        for nom, robot in [("jet", jouer_jet), ("pingouin", jouer_pingouin), ("runner", jouer_runner), ("candy", jouer_candy), ("tetris", jouer_tetris), ("flipper", jouer_flipper),
+        for nom, robot in [("arene", jouer_arene), ("jet", jouer_jet), ("pingouin", jouer_pingouin), ("runner", jouer_runner), ("candy", jouer_candy), ("tetris", jouer_tetris), ("flipper", jouer_flipper),
                            ("memory", jouer_memory), ("bataille", jouer_bataille), ("snake", jouer_snake),
                            ("demineur", jouer_demineur), ("echecs", jouer_echecs)]:
             if seuls and nom not in seuls:

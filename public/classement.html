@@ -29,7 +29,7 @@
 <script src="/assets/commun.js"></script>
 <script>
   document.getElementById("onglets-jeu").innerHTML = JEUX.map((j) => `<button data-jeu="${j.id}">${j.emoji} ${j.nom}</button>`).join("")
-    + `<button data-jeu="duel_echecs">⚔️ Duels d'échecs</button><button data-jeu="duel_bataille">⚔️ Duels navals</button>`
+    + `<button data-jeu="duel_echecs">⚔️ Duels d'échecs</button><button data-jeu="duel_bataille">⚔️ Duels navals</button><button data-jeu="duel_arene">⚔️ Duels d'arène</button>`
     + `<button data-jeu="fortune">🍌 Bananes</button>`;
   const EXPLICATIONS = {
     memory: "Meilleur score de chaque joueur. Le score monte avec le temps restant au chrono et baisse avec les erreurs (le mode difficile rapporte plus).",
@@ -45,6 +45,8 @@
     tetris: "Meilleur score à Blocomania : les lignes rapportent plus à chaque niveau.",
     duel_echecs: "Nombre de duels d'échecs gagnés contre d'autres joueurs.",
     duel_bataille: "Nombre de duels de bataille navale gagnés contre d'autres joueurs.",
+    duel_arene: "Nombre de duels Stickman Arena gagnés contre d'autres joueurs.",
+    arene: "Meilleur score à Stickman Arena (solo) : 100 points par K.O., +300 pour la 1re place, +100 pour la 2e.",
     fortune: "Bananes gagnées en jouant, tous jeux confondus (multiplicateurs de la roue compris).",
   };
   const etat = { jeu: new URLSearchParams(location.search).get("jeu") || "memory", periode: "semaine" };

@@ -1,4 +1,4 @@
-"""Duels en ligne entre joueurs : échecs et bataille navale.
+"""Duels en ligne entre joueurs : échecs, bataille navale et Stickman Arena (combat en temps réel, voir arene.py).
 
 Chaque joueur mise MISE bananes ; le gagnant empoche GAIN_VICTOIRE, une nulle rend la mise.
 Le serveur arbitre tout (coups légaux, flottes cachées) ; les pages interrogent l'état
@@ -13,7 +13,8 @@ from noyau import MISE, ErreurApi, db, joueur_public, lire_joueur, maintenant
 
 GAIN_VICTOIRE = 25
 DELAIS = {"echecs": 180, "bataille_placement": 150, "bataille": 60}   # secondes par coup
-JEUX_DUEL = ("echecs", "bataille")
+JEUX_DUEL = ("echecs", "bataille", "arene")
+DUREE_ARENE = 63 + 45   # manche de 60 s (+ compte à rebours) et marge : au-delà, le match est annulé
 EN_LIGNE = 120  # un joueur est « en ligne » s'il a fait une requête dans les 2 dernières minutes
 
 db.executescript(
@@ -101,6 +102,9 @@ def verifier_delai(d):
     etat = json.loads(d["etat"])
     if maintenant() <= etat.get("limite", 1e18):
         return d
+    if d["jeu"] == "arene":  # plus personne n'envoie de commandes : match annulé, mises rendues
+        terminer(d, etat, None, "Match interrompu")
+        return lire_duel(d["id"])
     if d["jeu"] == "bataille" and etat["phase"] == "placement":
         manquants = [int(j) for j, f in etat["flottes"].items() if f is None]
         if len(manquants) == 2:  # personne n'a placé sa flotte : duel annulé, mises rendues
@@ -187,6 +191,8 @@ def rejoindre(joueur, donnees):
         e = {"b": echecs.DEPART, "t": "w", "c": "KQkq", "ep": -1, "hm": 0}
         etat = {"e": e, "positions": {echecs.cle(e): 1}, "blancs": ids[0], "noirs": ids[1], "trait": ids[0],
                 "dernier": None, "limite": maintenant() + DELAIS["echecs"], "demi_coups": 0}
+    elif d["jeu"] == "arene":
+        etat = {"graine": secrets.randbits(32), "limite": maintenant() + DUREE_ARENE}
     else:
         etat = {"phase": "placement", "flottes": {str(i): None for i in ids}, "tirs": {str(i): [] for i in ids},
                 "trait": secrets.choice(ids), "limite": maintenant() + DELAIS["bataille_placement"], "dernier": None}
@@ -230,6 +236,8 @@ def vue_complete(d, jid):
             "joueur": joueur_public(lire_joueur(jid)),
         }
     if d["statut"] not in ("en_cours", "termine"):
+        return base
+    if d["jeu"] == "arene":
         return base
     if d["jeu"] == "echecs":
         e = etat["e"]
@@ -278,6 +286,8 @@ def jouer(joueur, donnees):
     if d["statut"] != "en_cours":
         raise ErreurApi("Ce duel est terminé.")
     etat = json.loads(d["etat"])
+    if d["jeu"] == "arene":
+        raise ErreurApi("Les commandes de l'arène passent par /api/arene/duel.")
     if d["jeu"] == "echecs":
         jouer_echecs(d, etat, jid, donnees)
     else:

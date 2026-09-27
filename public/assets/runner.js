@@ -33,6 +33,7 @@ const AMBIANCES = [
   { haut: [10, 14, 42], bas: [38, 52, 108], sol: [56, 70, 52], chemin: [78, 60, 48], nuit: 1, foret: 0.4 },
 ];
 function ambiance(distance) {
+  if (!Number.isFinite(distance) || distance < 0) distance = 0;
   const p = (distance / 700) % AMBIANCES.length;
   const i = Math.floor(p), f = Math.min(1, Math.max(0, (p - i - 0.7) / 0.3)); // transition sur la fin de chaque période
   const a = AMBIANCES[i], b = AMBIANCES[(i + 1) % AMBIANCES.length];
@@ -244,11 +245,13 @@ function avancer(dt) {
     jeu.y += jeu.vy * dt;
     if (jeu.y <= jeu.sol + 0.02 || (jeu.vy <= 0 && jeu.y - jeu.sol < 0.6 && avantY >= jeu.sol - 0.6)) {
       if (jeu.vy < -14) { jeu.secousse = 6; Sons.jouer("pose"); } // atterrissage lourd
+      if (jeu.vy < -4) jeu.ecrase = Math.min(1, -jeu.vy / 18);
       jeu.y = jeu.sol;
       jeu.vy = 0;
     }
   }
   if (jeu.glisse > 0) jeu.glisse -= dt;
+  if (jeu.ecrase) jeu.ecrase = jeu.ecrase < .02 ? 0 : jeu.ecrase * Math.pow(.02, dt);
   for (const b of Object.keys(jeu.bonus)) {
     jeu.bonus[b] -= dt;
     if (jeu.bonus[b] <= 0) {
@@ -666,12 +669,22 @@ function dessinerDecor(d, amb, t) {
   ctx.beginPath(); ctx.ellipse(0, 0, u * 1.2, u * .2, 0, 0, Math.PI * 2); ctx.fill();
   switch (d.type) {
     case "acacia": {
-      ctx.strokeStyle = c("#5c3d22"); ctx.lineCap = "round";
-      ctx.lineWidth = u * .28; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(u * .2, -u * 2, -u * .1, -u * 3.4); ctx.stroke();
-      ctx.lineWidth = u * .14;
-      ctx.beginPath(); ctx.moveTo(-u * .05, -u * 2.8); ctx.lineTo(-u * 1.4, -u * 4); ctx.moveTo(0, -u * 3); ctx.lineTo(u * 1.3, -u * 4.2); ctx.stroke();
-      ctx.fillStyle = c("#5c7a29"); ctx.beginPath(); ctx.ellipse(0, -u * 4.2, u * 2.8, u * .55, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = c("#7a9a33"); ctx.beginPath(); ctx.ellipse(-u * .6, -u * 4.45, u * 1.9, u * .4, 0, 0, Math.PI * 2); ctx.ellipse(u * 1.2, -u * 4.35, u * 1.2, u * .35, 0, 0, Math.PI * 2); ctx.fill();
+      // tronc tordu et branches en éventail
+      ctx.strokeStyle = c("#4a2e18"); ctx.lineCap = "round";
+      ctx.lineWidth = u * .34; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(u * .3, -u * 1.8, -u * .1, -u * 3.3); ctx.stroke();
+      ctx.strokeStyle = c("#6b4226"); ctx.lineWidth = u * .16; ctx.beginPath(); ctx.moveTo(u * .06, -u * .2); ctx.quadraticCurveTo(u * .34, -u * 1.8, 0, -u * 3.2); ctx.stroke();
+      ctx.strokeStyle = c("#4a2e18"); ctx.lineWidth = u * .13;
+      for (const [bx, by] of [[-1.6, -4.1], [-.7, -4.4], [.5, -4.5], [1.5, -4.2]]) { ctx.beginPath(); ctx.moveTo(0, -u * 3.1); ctx.quadraticCurveTo(bx * u * .4, -u * 3.8, bx * u, by * u); ctx.stroke(); }
+      // canopée plate en trois couches (ombre dessous, lumière dessus)
+      const vent = Math.sin(t * 1.3 + d.graine) * u * .08;
+      ctx.fillStyle = c("#3f5a1c"); ctx.beginPath(); ctx.ellipse(vent, -u * 4.05, u * 3, u * .6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = c("#5c7a29"); ctx.beginPath(); ctx.ellipse(vent - u * .2, -u * 4.3, u * 2.7, u * .5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = c("#86a83a");
+      ctx.beginPath(); ctx.ellipse(vent - u * .8, -u * 4.55, u * 1.5, u * .32, 0, 0, Math.PI * 2); ctx.ellipse(vent + u * 1.1, -u * 4.45, u * 1.1, u * .28, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = c("#a9c64f"); ctx.beginPath(); ctx.ellipse(vent - u * 1.1, -u * 4.68, u * .6, u * .13, 0, 0, Math.PI * 2); ctx.fill();
+      if (d.graine > 70) { // un oiseau posé sur une branche
+        ctx.fillStyle = c("#212529"); ctx.beginPath(); ctx.ellipse(u * 1.3, -u * 4.75, u * .18, u * .1, 0, 0, Math.PI * 2); ctx.fill();
+      }
       break;
     }
     case "baobab": {
@@ -698,6 +711,9 @@ function dessinerDecor(d, amb, t) {
     }
     case "jungle": {
       ctx.fillStyle = c("#4a3020"); ctx.fillRect(-u * .28, -u * 5.5, u * .56, u * 5.5);
+      ctx.fillStyle = c("#5c3d22"); ctx.fillRect(-u * .1, -u * 5.5, u * .14, u * 5.5);
+      ctx.strokeStyle = c("#2b1a0e"); ctx.lineWidth = Math.max(1, u * .04);
+      for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(-u * .28, -u * i); ctx.lineTo(u * .28, -u * (i - .15)); ctx.stroke(); }
       ctx.fillStyle = c("#3a2515"); ctx.beginPath(); ctx.moveTo(-u * .28, 0); ctx.lineTo(-u * .9, 0); ctx.lineTo(-u * .28, -u * .9); ctx.fill();
       for (const [bx, by, r, col] of [[-1.2, -5.6, 1.5, "#1f6b33"], [1.2, -5.9, 1.4, "#237a3a"], [0, -6.8, 1.6, "#2b8a3e"], [-.3, -5.3, 1.1, "#2f9e44"]]) {
         ctx.fillStyle = c(col); ctx.beginPath(); ctx.arc(bx * u, by * u, r * u, 0, Math.PI * 2); ctx.fill();
@@ -764,6 +780,13 @@ function dessinerDecor(d, amb, t) {
   ctx.restore();
 }
 
+// Visage de Moka qui se retourne pour regarder le gardien (dessin officiel de singes.js)
+let imgFuite = null;
+function teteMokaFuite() {
+  if (!imgFuite) imgFuite = imageSVG(singe({ chapeau: "casquette", yeux: "choc", sourcils: "haut", bouche: "o", habit: "aucun", extras: ["goutte"] }), "tete-fuite");
+  return imgFuite;
+}
+
 // ------------------------------------------------------------ dessin : Moka vu de dos
 function dessinerMoka(t) {
   const [sx, sy, k] = projeter(jeu.x, jeu.y, 0);
@@ -805,41 +828,87 @@ function dessinerMoka(t) {
     ctx.restore();
     return [sx, sy - 40 * u];
   }
-  const rebond = enAir ? 0 : Math.abs(Math.sin(jeu.pas * 1.6)) * 7;
+  const foulee = jeu.pas * 1.6;
+  const rebond = enAir ? 0 : Math.abs(Math.sin(foulee)) * 9;
+  // écrasement à l'atterrissage, étirement dans les airs
+  const e = jeu.ecrase || 0;
+  const etire = enAir ? Math.min(.12, Math.abs(jeu.vy) * .008) : 0;
   ctx.translate(0, -rebond * u);
-  // jambes courtes et pieds de singe
-  const jambe = (x, a) => {
-    membre(x, -62, a, 40, 16, FOUR, null);
-    ctx.save(); ctx.translate(x * u + Math.sin(a) * -40 * u, -62 * u + Math.cos(a) * 40 * u);
-    ctx.fillStyle = jeu.bonus.baskets ? "#51cf66" : PEAU; ctx.beginPath(); ctx.ellipse(0, 0, 13 * u, 7 * u, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+  ctx.scale(1 + e * .18 - etire * .5, 1 - e * .2 + etire);
+  ctx.rotate(Math.min(.12, jeu.vitesse * .004));   // penché en avant quand ça va vite
+  const TRAIT = "#3d2208";
+  const segment = (x1, y1, x2, y2, larg, couleur) => {
+    ctx.lineCap = "round";
+    ctx.strokeStyle = TRAIT; ctx.lineWidth = (larg + 4) * u; ctx.beginPath(); ctx.moveTo(x1 * u, y1 * u); ctx.lineTo(x2 * u, y2 * u); ctx.stroke();
+    ctx.strokeStyle = couleur; ctx.lineWidth = larg * u; ctx.beginPath(); ctx.moveTo(x1 * u, y1 * u); ctx.lineTo(x2 * u, y2 * u); ctx.stroke();
   };
-  jambe(-14, enAir ? .8 : p * .8);
-  jambe(14, enAir ? -.3 : -p * .8);
-  queue(-60, enAir ? 12 : 6);
-  // jetpack ou petit sac à bananes
+  // jambes en deux morceaux : cuisse, genou qui plie, pied de singe
+  const jambe = (hx, phase) => {
+    const a = enAir ? (hx < 0 ? .9 : -.5) : Math.sin(foulee + phase) * .9;
+    const plie = enAir ? 1.3 : Math.max(0, -Math.cos(foulee + phase)) * 1.4 + .2;
+    const gx = hx + Math.sin(a) * -22, gy = -62 + Math.cos(a) * 22;
+    const px = gx + Math.sin(a - plie) * -22, py = gy + Math.cos(a - plie) * 22;
+    segment(hx, -62, gx, gy, 14, FOUR);
+    segment(gx, gy, px, py, 12, FOUR);
+    ctx.fillStyle = jeu.bonus.baskets ? "#51cf66" : PEAU; ctx.strokeStyle = TRAIT; ctx.lineWidth = 2 * u;
+    ctx.beginPath(); ctx.ellipse(px * u, py * u, 13 * u, 7 * u, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  };
+  jambe(-13, 0);
+  jambe(13, Math.PI);
+  if (!enAir && Math.abs(Math.sin(foulee)) < .12 && Math.random() < .5) { // poussière à chaque foulée
+    for (let i = 0; i < 3; i++) jeu.particules.push({ x: jeu.x + (Math.random() - .5) * .5, y: jeu.sol + .05, z: -.2, vx: (Math.random() - .5) * 1.5, vy: 1 + Math.random(), vz: -jeu.vitesse * .25, vie: .35, couleur: "rgba(214,160,100,.8)" });
+  }
+  // queue qui fouette
+  queue(-60, enAir ? 16 : 9 + jeu.vitesse * .3);
+  // jetpack
   if (jeu.bonus.jetpack) {
     ctx.fillStyle = "#adb5bd"; ctx.beginPath(); ctx.roundRect(-26 * u, -128 * u, 52 * u, 50 * u, 10 * u); ctx.fill();
     ctx.fillStyle = "#ff922b";
     for (const bx of [-15, 15]) { ctx.beginPath(); ctx.moveTo((bx - 7) * u, -78 * u); ctx.lineTo(bx * u, (-78 + 30 + Math.random() * 18) * u); ctx.lineTo((bx + 7) * u, -78 * u); ctx.fill(); }
   }
-  // corps : poils + débardeur vert n° 7
-  ctx.fillStyle = FOUR; ctx.beginPath(); ctx.ellipse(0, -96 * u, 30 * u, 40 * u, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#2f9e44"; ctx.beginPath(); ctx.roundRect(-24 * u, -126 * u, 48 * u, 56 * u, 14 * u); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.font = `900 ${26 * u}px Arial Black, sans-serif`; ctx.textAlign = "center"; ctx.fillText("7", 0, -86 * u); ctx.textAlign = "start";
-  // longs bras de singe qui balancent
-  membre(-24, -118, enAir ? 2.7 : -p * 1.1 + .25, 58, 13, FOUR, PEAU);
-  membre(24, -118, enAir ? -2.7 : p * 1.1 - .25, 58, 13, FOUR, PEAU);
-  // tête vue de dos : oreilles, casquette rouge
-  ctx.fillStyle = FOUR;
-  ctx.beginPath(); ctx.arc(-26 * u, -150 * u, 11 * u, 0, Math.PI * 2); ctx.arc(26 * u, -150 * u, 11 * u, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#f3b894";
-  ctx.beginPath(); ctx.arc(-27 * u, -150 * u, 6 * u, 0, Math.PI * 2); ctx.arc(27 * u, -150 * u, 6 * u, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = FOUR; ctx.beginPath(); ctx.arc(0, -152 * u, 26 * u, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = FOUR2; ctx.beginPath(); ctx.arc(0, -146 * u, 18 * u, .2, Math.PI - .2); ctx.fill();
-  ctx.fillStyle = "#e03131"; ctx.beginPath(); ctx.arc(0, -160 * u, 26 * u, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
-  ctx.fillStyle = "#c92a2a"; ctx.fillRect(-12 * u, -162 * u, 24 * u, 5 * u);
-  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, -186 * u, 4 * u, 0, Math.PI * 2); ctx.fill();
+  // corps : poils + débardeur vert n° 7, avec contour
+  ctx.fillStyle = FOUR; ctx.strokeStyle = TRAIT; ctx.lineWidth = 3 * u;
+  ctx.beginPath(); ctx.ellipse(0, -96 * u, 30 * u, 40 * u, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#2f9e44"; ctx.beginPath(); ctx.roundRect(-24 * u, -126 * u, 48 * u, 56 * u, 14 * u); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#237a37"; ctx.fillRect(-24 * u, -80 * u, 48 * u, 6 * u);
+  ctx.fillStyle = "#fff"; ctx.font = `900 ${26 * u}px Arial Black, sans-serif`; ctx.textAlign = "center"; ctx.fillText("7", 0, -88 * u); ctx.textAlign = "start";
+  // longs bras de singe avec coudes, qui moulinent dans les airs
+  const bras = (sx, sens, phase) => {
+    const a = enAir ? sens * (2.5 + Math.sin(t * 18) * .3) : Math.sin(foulee + phase) * 1.1 + sens * .25;
+    const cx = sx + Math.sin(a) * -28, cy = -118 + Math.cos(a) * 28;
+    const b = a - sens * .6;
+    const mx = cx + Math.sin(b) * -26, my = cy + Math.cos(b) * 26;
+    segment(sx, -118, cx, cy, 12, FOUR);
+    segment(cx, cy, mx, my, 11, FOUR);
+    ctx.fillStyle = PEAU; ctx.strokeStyle = TRAIT; ctx.lineWidth = 2 * u;
+    ctx.beginPath(); ctx.arc(mx * u, my * u, 8 * u, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  };
+  bras(-24, -1, Math.PI);
+  bras(24, 1, 0);
+  // tête : il jette un œil derrière lui quand le gardien est tout près
+  const regarde = jeu.gardien > .55 && !jeu.fini && Math.sin(t * 2.3) > .2;
+  const hoche = Math.sin(foulee * 2) * 3;
+  ctx.translate(0, hoche * u);
+  const oreille = Math.sin(t * 14) * 3;
+  ctx.fillStyle = FOUR; ctx.strokeStyle = TRAIT; ctx.lineWidth = 2.5 * u;
+  for (const ox of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(ox * 27 * u, (-150 + oreille * ox) * u, 11 * u, 12 * u, ox * .3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#f3b894"; ctx.beginPath(); ctx.arc(ox * 28 * u, (-150 + oreille * ox) * u, 6 * u, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = FOUR;
+  }
+  if (regarde) {
+    const img = teteMokaFuite();
+    if (img.complete) ctx.drawImage(img, -36 * u, -190 * u, 72 * u, 72 * u);
+    if (Math.random() < .08) jeu.particules.push({ x: jeu.x + .4, y: jeu.y + 1.9, z: 0, vx: 1.5, vy: 1, vz: 0, vie: .5, couleur: "#74c0fc" });
+  } else {
+    ctx.fillStyle = FOUR; ctx.beginPath(); ctx.arc(0, -152 * u, 26 * u, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = FOUR2; ctx.beginPath(); ctx.arc(0, -146 * u, 18 * u, .2, Math.PI - .2); ctx.fill();
+    ctx.strokeStyle = FOUR2; ctx.lineWidth = 2 * u;   // épis de poils
+    ctx.beginPath(); ctx.moveTo(-8 * u, -130 * u); ctx.lineTo(-4 * u, -138 * u); ctx.moveTo(6 * u, -130 * u); ctx.lineTo(3 * u, -139 * u); ctx.stroke();
+    ctx.fillStyle = "#e03131"; ctx.strokeStyle = TRAIT; ctx.lineWidth = 2 * u;
+    ctx.beginPath(); ctx.arc(0, -160 * u, 26 * u, Math.PI * 1.02, Math.PI * 1.98); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#c92a2a"; ctx.fillRect(-12 * u, -162 * u, 24 * u, 5 * u);
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, -186 * u, 4 * u, 0, Math.PI * 2); ctx.fill();
+  }
   // étoiles qui tournent après un choc
   if (jeu.etourdi > 0) {
     for (let i = 0; i < 3; i++) {
@@ -869,10 +938,11 @@ const CRIS_GARDIEN = ["Reviens ici, Moka !", "Arrête-toi !", "Mes bananes !", "
 function dessinerGardien(t, cibleMoka) {
   const p = jeu.gardien;
   if (p < 0.02) return;
-  const vise = Math.min(W - 70, Math.max(70, cibleMoka[0] + 115 + Math.sin(t * 1.7) * 25));
+  // toujours sur le côté de Moka, pour ne jamais le cacher
+  const vise = Math.min(W - 60, Math.max(60, cibleMoka[0] + (cibleMoka[0] < W / 2 ? 165 : -165) + Math.sin(t * 1.7) * 20));
   gardienX += (vise - gardienX) * .1;
   const attrape = jeu.fini ? jeu.attrape : 0;
-  const s = .88;
+  const s = .8;
   const enChasse = !jeu.fini;
   const rythme = t * (jeu.trebuche > 0 ? 15 : 12);
   const course = enChasse ? Math.sin(rythme) : 0;
@@ -907,8 +977,9 @@ function dessinerGardien(t, cibleMoka) {
   ctx.fillStyle = "#6b4226"; ctx.fillRect(-46, -160, 92, 10); // ceinture
   ctx.fillStyle = "#ffd43b"; ctx.fillRect(-8, -161, 16, 12);
   ctx.fillStyle = "#1c7ed6"; ctx.font = "900 15px Arial Black, sans-serif"; ctx.textAlign = "center"; ctx.fillText("ZOO", 0, -205);
-  // bras gauche qui pompe
-  ctx.save(); ctx.translate(-44, -258); ctx.rotate(.2 + course * .9);
+  // bras gauche qui pompe (et qui gesticule de rage quand Moka vient de trébucher)
+  const rage = jeu.trebuche > 0 && enChasse;
+  ctx.save(); ctx.translate(-44, -258); ctx.rotate(rage ? 2.6 + Math.sin(t * 16) * .5 : .2 + course * .9);
   ctx.fillStyle = "#c2a878"; ctx.fillRect(-11, 0, 22, 36); ctx.fillStyle = "#f3c89a"; ctx.fillRect(-9, 36, 18, 42);
   ctx.beginPath(); ctx.arc(0, 80, 11, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
@@ -943,7 +1014,20 @@ function dessinerGardien(t, cibleMoka) {
   ctx.beginPath(); ctx.ellipse(0, -322 - saut, 62, 14, Math.sin(rythme) * .06, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.arc(0, -326 - saut, 32, Math.PI, 0); ctx.fill(); ctx.stroke();
   ctx.fillStyle = "#8d6e3a"; ctx.fillRect(-32, -334 - saut, 64, 8);
-  if (enChasse) {
+  if (enChasse) { // souffle court, marques de colère
+    for (let i = 0; i < 3; i++) {
+      const g = (t * 2.2 + i / 3) % 1;
+      ctx.fillStyle = `rgba(255,255,255,${.5 * (1 - g)})`;
+      ctx.beginPath(); ctx.arc(-44 - g * 40, -300 - g * 20, 6 + g * 10, 0, Math.PI * 2); ctx.fill();
+    }
+    if (rage) {
+      ctx.strokeStyle = "#e03131"; ctx.lineWidth = 5; ctx.lineCap = "round";
+      const r = 1 + Math.sin(t * 12) * .15;
+      ctx.save(); ctx.translate(40, -360); ctx.scale(r, r);
+      ctx.beginPath(); ctx.moveTo(-10, -4); ctx.lineTo(-3, -4); ctx.lineTo(-3, -11); ctx.moveTo(10, -4); ctx.lineTo(3, -4); ctx.lineTo(3, -11);
+      ctx.moveTo(-10, 4); ctx.lineTo(-3, 4); ctx.lineTo(-3, 11); ctx.moveTo(10, 4); ctx.lineTo(3, 4); ctx.lineTo(3, 11); ctx.stroke();
+      ctx.restore();
+    }
     for (let i = 0; i < 2; i++) {
       const g = (t * 1.6 + i * .5) % 1;
       ctx.fillStyle = `rgba(116,192,252,${1 - g})`;
@@ -1080,7 +1164,10 @@ function dessiner(dt) {
   const scene = [
     ...jeu.decor.filter((d) => d.z > -CAM_D + 1).map((d) => ({ z: d.z, dessin: () => dessinerDecor(d, amb, t) })),
     ...Array.from({ length: 5 }, (_, i) => { const z = i * 30 - (dist % 30) + 4; const n = Math.floor((dist + z) / 30); return { z, dessin: () => dessinerPortique(z, amb, t, n) }; }).filter((e) => e.z > -CAM_D + 1.5),
-    ...jeu.objets.filter((o) => (estLong(o) || o.type === "rampe") ? o.z + o.long > -CAM_D + 1 : o.z > -CAM_D + 1).map((o) => ({ z: o.z, dessin: () => {
+    // un camion, un tronc ou une rampe qui passe sous Moka (commencé derrière lui) est dessiné AVANT lui,
+    // sinon il le recouvre quand il grimpe ou court sur le toit
+    ...jeu.objets.filter((o) => (estLong(o) || o.type === "rampe") ? o.z + o.long > -CAM_D + 1 : o.z > -CAM_D + 1).map((o) => ({
+      z: (estLong(o) || o.type === "rampe") && o.z < 0.2 && o.z + o.long > -0.5 ? 0.3 + Math.min(o.z + o.long, 50) * 1e-3 : o.z, dessin: () => {
       if (o.type === "camion") dessinerCamion(o, amb);
       else if (o.type === "tronc") dessinerTronc(o, amb);
       else if (o.type === "rampe") dessinerRampe(o, amb);

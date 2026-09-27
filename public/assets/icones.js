@@ -1,6 +1,13 @@
 // Icônes des jeux, dessinées à la main en SVG (100 × 100). Utilisées sur l'accueil, le menu et les pages.
 
 const ICONES_JEUX = {
+  arene: `
+    <rect width="100" height="100" fill="#2a1560"/><path d="M0 84 H100 V100 H0z" fill="#3d3d5c"/><path d="M0 84 H100" stroke="#3ee0e8" stroke-width="3"/>
+    <g stroke="#ffd43b" stroke-width="5" stroke-linecap="round" fill="none"><path d="M30 46 v20 M30 66 l-8 16 M30 66 l8 16 M30 52 l14 -6 M30 52 l-10 8"/></g>
+    <circle cx="30" cy="36" r="9" fill="#ffd43b"/><rect x="42" y="41" width="12" height="5" fill="#495057"/>
+    <g stroke="#ff6b6b" stroke-width="5" stroke-linecap="round" fill="none"><path d="M72 46 v20 M72 66 l-8 16 M72 66 l8 16 M72 52 l-12 -8 M72 52 l10 6"/></g>
+    <circle cx="72" cy="36" r="9" fill="#ff6b6b"/><path d="M56 40 l6 -4" stroke="#fff" stroke-width="3"/>
+    <path d="M48 20 l4 8 8 -2 -5 7 6 6 -9 0 -2 8 -4 -7 -8 3 4 -8 -6 -5 9 -1z" fill="#ff922b"/>`,
   runner: `
     <rect width="100" height="62" fill="#ffd8a8"/><circle cx="72" cy="30" r="16" fill="#ffa94d"/>
     <path d="M0 62 q25 -10 50 -2 t50 -4 V100 H0z" fill="#d9a441"/>

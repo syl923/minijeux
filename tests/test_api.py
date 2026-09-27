@@ -493,5 +493,89 @@ class TestApi(unittest.TestCase):
         self.assertEqual(autre.appel("/api/roue/bonus", {"partie": f2["partie"]})[0], 400)
 
 
+    # ------------------------------------------------------------ Stickman Arena
+    def test_arene_moteurs_identiques(self):
+        """Le moteur Python (arbitre des duels) et le moteur JavaScript donnent exactement le même combat."""
+        import shutil
+        import subprocess
+        from jeux import arene
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node absent")
+        script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "parite_arene.js")
+        js = json.loads(subprocess.run([node, script, "777"], capture_output=True, text=True, check=True).stdout)
+        sim = arene.nouveau(777, ["A", "B", "C", "D"])
+        for t in range(4000):
+            for j in sim["joueurs"]:
+                i = j["i"]
+                c = (t * 7 + i * 13) % 97
+                j["entree"] = {"g": 1 if c < 30 else 0, "d": 1 if c > 60 else 0, "b": 1 if c % 23 == 0 else 0,
+                               "t": 1 if (t + i) % 5 < 3 else 0, "saut": (t + i * 11) // 37,
+                               "ax": ((t * 31 + i * 17) % 2001) - 1000, "ay": ((t * 13 + i * 29) % 1201) - 600}
+            arene.pas(sim)
+        py = json.loads(json.dumps(sim))
+        self.assertEqual([(j["k"], j["m"], j["hp"]) for j in js["joueurs"]], [(j["k"], j["m"], j["hp"]) for j in py["joueurs"]])
+        for a, b in zip(js["joueurs"], py["joueurs"]):
+            self.assertAlmostEqual(a["x"], b["x"], places=6)
+            self.assertAlmostEqual(a["y"], b["y"], places=6)
+        self.assertEqual(js["alea"], py["alea"])
+        self.assertTrue(py["fini"])
+
+    def test_arene_solo(self):
+        c, _ = nouveau_joueur("Boxeur", pieces=100)
+        _, r = c.appel("/api/arene/debut", {})
+        self.assertEqual(c.appel("/api/arene/fin", {"partie": r["partie"], "k": 5, "m": 1, "place": 1})[0], 400)  # trop tôt
+        with noyau.db:
+            noyau.db.execute("UPDATE parties SET debut = debut - 70 WHERE id = ?", (r["partie"],))
+        self.assertEqual(c.appel("/api/arene/fin", {"partie": r["partie"], "k": 99, "m": 1, "place": 1})[0], 400)  # invraisemblable
+        code, f = c.appel("/api/arene/fin", {"partie": r["partie"], "k": 5, "m": 1, "place": 1})
+        self.assertEqual((code, f["fin"]["score"]), (200, 800))
+
+    def test_arene_duel(self):
+        from jeux import arene
+        a, _ = nouveau_joueur("GladiaA", pieces=50)
+        b, _ = nouveau_joueur("GladiaB", pieces=50)
+        _, d = a.appel("/api/duels/creer", {"jeu": "arene"})
+        self.assertEqual(b.appel("/api/duels/rejoindre", {"duel": d["duel"]})[0], 200)
+        entree = {"g": 0, "d": 1, "t": 1, "saut": 0, "ax": 1000, "ay": 0, "pirate": "x"}
+        _, r = a.appel("/api/arene/duel", {"duel": d["duel"], "entree": entree})
+        self.assertTrue(r["attente"])                           # on attend le second joueur
+        _, r = b.appel("/api/arene/duel", {"duel": d["duel"], "entree": {"ax": -5000}})
+        self.assertFalse(r.get("attente"))
+        self.assertEqual(r["sim"]["joueurs"][1]["entree"]["ax"], -1000)   # commandes bornées
+        self.assertEqual(noyau.db.execute("SELECT COUNT(*) FROM duels WHERE id = ?", (d["duel"],)).fetchone()[0], 1)
+        arene.MATCHS[d["duel"]]["debut"] -= 70                  # on avance le temps : la manche se joue jusqu'au bout
+        fini = None
+        for k in range(400):
+            code, r = (a if k % 2 else b).appel("/api/arene/duel", {"duel": d["duel"], "entree": entree})
+            self.assertEqual(code, 200, r)
+            if r["fini"]:
+                fini = r
+                break
+        self.assertIsNotNone(fini)
+        statut = noyau.db.execute("SELECT statut FROM duels WHERE id = ?", (d["duel"],)).fetchone()[0]
+        self.assertEqual(statut, "termine")
+        self.assertNotIn(d["duel"], arene.MATCHS)
+        self.assertEqual(a.appel("/api/duels/jouer", {"duel": d["duel"]})[0], 400)
+
+
+    def test_publicite(self):
+        import urllib.request
+        from urllib.error import HTTPError
+        base = robots.URL
+        with self.assertRaises(HTTPError):   # sans identifiant AdSense : pas d'ads.txt, pas de code Google
+            urllib.request.urlopen(base + "/ads.txt")
+        self.assertNotIn("adsbygoogle", urllib.request.urlopen(base + "/").read().decode())
+        ancien = (server.ADSENSE, server.CODE_ADSENSE)
+        try:
+            server.ADSENSE = "ca-pub-1111222233334444"
+            server.CODE_ADSENSE = f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={server.ADSENSE}"></script>'
+            self.assertIn("pub-1111222233334444, DIRECT", urllib.request.urlopen(base + "/ads.txt").read().decode())
+            self.assertIn("client=ca-pub-1111222233334444", urllib.request.urlopen(base + "/jet.html").read().decode())
+            self.assertEqual(Client().appel("/api/config")[1]["pub"]["client"], "ca-pub-1111222233334444")
+        finally:
+            server.ADSENSE, server.CODE_ADSENSE = ancien
+
+
 if __name__ == "__main__":
     unittest.main()

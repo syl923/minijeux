@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Duels en ligne — Moka Arcade</title>
-  <meta name="description" content="Défie d'autres joueurs en ligne aux échecs et à la bataille navale. Le gagnant empoche les bananes.">
+  <meta name="description" content="Défie d'autres joueurs en ligne aux échecs, à la bataille navale et à Stickman Arena. Le gagnant empoche les bananes.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -21,12 +21,13 @@
       <div class="choix-duel" id="choix-jeu">
         <button data-jeu="echecs" class="actif"><span>♞</span>Échecs</button>
         <button data-jeu="bataille"><span>🚢</span>Bataille navale</button>
+        <button data-jeu="arene"><span>🥊</span>Stickman Arena</button>
       </div>
       <label for="adversaire">Adversaire (facultatif)</label>
       <input type="text" id="adversaire" placeholder="Laisse vide pour un défi ouvert à tous" maxlength="16">
       <p class="erreur" id="erreur-defi"></p>
       <button class="bouton" id="btn-defi" style="width:100%">⚔️ Lancer le défi (10 <i class="piece"></i>)</button>
-      <p class="doux" style="font-size:13px;margin-bottom:0">Temps limite : 3 minutes par coup aux échecs, 1 minute par tir à la bataille navale (un tir réussi permet de rejouer). Au-delà, la partie est perdue.</p>
+      <p class="doux" style="font-size:13px;margin-bottom:0">Temps limite : 3 minutes par coup aux échecs, 1 minute par tir à la bataille navale (un tir réussi permet de rejouer). Au-delà, la partie est perdue. Stickman Arena : une manche de 60 secondes en temps réel, le plus de K.O. gagne.</p>
     </section>
 
     <section class="panneau">
@@ -47,7 +48,7 @@
 <script src="/assets/singes.js"></script>
 <script src="/assets/commun.js"></script>
 <script>
-  const NOMS = { echecs: "♞ Échecs", bataille: "🚢 Bataille navale" };
+  const NOMS = { echecs: "♞ Échecs", bataille: "🚢 Bataille navale", arene: "🥊 Stickman Arena" };
   let jeuChoisi = "echecs";
   let mesDefis = new Set();
 

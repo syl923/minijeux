@@ -107,18 +107,27 @@ function appliquer(b, de, vers) {
 const NOMS_PIECES = { p: "pion", n: "cavalier", b: "fou", r: "tour", q: "dame" };
 const TA_PIECE = { dame: "ta dame", tour: "ta tour", fou: "ton fou", cavalier: "ton cavalier" };
 const MA_PIECE = { dame: "Ma dame", tour: "Ma tour", fou: "Mon fou", cavalier: "Mon cavalier" };
+const au_hasard = (liste) => liste[Math.floor(Math.random() * liste.length)];
 function professeur(prisParMoi, prisParIa, echec) {
-  if (echec) return mokaDit(["Échec, hi hi ! Où vas-tu te cacher ?", "Échec au roi ! Tu transpires, hein ?"][Math.floor(Math.random() * 2)], "taquin", 2400);
+  if (echec) return mokaDit(au_hasard(["Échec, hi hi ! Où vas-tu te cacher ?", "Échec au roi ! Tu transpires, hein ?", "Ton roi a la tremblote, hou hou ha ha !",
+    "Échec ! Cours, petit roi, cours !", "Échec… et bientôt mat, hi hi !"]), "taquin", 2400);
   if (prisParIa && prisParIa !== ".") {
     const nom = NOMS_PIECES[prisParIa.toLowerCase()];
-    if (nom && nom !== "pion") return mokaDit(`Hou hou ha ha ! Merci pour ${TA_PIECE[nom]} !`, "rire", 2400);
+    if (nom === "dame") return mokaDit(au_hasard(["TA DAME ! Hou hou ha ha ! Merci, merci !", "Oh la belle dame… elle est à moi maintenant !"]), "rire", 2600);
+    if (nom && nom !== "pion") return mokaDit(au_hasard([`Hou hou ha ha ! Merci pour ${TA_PIECE[nom]} !`, `Miam, ${TA_PIECE[nom]} ! Délicieux !`,
+      `${TA_PIECE[nom].charAt(0).toUpperCase() + TA_PIECE[nom].slice(1)} ? Je la mets dans ma collection, hi hi !`, `Tu m'offres ${TA_PIECE[nom]} ? Trop gentil !`]), "rire", 2400);
+    if (nom === "pion" && Math.random() < .35) return mokaDit(au_hasard(["Un petit pion pour la route, hi hi !", "Miam, un pion ! C'est l'apéro !"]), "taquin", 1800);
   }
   if (prisParMoi && prisParMoi !== ".") {
     const nom = NOMS_PIECES[prisParMoi.toLowerCase()];
-    if (nom === "dame") return mokaDit("MA DAME ?! Nooon… *snif*", "pleure", 2400);
-    if (MA_PIECE[nom]) return mokaDit(`${MA_PIECE[nom]} ! Pas mal… pour un élève.`, "choc", 1900);
+    if (nom === "dame") return mokaDit(au_hasard(["MA DAME ?! Nooon… *snif*", "Ma dame chérie… Ouiiin !", "Tu… tu as pris ma dame ?! C'est de la triche !"]), "pleure", 2600);
+    if (MA_PIECE[nom]) return mokaDit(au_hasard([`${MA_PIECE[nom]} ! Pas mal… pour un élève.`, `${MA_PIECE[nom]} ?! Coup de chance !`,
+      `Grrr… ${MA_PIECE[nom].toLowerCase()}… je l'aimais bien.`, "Hé ! Je n'avais pas vu ce coup-là !"]), "choc", 2000);
+    if (nom === "pion" && Math.random() < .25) return mokaDit(au_hasard(["Un pion ? Prends, prends, j'en ai plein !", "Même pas mal !"]), "malin", 1700);
   }
-  if (Math.random() < .12) mokaDit(["Hmm… tu es sûr de ton coup ?", "Intéressant… très intéressant, hi hi.", "J'ai déjà prévu ta réponse !"][Math.floor(Math.random() * 3)], "malin", 1800);
+  if (Math.random() < .14) mokaDit(au_hasard(["Hmm… tu es sûr de ton coup ?", "Intéressant… très intéressant, hi hi.", "J'ai déjà prévu ta réponse !",
+    "Tu joues toujours aussi lentement ?", "Ce coup… mon grand-père aurait fait mieux. Et c'était un babouin.", "Je te laisse encore une chance, hi hi.",
+    "Chut… le professeur réfléchit.", "Tu veux un indice ? Non ? Tant pis pour toi !"]), "malin", 2000);
 }
 
 async function clic(sq) {

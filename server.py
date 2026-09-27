@@ -18,13 +18,23 @@ import avatars
 import compte
 import noyau
 from noyau import DUREE_SESSION, ErreurApi, creer_session, db, joueur_de_session, joueur_public, lire_joueur
-from jeux import bataille, candy, demineur, duels, echecs, flipper, jet, memory, pingouin, runner, snake, tetris
+from jeux import arene, bataille, candy, demineur, duels, echecs, flipper, jet, memory, pingouin, runner, snake, tetris
 
 DOSSIER_PUBLIC = os.path.join(noyau.RACINE, "public")
 PORT = int(os.environ.get("PORT", "8000"))
 HOTE = os.environ.get("HOST", "0.0.0.0")               # certains hébergeurs imposent "::"
 HTTPS = os.environ.get("MINIJEUX_HTTPS") == "1"         # en ligne derrière HTTPS : cookie « Secure »
 DERRIERE_PROXY = os.environ.get("MINIJEUX_PROXY") == "1"  # l'hébergeur transmet l'IP réelle dans X-Forwarded-For
+
+# Publicité Google AdSense : rien n'est chargé tant que l'identifiant d'éditeur n'est pas renseigné.
+ADSENSE = os.environ.get("MINIJEUX_ADSENSE_CLIENT", "").strip()              # ex. ca-pub-1234567890123456
+ADSENSE_EMPLACEMENT = os.environ.get("MINIJEUX_ADSENSE_EMPLACEMENT", "").strip()  # identifiant du bloc d'annonce (facultatif)
+if ADSENSE and not ADSENSE.startswith("ca-pub-"):
+    ADSENSE = "ca-pub-" + ADSENSE.removeprefix("pub-")
+CODE_ADSENSE = (
+    f'<meta name="google-adsense-account" content="{ADSENSE}">\n'
+    f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE}" crossorigin="anonymous"></script>\n'
+) if ADSENSE else ""
 
 # Limite anti-force-brute : nombre d'essais par adresse IP sur une fenêtre de temps.
 LIMITES = {"/api/connexion": (10, 600), "/api/inscription": (5, 3600)}
@@ -46,7 +56,7 @@ ROUTES_POST = {
     "/api/secours": noyau.secours,
     "/api/roue/bonus": noyau.roue_bonus,
 }
-for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin, compte, avatars):
+for jeu in (memory, bataille, snake, demineur, echecs, flipper, candy, tetris, runner, duels, jet, pingouin, compte, avatars, arene):
     ROUTES_POST.update(jeu.ROUTES)
 ROUTES_GET = {"/api/classement": noyau.classement, "/api/roue": noyau.roue_config, "/api/mes_records": noyau.mes_records,
               "/api/activite": noyau.activite,
@@ -105,13 +115,40 @@ class Gestionnaire(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(brut)
 
+    def envoyer_texte(self, code, texte, type_):
+        brut = texte.encode()
+        self.send_response(code)
+        self.send_header("Content-Type", type_)
+        self.send_header("Content-Length", str(len(brut)))
+        self.end_headers()
+        self.wfile.write(brut)
+
+    def page_avec_pub(self, chemin):
+        """Pages HTML : on insère le code AdSense dans l'en-tête quand il est configuré."""
+        fichier = os.path.join(DOSSIER_PUBLIC, "index.html" if chemin == "/" else chemin.lstrip("/"))
+        fichier = os.path.normpath(fichier)
+        if not fichier.startswith(DOSSIER_PUBLIC + os.sep) or not os.path.isfile(fichier):
+            return False
+        with open(fichier, encoding="utf-8") as f:
+            html = f.read().replace("</head>", CODE_ADSENSE + "</head>", 1)
+        self.envoyer_texte(200, html, "text/html; charset=utf-8")
+        return True
+
     def do_GET(self):
         url = urlparse(self.path)
+        if url.path == "/ads.txt":
+            if not ADSENSE:
+                return self.envoyer_texte(404, "", "text/plain; charset=utf-8")
+            return self.envoyer_texte(200, f"google.com, {ADSENSE.removeprefix('ca-')}, DIRECT, f08c47fec0942fa0\n", "text/plain; charset=utf-8")
+        if ADSENSE and (url.path == "/" or url.path.endswith(".html")) and self.page_avec_pub(url.path):
+            return
         if not url.path.startswith("/api/"):
             return super().do_GET()
         with verrou, db:  # une consultation peut écrire (présence, fin d'un duel au temps écoulé)
             try:
                 joueur = joueur_de_session(self.jeton())
+                if url.path == "/api/config":
+                    return self.repondre(200, {"pub": {"client": ADSENSE, "emplacement": ADSENSE_EMPLACEMENT}})
                 if url.path == "/api/moi":
                     return self.repondre(200, {"joueur": joueur_public(joueur) if joueur else None})
                 if url.path not in ROUTES_GET:

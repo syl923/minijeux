@@ -287,16 +287,23 @@ const attendre = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
 // Les répliques de Capitaine Moka : en solo c'est lui l'adversaire, et il adore te taquiner.
 const REPLIQUES = {
-  touche: [["Aïe ! Tu as touché mon navire !", "choc"], ["Ouille, ma coque ! Coup de chance…", "colere"], ["Hé ! Doucement avec mes bateaux !", "choc"]],
-  coule: [["Nooon, mon bateau ! Tu vas me le payer !", "pleure"], ["Mon beau navire… *snif*", "pleure"], ["Grrr ! Coulé… mais la guerre n'est pas finie !", "colere"]],
-  eau: [["Hi hi hi ! Raté, moussaillon !", "taquin"], ["Plouf ! Tu arroses les poissons ?", "taquin"], ["Ha ha, même pas proche !", "rire"]],
-  subi: [["Ha ha ! Dans le mille !", "taquin"], ["Bam ! Je t'ai eu !", "rire"], ["Hou hou ha ha ! Touché !", "rire"]],
-  perdu: [["HOU HOU HA HA ! Coulé, ton bateau !", "rire"], ["Un de moins ! Tu fais moins le malin, hein ?", "taquin"]],
+  touche: [["Aïe ! Tu as touché mon navire !", "choc"], ["Ouille, ma coque ! Coup de chance…", "colere"], ["Hé ! Doucement avec mes bateaux !", "choc"],
+    ["Grrr… Tu as des jumelles ou quoi ?", "colere"], ["Touché… mais pas coulé, moussaillon !", "malin"], ["Mon perroquet a tout vu, tricheur !", "colere"],
+    ["Ça chatouille à peine, hi hi !", "taquin"], ["Qui t'a appris à viser comme ça ?!", "choc"]],
+  coule: [["Nooon, mon bateau ! Tu vas me le payer !", "pleure"], ["Mon beau navire… *snif*", "pleure"], ["Grrr ! Coulé… mais la guerre n'est pas finie !", "colere"],
+    ["Mon équipage sait nager, rassure-toi… enfin, je crois.", "pleure"], ["Il était tout neuf ! Ouiiin !", "pleure"], ["Bon, celui-là, je le trouvais moche de toute façon.", "malin"]],
+  eau: [["Hi hi hi ! Raté, moussaillon !", "taquin"], ["Plouf ! Tu arroses les poissons ?", "taquin"], ["Ha ha, même pas proche !", "rire"],
+    ["Les poissons te remercient pour la visite !", "taquin"], ["À l'eau ! Tu tires les yeux fermés ?", "rire"], ["Froid… glacial… banquise !", "taquin"],
+    ["Encore raté ! Tu veux que je te prête mes lunettes ?", "rire"], ["Splash ! Magnifique… plouf.", "taquin"], ["Mes bateaux sont bien cachés, hou hou ha ha !", "rire"]],
+  subi: [["Ha ha ! Dans le mille !", "taquin"], ["Bam ! Je t'ai eu !", "rire"], ["Hou hou ha ha ! Touché !", "rire"], ["Et un trou dans ta coque, un !", "taquin"],
+    ["Capitaine Moka ne rate jamais, hi hi !", "rire"], ["Tu as senti le vent du boulet ?", "taquin"]],
+  perdu: [["HOU HOU HA HA ! Coulé, ton bateau !", "rire"], ["Un de moins ! Tu fais moins le malin, hein ?", "taquin"],
+    ["Au fond de l'eau ! Salue les poissons pour moi !", "rire"], ["Glou glou glou… c'était ton navire ?", "taquin"], ["Victoire en vue ! Rends-toi, moussaillon !", "rire"]],
   // en duel contre un vrai joueur, Moka est ton second
-  duel_coule: [["Coulé ! Bravo moussaillon !", "etoiles"]],
-  duel_touche: [["Touché ! Continue !", "content"]],
-  duel_perdu: [["Aïe, ils ont coulé notre navire !", "pleure"]],
-  duel_subi: [["Ouille, notre coque !", "choc"]],
+  duel_coule: [["Coulé ! Bravo moussaillon !", "etoiles"], ["À l'abordage ! Un de moins !", "etoiles"]],
+  duel_touche: [["Touché ! Continue !", "content"], ["Vise juste à côté maintenant !", "malin"]],
+  duel_perdu: [["Aïe, ils ont coulé notre navire !", "pleure"], ["Nooon ! On va se venger !", "colere"]],
+  duel_subi: [["Ouille, notre coque !", "choc"], ["Ils ont de bons canons, eux…", "choc"]],
 };
 function capitaine(cle, proba = 1) {
   if (Math.random() > proba) return;

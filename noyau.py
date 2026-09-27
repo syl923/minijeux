@@ -368,7 +368,7 @@ def roue_bonus(joueur, donnees):
 
 # --------------------------------------------------------------------------- classements
 
-JEUX_CLASSES = ("memory", "bataille", "snake", "demineur", "echecs", "flipper", "candy", "tetris", "runner", "jet", "pingouin")
+JEUX_CLASSES = ("memory", "bataille", "snake", "demineur", "echecs", "flipper", "candy", "tetris", "runner", "jet", "pingouin", "arene")
 
 
 def classement(joueur, requete):
@@ -383,7 +383,7 @@ def classement(joueur, requete):
                GROUP BY p.joueur_id HAVING valeur > 0 ORDER BY valeur DESC, MIN(p.fin) LIMIT 50""",
             (depuis,),
         ).fetchall()
-    elif jeu in ("duel_echecs", "duel_bataille"):  # duels en ligne : nombre de victoires
+    elif jeu in ("duel_echecs", "duel_bataille", "duel_arene"):  # duels en ligne : nombre de victoires
         lignes = db.execute(
             """SELECT j.pseudo, j.avatar, SUM(p.score) AS valeur, COUNT(*) AS parties
                FROM parties p JOIN joueurs j ON j.id = p.joueur_id

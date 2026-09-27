@@ -7,6 +7,7 @@ multiplie les gains une fois par jour, chaque jeu a son **classement**, et on pe
 
 | Jeu | Décor | Principe |
 |---|---|---|
+| 🥊 Stickman Arena | arène néon | combats de bonshommes bâtons (ZQSD/WASD + souris), armes qui tombent du ciel, manches de 60 s, Moka qui s'en mêle ; solo contre 3 robots ou **duel en ligne** arbitré par le serveur |
 | 🚀 Moka Jet | jungle | Moka et son jetpack entre les bambous ; partie rejouée par le serveur (anti-triche) |
 | 🏏 Moka Glisse | banquise | Nounours l'ours polaire envoie Moka en doudoune d'un coup de batte (puissance puis angle), vol plané, glissade, obstacles à sauter |
 | 🐒 Safari Rush | savane / forêt (jour → nuit) | Moka s'échappe du zoo : course sans fin en perspective, camions du zoo, troncs, rampes, bananes, bonus ; un choc toléré, au second le gardien l'attrape |
@@ -72,7 +73,14 @@ serveur plus costaud (plusieurs processus, base PostgreSQL) : le code est organi
 
 - Memory, Démineur, Bonbons Folies, Bataille navale, Échecs, duels : tout se joue sur le serveur, la page ne fait qu'afficher.
 - Snake et Moka Jet : la page envoie ses commandes, le serveur rejoue la partie à l'identique et vérifie la durée.
+- Stickman Arena en duel : le serveur fait tourner le combat lui-même (moteur identique à celui de la page) ; les pages
+  n'envoient que leurs commandes et affichent une prédiction. En solo : vérification de la durée et de la vraisemblance.
 - Flipper, Blocomania, Safari Rush, Moka Glisse (temps réel) : le serveur vérifie que le score est possible pour la durée réellement jouée.
+
+## Publicité
+
+Google AdSense, désactivé par défaut : voir la section 7 de DEPLOIEMENT.md (variables `MINIJEUX_ADSENSE_CLIENT` et
+`MINIJEUX_ADSENSE_EMPLACEMENT`, consentement géré par le message RGPD de Google).
 
 ## Données personnelles
 

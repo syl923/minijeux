@@ -2,6 +2,7 @@
 
 // Catalogue des jeux : catégorie pour le menu, thème graphique de la page, badge éventuel.
 const JEUX = [
+  { id: "arene", nom: "Stickman Arena", emoji: "🥊", cat: "duel", theme: "arene", badge: "NOUVEAU", desc: "Combats de bonshommes bâtons : armes qui tombent du ciel, manches de 60 s, et Moka qui sème la zizanie. En solo ou en duel en ligne !" },
   { id: "jet", nom: "Moka Jet", emoji: "🚀", cat: "arcade", theme: "jungle", badge: "NOUVEAU", desc: "Pilote Moka et son jetpack entre les bambous et attrape les bananes !" },
   { id: "pingouin", nom: "Moka Glisse", emoji: "🏏", cat: "action", theme: "banquise", badge: "NOUVEAU", desc: "Un coup de batte bien dosé, un vol plané et une glissade en doudoune sur la banquise !" },
   { id: "runner", nom: "Safari Rush", emoji: "🐒", cat: "action", theme: "savane", badge: "HOT", desc: "Moka s'est échappé du zoo ! Cours dans la savane, évite les camions et sème le gardien." },
@@ -46,6 +47,10 @@ const MASCOTTE = `<svg class="mascotte" viewBox="0 0 120 140" aria-hidden="true"
 const MJ = { joueur: null, surChangement: [] };
 
 async function api(chemin, donnees) {
+  // petite animation de Moka juste avant de lancer une partie (avant la requête : aucun chrono ne tourne encore)
+  if (donnees !== undefined && chemin.endsWith("/debut") && MJ.joueur && MJ.joueur.pieces >= (MJ.joueur.mise || 10)) {
+    await introMoka(document.body.dataset.page);
+  }
   const options = donnees === undefined
     ? {}
     : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(donnees) };
@@ -120,7 +125,7 @@ function construireEntete() {
   const pied = document.createElement("footer");
   pied.className = "pied";
   pied.innerHTML = `<div class="pied-mascotte">${MASCOTTE}</div>
-    <b>Moka Arcade</b> — petits jeux gratuits, sans publicité · Les bananes sont virtuelles et n'ont aucune valeur monétaire<br>
+    <b>Moka Arcade</b> — petits jeux gratuits · Les bananes sont virtuelles et n'ont aucune valeur monétaire<br>
     ${JEUX.map((j) => `<a href="/${j.id}.html">${j.nom}</a>`).join(" · ")}<br>
     <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité et cookies</a> ·
     <a href="/cgu.html">Règles du site</a> · <a href="/compte.html">Mon compte</a>`;
@@ -128,12 +133,77 @@ function construireEntete() {
   const h1 = document.querySelector(".titre-page h1");
   if (jeu && h1) h1.innerHTML = iconeJeu(jeu.id, "icone-titre") + h1.textContent.replace(/^\S+\s/, "");
   document.body.append(pied);
+  chargerPub(pied);
   if (jeu && typeof TENUES !== "undefined" && TENUES[jeu.id]) construireCoach(jeu.id);
+}
+
+// Publicité (Google AdSense) : un petit bloc au-dessus du pied de page, seulement si le site est configuré pour.
+// Le consentement aux cookies est demandé par le message de Google (configuré dans AdSense), avant tout affichage.
+async function chargerPub(pied) {
+  let conf;
+  try { conf = await (await fetch("/api/config")).json(); } catch (e) { return; }
+  const pub = conf && conf.pub;
+  if (!pub || !pub.client) return;
+  const lien = document.createElement("span");
+  lien.innerHTML = ` · <a href="#" id="gerer-cookies">Gérer mes cookies</a>`;
+  pied.append(lien);
+  lien.querySelector("a").onclick = (e) => {
+    e.preventDefault();
+    window.googlefc = window.googlefc || {};
+    (window.googlefc.callbackQueue = window.googlefc.callbackQueue || []).push(() => window.googlefc.showRevocationMessage());
+  };
+  if (!pub.emplacement) return;   // sans bloc précis, ce sont les annonces automatiques réglées dans AdSense
+  const zone = document.createElement("div");
+  zone.className = "zone-pub";
+  zone.innerHTML = `<span class="etiquette-pub">Publicité</span>
+    <ins class="adsbygoogle" style="display:block" data-ad-client="${echapper(pub.client)}" data-ad-slot="${echapper(pub.emplacement)}"
+      data-ad-format="horizontal" data-full-width-responsive="true"></ins>`;
+  pied.before(zone);
+  try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* bloqueur de publicité */ }
 }
 
 // Petit avatar + pseudo pour les listes (classements, salon des duels…)
 function pseudoAvecAvatar(pseudo, avatar) {
   return `<span class="avec-avatar">${avatarSVG(avatar || "moka", "mini-avatar")}${echapper(pseudo)}</span>`;
+}
+
+// ------------------------------------------------------------ intro : Moka entre en scène avant chaque partie
+const INTROS = {
+  bataille: { fond: "linear-gradient(180deg, #74c0fc, #1c7ed6 55%, #0b3d6e)", texte: "À l'abordage !", anim: "sort-eau", decor: '<div class="intro-vagues"></div><div class="intro-vagues v2"></div>' },
+  runner: { fond: "linear-gradient(180deg, #ffd8a8, #ff922b 60%, #a0522d)", texte: "Adieu le zoo, hou hou ha ha !", anim: "fuit", decor: '<div class="intro-cage">' + "<i></i>".repeat(6) + "</div>" },
+  memory: { fond: "radial-gradient(circle, #9775fa, #3b1d8f)", texte: "Abracadabra !", anim: "magie", decor: '<div class="intro-cartes">' + "<i></i>".repeat(5) + "</div>" },
+  echecs: { fond: "linear-gradient(180deg, #d9a066, #8b5a2b)", texte: "Mettons les pièces en place…", anim: "pose", decor: '<div class="intro-pieces"><i>♜</i><i>♞</i><i>♝</i><i>♛</i><i>♚</i><i>♝</i><i>♞</i><i>♜</i></div>' },
+  jet: { fond: "linear-gradient(180deg, #4dabf7, #a5e1f7 70%, #51cf66)", texte: "Décollage !", anim: "decolle", decor: "" },
+  pingouin: { fond: "linear-gradient(180deg, #a5d8ff, #e7f5ff 70%, #fff)", texte: "Nounours, frappe fort !", anim: "glisse", decor: '<div class="intro-neige"></div>' },
+  candy: { fond: "radial-gradient(circle, #ffc9e3, #e64980)", texte: "Miam, des bonbons !", anim: "saute", decor: '<div class="intro-pluie">🍬🍭🍬🍫🍭🍬</div>' },
+  tetris: { fond: "linear-gradient(180deg, #1b1340, #3b2a8f)", texte: "Au boulot, on empile !", anim: "saute", decor: '<div class="intro-pluie">🟥🟨🟦🟩🟪🟧</div>' },
+  flipper: { fond: "radial-gradient(circle, #ff2fd0, #1b1340 70%)", texte: "Rock'n'roll !", anim: "rock", decor: '<div class="intro-spots"></div>' },
+  snake: { fond: "linear-gradient(180deg, #ffe066, #74b816 60%, #2b8a3e)", texte: "Sssss… l'aventure commence !", anim: "cache", decor: '<div class="intro-herbe"></div>' },
+  demineur: { fond: "repeating-linear-gradient(45deg, #ffd43b 0 30px, #212529 30px 60px)", texte: "Chut… pas un bruit…", anim: "pointe", decor: '<div class="intro-bombe">💣</div>' },
+  arene: { fond: "radial-gradient(circle, #7048e8, #120a2e 70%)", texte: "Prêts ? COMBAT !", anim: "arbitre", decor: '<div class="intro-spots"></div>' },
+};
+async function introMoka(jeu) {
+  const conf = INTROS[jeu];
+  if (!conf || typeof TENUES === "undefined" || !TENUES[jeu]) return;
+  const courte = COACH.introFaite;   // la première intro est complète, les suivantes sont rapides
+  COACH.introFaite = true;
+  const duree = courte ? 1100 : 2300;
+  const voile = document.createElement("div");
+  voile.className = `intro-moka intro-${conf.anim} ${courte ? "courte" : ""}`;
+  voile.style.background = conf.fond;
+  voile.style.setProperty("--duree", duree + "ms");
+  voile.innerHTML = `${conf.decor}<div class="intro-acteur">${tenueSVG(jeu, "etoiles")}</div>
+    <div class="intro-texte">${echapper(conf.texte)}</div><div class="intro-passer">Clique pour passer</div>`;
+  document.body.append(voile);
+  Sons.jouer(courte ? "bonus" : "cri");
+  await new Promise((fini) => {
+    const stop = () => { clearTimeout(minuteur); voile.onclick = null; document.removeEventListener("keydown", stop); fini(); };
+    const minuteur = setTimeout(stop, duree);
+    voile.onclick = stop;
+    document.addEventListener("keydown", stop);
+  });
+  voile.classList.add("sortie");
+  setTimeout(() => voile.remove(), 300);
 }
 
 // ------------------------------------------------------------ Moka, le coach de chaque jeu
@@ -149,6 +219,7 @@ const ASTUCES_COACH = {
   memory: ["Abracadabra ! Retiens bien où sont les cartes.", "Chaque paire te rend 5 secondes.", "Commence par les coins : c'est plus facile à mémoriser."],
   demineur: ["Le chiffre dit combien de bombes touchent la case.", "Clic droit (ou appui long) pour poser un drapeau.", "Quand tu doutes… respire. Ou fuis."],
   echecs: ["Contrôle le centre de l'échiquier, jeune élève.", "Roque tôt pour protéger ton roi.", "Avant chaque coup : qu'est-ce que mon adversaire menace ?"],
+  arene: ["ZQSD (ou WASD) pour bouger, la souris pour viser, clic pour tirer !", "Double saut : appuie deux fois sur saut.", "S sur une plateforme pour descendre à travers.", "Les caisses tombent du ciel : fonce chercher le lance-bananes !"],
   bataille: ["Tire en damier : tu trouveras les navires plus vite, moussaillon !", "Quand tu touches, vise les cases autour.", "Les navires ne se touchent jamais, même en diagonale."],
 };
 
@@ -164,6 +235,26 @@ function construireCoach(jeu) {
     mokaDit(a[Math.floor(Math.random() * a.length)] || "Bonne partie !", "malin", 5000);
   };
   setTimeout(() => mokaDit(`Salut ! C'est moi, ${TENUES[jeu].nom} !`, "content", 3500), 900);
+  placerCoach();
+  let attente = false;
+  const replacer = () => { if (!attente) { attente = true; requestAnimationFrame(() => { attente = false; placerCoach(); }); } };
+  window.addEventListener("scroll", replacer, { passive: true });
+  window.addEventListener("resize", replacer);
+  setInterval(placerCoach, 1000);   // la zone de jeu peut apparaître ou changer de taille
+}
+
+// Place le coach juste à gauche de la zone de jeu (canvas, plateau, grilles…), à hauteur de son haut.
+function placerCoach() {
+  const c = document.getElementById("coach");
+  if (!c) return;
+  const zones = [...document.querySelectorAll("main canvas, .plateau-memory, .zone-bataille, #echiquier, .plateau-candy, .zone-demineur")]
+    .filter((z) => z.offsetParent !== null && z.getBoundingClientRect().width > 150);
+  if (!zones.length || window.innerWidth <= 800) { c.style.left = ""; c.style.top = ""; return; }
+  const r = zones.reduce((a, z) => { const b = z.getBoundingClientRect(); return b.width * b.height > a.width * a.height ? b : a; }, zones[0].getBoundingClientRect());
+  const largeur = c.querySelector(".coach-singe").offsetWidth;
+  c.style.left = Math.max(6, r.left - largeur - 14) + "px";
+  const haut = Math.max(r.top, 12);
+  c.style.top = Math.min(Math.max(haut + 40, 110), window.innerHeight - 200) + "px";
 }
 
 // Fait parler Moka : texte dans la bulle et humeur passagère (content, rire, choc, triste, colere, malin, ko, etoiles).
@@ -514,7 +605,7 @@ async function afficherResultat({ titre, emoji, lignes = [], fin, rejouer, victo
     ${fin.mult > 1 ? `<p class="doux" style="margin:0">${fin.pieces_base} bananes ${formatMult(fin.mult)} grâce à la roue</p>` : ""}
     <p class="doux" style="margin:6px 0 0">Mise : ${fin.mise} · bilan : <b style="color:${net >= 0 ? "var(--vert)" : "var(--rouge)"}">${net >= 0 ? "+" : ""}${net}</b></p>
     ${fin.partie ? `<div class="roue-bonus" id="roue-bonus">
-      <div class="roue-bonus-cadre"><div class="fleche petite-fleche"></div><canvas width="360" height="360"></canvas></div>
+      <div class="roue-bonus-cadre"><div class="fleche petite-fleche"></div><canvas width="500" height="500"></canvas></div>
       <p class="resultat-bonus">🎰 Roue bonus : ça tourne…</p></div>` : ""}
     <div class="actions">
       <button class="bouton" id="r-rejouer">Rejouer (${prixPartie()})</button>

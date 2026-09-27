@@ -221,6 +221,7 @@ function habit(type, couleur) {
     case "diable": return base("#212529") + `<path d="M84 122 v-20 m-6 0 q6 -10 12 0 m-6 -8 v8" stroke="#ffd43b" stroke-width="3" fill="none"/><path d="M40 96 l20 10 20 -10" stroke="#c92a2a" stroke-width="4" fill="none"/>`;
     case "drap": return `<path d="M14 122 q4 -24 20 -30 q26 -8 52 0 q16 6 20 30 l-8 -6 -8 6 -8 -6 -8 6 -8 -6 -8 6 -8 -6 -8 6 -8 -6 -8 6 -8 -6z" fill="#f8f9fa" opacity=".9"/>`;
     case "cosmos": return base("#241a5c") + `<circle cx="36" cy="108" r="1.5" fill="#fff"/><circle cx="80" cy="104" r="1.2" fill="#fff"/><circle cx="64" cy="116" r="1.8" fill="#ffd43b"/><circle cx="92" cy="116" r="1" fill="#fff"/>`;
+    case "arbitre": return base("#f8f9fa") + `<path d="M24 100 v22 M36 96 v26 M48 94 v28 M72 94 v28 M84 96 v26 M96 100 v22" stroke="#212529" stroke-width="6"/>`;
     case "aucun": return "";
     default: return base(couleur || "#5c7cfa") + `<path d="M46 94 q14 8 28 0" stroke="rgba(255,255,255,.5)" stroke-width="3" fill="none"/>`;
   }
@@ -243,6 +244,7 @@ function extras(liste) {
     paillettes: `<circle cx="18" cy="40" r="2.5" fill="#fff3bf"/><circle cx="104" cy="44" r="3" fill="#fff3bf"/><circle cx="98" cy="84" r="2" fill="#fff3bf"/><circle cx="20" cy="86" r="2" fill="#fff3bf"/>`,
     noeud: `<path d="M50 96 l10 6 10 -6 v10 l-10 -6 -10 6z" fill="#e03131"/><circle cx="60" cy="101" r="2.5" fill="#a61e1e"/>`,
     banane: `<path d="M92 92 c-4 14 3 24 16 24 c-9 -4 -13 -13 -11 -24 z" fill="#ffd43b" stroke="#8a6400" stroke-width="2" stroke-linejoin="round"/>`,
+    sifflet: `<path d="M66 84 l12 4 v6 l-12 -3z" fill="#adb5bd" stroke="#495057" stroke-width="1.2"/><circle cx="80" cy="92" r="4" fill="#ced4da" stroke="#495057"/><path d="M78 92 q10 8 4 18" stroke="#e03131" stroke-width="2" fill="none"/>`,
     nez_clown: `<circle cx="60" cy="71" r="6.5" fill="#fa5252" stroke="#c92a2a" stroke-width="1.5"/><circle cx="58" cy="69" r="2" fill="#fff" opacity=".7"/>`,
     torrent: `<path d="M42 62 q-4 14 -2 26 q3 3 5 0 q-2 -12 1 -26z M78 62 q4 14 2 26 q-3 3 -5 0 q2 -12 -1 -26z" fill="#74c0fc" opacity=".9"/>`,
     boulons: `<circle cx="22" cy="60" r="3" fill="#495057"/><circle cx="98" cy="60" r="3" fill="#495057"/>`,
@@ -341,6 +343,7 @@ const TENUES = {
   memory: { nom: "Moka le magicien", look: { chapeau: "magicien", habit: "robe", yeux: "malin", sourcils: "malin", bouche: "sourire_en_coin" } },
   demineur: { nom: "Moka le démineur", look: { chapeau: "chantier", habit: "gilet", sourcils: "haut", bouche: "zigzag", extras: ["goutte"] } },
   echecs: { nom: "Professeur Moka", look: { chapeau: "universitaire", lunettes: "rondes", habit: "blouse", bouche: "ferme" } },
+  arene: { nom: "Moka l'arbitre", look: { chapeau: "casquette_envers", habit: "arbitre", bouche: "sourire_en_coin", sourcils: "malin", extras: ["sifflet"] } },
   bataille: { nom: "Capitaine Moka", look: { chapeau: "capitaine", habit: "capitaine", bouche: "dents", sourcils: "malin" } },
 };
 

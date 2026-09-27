@@ -154,7 +154,16 @@ const Sons = (() => {
     }),
     victoire: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) =>
       note(f, i * 0.11, i === 5 ? 0.6 : 0.16, { type: "square", volume: 0.09 })),
-    // Moka : rire, taquinerie, pleurs, cri de joie
+    // Stickman Arena
+    pan: () => { bruit(0, 0.09, { volume: 0.35, de: 5000, a: 600 }); note(180, 0, 0.08, { type: "square", volume: 0.08, glisse: 60 }); },
+    rafale: () => bruit(0, 0.05, { volume: 0.22, de: 6000, a: 1200 }),
+    pompe: () => { bruit(0, 0.22, { volume: 0.5, de: 3000, a: 150 }); note(90, 0, 0.18, { type: "square", volume: 0.12, glisse: 40 }); },
+    roquette: () => { bruit(0, 0.5, { volume: 0.25, de: 300, a: 2500, type: "bandpass" }); note(120, 0, 0.3, { type: "sawtooth", volume: 0.08, glisse: 300 }); },
+    poing: () => { bruit(0, 0.06, { volume: 0.4, de: 1200, a: 200 }); note(110, 0, 0.07, { type: "triangle", volume: 0.25 }); },
+    aie: () => note(520, 0, 0.12, { type: "square", volume: 0.06, glisse: 300 }),
+    ko: () => { note(600, 0, 0.5, { type: "sawtooth", volume: 0.12, glisse: 90, filtre: 1800 }); bruit(0, 0.2, { volume: 0.3, de: 2000, a: 200 }); },
+    ramasse: () => [660, 880, 1320].forEach((f, i) => note(f, i * 0.05, 0.09, { type: "square", volume: 0.07 })),
+        // Moka : rire, taquinerie, pleurs, cri de joie
     rire: () => {
       voix(380, 470, 0, .14, { formant: 520 }); voix(400, 500, .17, .14, { formant: 520 });
       [0, 1, 2, 3].forEach((i) => voix(760 - i * 40, 660 - i * 40, .36 + i * .13, .11, { formant: 1500, volume: .25 }));

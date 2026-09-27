@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stickman Arena — Moka Arcade</title>
+  <meta name="description" content="Combats de bonshommes bâtons en 2D : armes qui tombent du ciel, manches de 60 secondes, Moka qui s'en mêle. En solo contre des robots ou en duel en ligne.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥊</text></svg>">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="arene">
+<main>
+  <div class="titre-page">
+    <h1>🥊 Stickman Arena</h1>
+    <span class="doux">60 secondes pour mettre un maximum d'adversaires K.O. Les armes tombent du ciel… et Moka l'arbitre adore mettre le bazar.</span>
+  </div>
+
+  <div class="bandeau-duel cache" id="bandeau-duel">
+    <span>⚔️ Duel en ligne contre</span><span class="vs" id="vs-adversaire">…</span>
+    <span class="doux">Le plus de K.O. en 60 secondes gagne</span>
+    <button class="bouton secondaire petit" id="btn-abandon-duel">🏳️ Abandonner</button>
+  </div>
+
+  <div class="scene">
+    <div class="toile-cadre cadre-arene">
+      <canvas id="arene"></canvas>
+      <div class="surcouche" id="surcouche">
+        <h2>Stickman Arena</h2>
+        <p class="doux"><b>Z Q S D</b> (ou W A S D, ou les flèches) pour bouger · <b>Z / espace</b> : sauter (double saut !)<br>
+          <b>S</b> : descendre d'une plateforme · <b>souris</b> : viser · <b>clic</b> : tirer / frapper</p>
+        <div class="choix-mode-arene" id="choix-mode">
+          <button class="bouton gros-bouton" id="btn-solo">▶ Solo contre 3 robots (10 <i class="piece"></i>)</button>
+          <a class="bouton secondaire gros-bouton" href="/duels.html">⚔️ Duel en ligne</a>
+        </div>
+        <p class="doux" style="font-size:12px">Il faut un clavier et une souris.</p>
+      </div>
+    </div>
+    <div class="panneau-lateral">
+      <h2 style="margin:0">Les armes</h2>
+      <div class="liste-armes">
+        <p>✊ <b>Poings</b> : quand tu n'as plus de munitions</p>
+        <p>🔫 <b>Pistolet</b> : précis, 14 balles</p>
+        <p>💥 <b>Fusil à pompe</b> : dévastateur de près</p>
+        <p>🔥 <b>Mitraillette</b> : ça arrose !</p>
+        <p>🍌 <b>Lance-bananes</b> : roquettes qui explosent</p>
+        <p>✨ <b>Canon en or</b> : le cadeau de Moka</p>
+      </div>
+      <h2 style="margin:16px 0 6px">Moka s'en mêle</h2>
+      <p class="touches">Toutes les 10 à 14 secondes, Moka passe au-dessus de l'arène : peaux de banane, banane dorée qui soigne,
+        gravité lunaire, noix de coco sur le premier, bulle de protection pour le dernier, commandes inversées… ou le canon en or !</p>
+      <p class="touches">Solo : 100 points par K.O., +300 pour la 1re place.</p>
+    </div>
+  </div>
+</main>
+<script src="/assets/sons.js"></script>
+<script src="/assets/icones.js"></script>
+<script src="/assets/singes.js"></script>
+<script src="/assets/commun.js"></script>
+<script src="/assets/arene-sim.js"></script>
+<script src="/assets/arene.js"></script>
+</body>
+</html>

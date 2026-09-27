@@ -1079,9 +1079,9 @@ main.accueil { background: none; border: 0; box-shadow: none; padding: 0 14px 30
 .fenetre .gain-total { animation: gain-rebond .8s .2s cubic-bezier(.2, 2, .4, 1) both; }
 @keyframes gain-rebond { from { transform: scale(0); } }
 .roue-bonus { margin: 12px auto 4px; padding: 10px; border-radius: 16px; background: rgba(0,0,0,.25); }
-.roue-bonus-cadre { position: relative; width: 176px; height: 176px; margin: 0 auto; }
+.roue-bonus-cadre { position: relative; width: min(250px, 62vw); aspect-ratio: 1; margin: 0 auto; }
 .roue-bonus-cadre canvas { width: 100%; height: 100%; display: block; }
-.roue-bonus .petite-fleche { position: absolute; top: -8px; left: 50%; width: 24px; height: 28px; transform: translateX(-50%); z-index: 2;
+.roue-bonus .petite-fleche { position: absolute; top: -10px; left: 50%; width: 32px; height: 38px; transform: translateX(-50%); z-index: 2;
   background: linear-gradient(180deg, #fff, #ffd84d); clip-path: polygon(0 0, 100% 0, 50% 100%); filter: drop-shadow(0 3px 3px rgba(0,0,0,.5)); }
 .resultat-bonus { margin: 8px 0 0; font-weight: 900; }
 .roue-bonus.jackpot { background: radial-gradient(circle, rgba(255,212,59,.5), rgba(0,0,0,.2)); animation: pulse .6s ease 4; }
@@ -1146,3 +1146,101 @@ main { animation: page-arrive .5s ease both; }
 @keyframes avatar-coucou { 0%, 90%, 100% { transform: rotate(0); } 93% { transform: rotate(-10deg); } 96% { transform: rotate(8deg); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
 .rarete { display: inline-block; font-size: 12px; font-weight: 900; padding: 3px 10px; border-radius: 99px; color: #fff; margin: 6px 0 2px; }
+
+/* Arène (Stickman Arena) : stade néon */
+.theme-arene { --t2: #7048e8; --ecran: rgba(18, 10, 46, .92); --ecran-bord: #ff2fd0; }
+.theme-arene::before { background: radial-gradient(ellipse at 50% 0%, #5f3dc4 0%, #2a1560 40%, #0d0b1f 80%); }
+.theme-arene::after {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,47,208,.25) 0 60px, transparent 200px),
+    radial-gradient(circle at 85% 25%, rgba(62,224,232,.22) 0 60px, transparent 200px),
+    repeating-linear-gradient(90deg, transparent 0 60px, rgba(255,255,255,.03) 60px 62px);
+}
+.cadre-arene canvas { cursor: none; }
+.choix-mode-arene { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+.liste-armes p { margin: 6px 0; font-size: 14px; }
+
+/* Échecs : dimensions fixes pour que l'échiquier ne bouge plus quand le tour change */
+body[data-page="echecs"] .panneau-lateral { width: 250px; flex: none; }
+body[data-page="echecs"] #statut { display: flex; align-items: center; justify-content: center; min-height: 2.8em; line-height: 1.2; }
+body[data-page="echecs"] .prises { min-height: 34px; }
+@media (max-width: 800px) { body[data-page="echecs"] .panneau-lateral { width: 100%; } }
+.coach { display: block; }
+.coach-bulle { position: absolute; left: 0; bottom: calc(100% + 14px); width: max-content; max-width: 250px; }
+@media (max-width: 800px) { .coach-bulle { max-width: 200px; } }
+
+/* bloc publicitaire (discret, jamais par-dessus un jeu) */
+.zone-pub { max-width: 760px; margin: 18px auto 0; padding: 8px 12px 10px; border-radius: 14px; background: rgba(255,255,255,.08); text-align: center; min-height: 60px; }
+.etiquette-pub { display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; opacity: .6; margin-bottom: 4px; }
+
+/* ------------------------------------------------------------ intros de Moka avant chaque partie */
+.intro-moka { position: fixed; inset: 0; z-index: 70; overflow: hidden; display: grid; place-items: center; cursor: pointer;
+  animation: intro-entree .35s ease both; }
+.intro-moka.sortie { animation: intro-sortie .3s ease forwards; }
+@keyframes intro-entree { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(80% at 50% 50%); } }
+@keyframes intro-sortie { to { opacity: 0; transform: scale(1.15); } }
+.intro-acteur { position: absolute; left: 50%; top: 50%; width: min(260px, 50vw); aspect-ratio: 1; margin: calc(min(260px, 50vw) / -2) 0 0 calc(min(260px, 50vw) / -2);
+  border-radius: 50%; background: radial-gradient(circle at 50% 35%, #fff8d6, #ffd166 70%, #f59f00); border: 8px solid #fff;
+  box-shadow: 0 20px 50px rgba(0,0,0,.45); overflow: hidden; z-index: 2; }
+.intro-acteur svg { width: 100%; height: 100%; display: block; transform: translateY(8px) scale(1.06); }
+.intro-texte { position: absolute; left: 0; right: 0; top: 14%; text-align: center; z-index: 3; font: 900 clamp(30px, 6vw, 64px) var(--police-titre, "Arial Black", sans-serif);
+  color: #fff; text-shadow: 0 5px 0 #c2255c, 0 0 30px rgba(0,0,0,.5); animation: intro-texte .6s .25s cubic-bezier(.2, 1.8, .4, 1) both; }
+@keyframes intro-texte { from { transform: scale(0) rotate(-10deg); opacity: 0; } }
+.intro-passer { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,.75); font-weight: 800; font-size: 13px; z-index: 3; }
+.intro-moka.courte .intro-passer { display: none; }
+/* chaque jeu a son entrée */
+.intro-sort-eau .intro-acteur { animation: sort-eau var(--duree) cubic-bezier(.2, 1.3, .4, 1) both; }
+@keyframes sort-eau { 0% { transform: translateY(70vh) rotate(-20deg); } 45% { transform: translateY(-4vh) rotate(8deg); } 60%, 100% { transform: translateY(0) rotate(0); } }
+.intro-vagues { position: absolute; left: -10%; right: -10%; bottom: 0; height: 36%; z-index: 4; background:
+  radial-gradient(ellipse 60px 26px at 50% 0, transparent 60%, #1864ab 62%) 0 0 / 120px 60px repeat-x, linear-gradient(#1864ab, #0b3d6e);
+  animation: vagues 1.2s linear infinite; opacity: .95; }
+.intro-vagues.v2 { height: 30%; z-index: 5; opacity: .8; animation-duration: .8s; animation-direction: reverse; filter: hue-rotate(-15deg) brightness(1.2); }
+@keyframes vagues { to { background-position: 120px 0, 0 0; } }
+.intro-fuit .intro-acteur { animation: fuit var(--duree) ease-in both; }
+@keyframes fuit { 0%, 35% { transform: translateX(0) rotate(0); } 45% { transform: translateX(-4vw) rotate(-6deg); } 100% { transform: translateX(80vw) rotate(12deg); } }
+.intro-cage { position: absolute; left: 50%; top: 50%; width: 300px; height: 320px; margin: -160px 0 0 -150px; z-index: 3; display: flex; justify-content: space-between; padding: 0 20px;
+  border-top: 14px solid #495057; border-bottom: 14px solid #495057; border-radius: 10px; }
+.intro-cage i { width: 10px; background: #868e96; border-radius: 5px; animation: barreau var(--duree) ease both; }
+.intro-cage i:nth-child(3), .intro-cage i:nth-child(4) { animation-name: barreau-plie; }
+@keyframes barreau-plie { 0%, 25% { transform: none; } 38%, 100% { transform: scaleX(1) translateX(var(--sens, 30px)) skewX(-25deg); } }
+.intro-cage i:nth-child(3) { --sens: -40px; }
+@keyframes barreau { 50% { transform: none; } }
+.intro-magie .intro-acteur { animation: magie var(--duree) ease both; }
+@keyframes magie { 0% { transform: scale(0) rotate(-360deg); } 40% { transform: scale(1.1) rotate(10deg); } 55%, 100% { transform: scale(1) rotate(0); } }
+.intro-cartes { position: absolute; bottom: 12%; display: flex; gap: 14px; z-index: 3; }
+.intro-cartes i { width: 60px; height: 84px; border-radius: 10px; background: repeating-linear-gradient(45deg, #6b2fd6 0 8px, #7d3fe8 8px 16px); border: 3px solid #fff;
+  animation: carte-tourne .9s ease-in-out infinite alternate; }
+.intro-cartes i:nth-child(2) { animation-delay: .15s; } .intro-cartes i:nth-child(3) { animation-delay: .3s; } .intro-cartes i:nth-child(4) { animation-delay: .45s; } .intro-cartes i:nth-child(5) { animation-delay: .6s; }
+@keyframes carte-tourne { to { transform: rotateY(180deg); background: #fff3bf; } }
+.intro-pose .intro-acteur { animation: saute var(--duree) cubic-bezier(.2, 1.6, .4, 1) both; }
+.intro-pieces { position: absolute; bottom: 10%; display: flex; gap: 8px; z-index: 3; font-size: 54px; color: #fff; text-shadow: 0 3px 0 #3d2208; }
+.intro-pieces i { font-style: normal; animation: piece-tombe .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+.intro-pieces i:nth-child(n) { animation-delay: calc(var(--i, 0) * 1ms); }
+.intro-pieces i:nth-child(1) { animation-delay: .1s; } .intro-pieces i:nth-child(2) { animation-delay: .2s; } .intro-pieces i:nth-child(3) { animation-delay: .3s; } .intro-pieces i:nth-child(4) { animation-delay: .4s; }
+.intro-pieces i:nth-child(5) { animation-delay: .5s; } .intro-pieces i:nth-child(6) { animation-delay: .6s; } .intro-pieces i:nth-child(7) { animation-delay: .7s; } .intro-pieces i:nth-child(8) { animation-delay: .8s; }
+@keyframes piece-tombe { from { transform: translateY(-60vh); opacity: 0; } }
+.intro-decolle .intro-acteur { animation: decolle var(--duree) ease-in both; }
+@keyframes decolle { 0% { transform: translateY(60vh); } 30% { transform: translateY(0); } 70% { transform: translateY(-3vh) rotate(-5deg); } 100% { transform: translateY(-90vh) rotate(-12deg); } }
+.intro-decolle .intro-acteur::after { content: ""; }
+.intro-glisse .intro-acteur { animation: glisse var(--duree) ease-in-out both; }
+@keyframes glisse { 0% { transform: translateX(-80vw) rotate(-30deg); } 45%, 70% { transform: translateX(0) rotate(-8deg); } 100% { transform: translateX(80vw) rotate(-25deg); } }
+.intro-neige { position: absolute; inset: 0; background: radial-gradient(circle, #fff 2px, transparent 3px) 0 0 / 40px 40px; animation: neige-tombe 1.5s linear infinite; opacity: .9; }
+@keyframes neige-tombe { to { background-position: 20px 40px; } }
+.intro-saute .intro-acteur { animation: saute var(--duree) cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes saute { 0% { transform: scale(0); } 25% { transform: scale(1.15) translateY(-3vh); } 40% { transform: scale(.95); } 55%, 100% { transform: scale(1); } }
+.intro-pluie { position: absolute; top: -10%; left: 0; right: 0; display: flex; justify-content: space-around; font-size: 48px; animation: pluie var(--duree) linear both; }
+@keyframes pluie { to { transform: translateY(110vh) rotate(40deg); } }
+.intro-rock .intro-acteur { animation: rock var(--duree) ease both; }
+@keyframes rock { 0% { transform: translateX(-80vw) rotate(-40deg); } 35% { transform: translateX(0) rotate(15deg); } 45% { transform: rotate(-12deg) scale(1.1); } 55% { transform: rotate(10deg); } 65%, 100% { transform: rotate(0); } }
+.intro-spots { position: absolute; inset: 0; background: conic-gradient(from 0deg at 50% 0%, transparent 0 20deg, rgba(255,255,255,.18) 20deg 30deg, transparent 30deg 60deg, rgba(62,224,232,.2) 60deg 70deg, transparent 70deg);
+  animation: spots 1.2s ease-in-out infinite alternate; }
+@keyframes spots { to { transform: rotate(12deg); } }
+.intro-cache .intro-acteur { animation: cache var(--duree) cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes cache { 0%, 15% { transform: translateY(60vh); } 45% { transform: translateY(-2vh); } 60%, 100% { transform: translateY(0); } }
+.intro-herbe { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; z-index: 4;
+  background: linear-gradient(transparent, #2b8a3e 20%), repeating-linear-gradient(80deg, #37b24d 0 6px, transparent 6px 14px); }
+.intro-pointe .intro-acteur { animation: pointe var(--duree) ease-in-out both; }
+@keyframes pointe { 0% { transform: translateX(-70vw); } 20% { transform: translateX(-50vw) translateY(-2vh); } 40% { transform: translateX(-30vw); } 60% { transform: translateX(-12vw) translateY(-2vh); } 80%, 100% { transform: translateX(0); } }
+.intro-bombe { position: absolute; right: 18%; bottom: 20%; font-size: 90px; z-index: 3; animation: tremble .2s linear infinite; }
+@keyframes tremble { 50% { transform: rotate(6deg); } }
+.intro-arbitre .intro-acteur { animation: saute var(--duree) cubic-bezier(.2, 1.6, .4, 1) both; }
